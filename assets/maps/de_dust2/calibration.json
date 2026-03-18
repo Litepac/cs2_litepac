@@ -1,0 +1,12 @@
+{
+    "mapId":  "de_dust2",
+    "displayName":  "Dust2",
+    "radarImageKey":  "de_dust2/radar.png",
+    "coordinateSystem":  {
+                             "worldXMin":  -2476,
+                             "worldXMax":  2029.6000000000004,
+                             "worldYMin":  -1266.6000000000004,
+                             "worldYMax":  3239,
+                             "rotateDegrees":  0
+                         }
+}

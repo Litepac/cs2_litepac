@@ -1,0 +1,12 @@
+{
+    "mapId":  "de_inferno",
+    "displayName":  "Inferno",
+    "radarImageKey":  "de_inferno/radar.png",
+    "coordinateSystem":  {
+                             "worldXMin":  -2087,
+                             "worldXMax":  2930.6000000000004,
+                             "worldYMin":  -1147.6000000000004,
+                             "worldYMax":  3870,
+                             "rotateDegrees":  0
+                         }
+}

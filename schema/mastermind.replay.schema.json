@@ -1,0 +1,720 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mastermind.local/schema/mastermind.replay.schema.json",
+  "title": "mastermind.replay",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format",
+    "schemaVersion",
+    "generatedAt",
+    "generator",
+    "sourceDemo",
+    "match",
+    "map",
+    "teams",
+    "players",
+    "rounds"
+  ],
+  "properties": {
+    "format": {
+      "const": "mastermind.replay"
+    },
+    "schemaVersion": {
+      "type": "string"
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "generator": {
+      "$ref": "#/$defs/generator"
+    },
+    "sourceDemo": {
+      "$ref": "#/$defs/sourceDemo"
+    },
+    "match": {
+      "$ref": "#/$defs/match"
+    },
+    "map": {
+      "$ref": "#/$defs/map"
+    },
+    "teams": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/team"
+      }
+    },
+    "players": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/player"
+      }
+    },
+    "rounds": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/round"
+      }
+    }
+  },
+  "$defs": {
+    "nullableNumber": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "nullableInteger": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "nullableString": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "side": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "T",
+        "CT",
+        null
+      ]
+    },
+    "score": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "t",
+        "ct"
+      ],
+      "properties": {
+        "t": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "ct": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "generator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "version"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      }
+    },
+    "sourceDemo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fileName",
+        "sha256",
+        "tickRate",
+        "tickCount"
+      ],
+      "properties": {
+        "fileName": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string"
+        },
+        "tickRate": {
+          "type": "number"
+        },
+        "tickCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "demoProtocol": {
+          "$ref": "#/$defs/nullableInteger"
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "match": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "matchId",
+        "tickRate",
+        "totalRounds"
+      ],
+      "properties": {
+        "matchId": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "tickRate": {
+          "type": "number"
+        },
+        "totalRounds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "gameMode": {
+          "$ref": "#/$defs/nullableString"
+        }
+      }
+    },
+    "map": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mapId",
+        "displayName",
+        "radarImageKey",
+        "coordinateSystem"
+      ],
+      "properties": {
+        "mapId": {
+          "type": "string"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "radarImageKey": {
+          "type": "string"
+        },
+        "coordinateSystem": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "worldXMin",
+            "worldXMax",
+            "worldYMin",
+            "worldYMax",
+            "rotateDegrees"
+          ],
+          "properties": {
+            "worldXMin": {
+              "type": "number"
+            },
+            "worldXMax": {
+              "type": "number"
+            },
+            "worldYMin": {
+              "type": "number"
+            },
+            "worldYMax": {
+              "type": "number"
+            },
+            "rotateDegrees": {
+              "type": "number"
+            }
+          }
+        }
+      }
+    },
+    "team": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "teamId",
+        "displayName"
+      ],
+      "properties": {
+        "teamId": {
+          "type": "string"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "clanName": {
+          "$ref": "#/$defs/nullableString"
+        }
+      }
+    },
+    "player": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "playerId",
+        "displayName",
+        "teamId"
+      ],
+      "properties": {
+        "playerId": {
+          "type": "string"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "steamId": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "teamId": {
+          "type": "string"
+        }
+      }
+    },
+    "killEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tick",
+        "victimPlayerId",
+        "weaponName",
+        "isHeadshot"
+      ],
+      "properties": {
+        "tick": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "killerPlayerId": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "victimPlayerId": {
+          "type": "string"
+        },
+        "assisterPlayerId": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "weaponName": {
+          "type": "string"
+        },
+        "isHeadshot": {
+          "type": "boolean"
+        },
+        "penetratedObjects": {
+          "$ref": "#/$defs/nullableInteger"
+        },
+        "throughSmoke": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "killerX": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "killerY": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "killerZ": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "victimX": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "victimY": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "victimZ": {
+          "$ref": "#/$defs/nullableNumber"
+        }
+      }
+    },
+    "bombEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tick",
+        "type"
+      ],
+      "properties": {
+        "tick": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "pickup",
+            "drop",
+            "plant_start",
+            "planted",
+            "defuse_start",
+            "defused",
+            "exploded"
+          ]
+        },
+        "playerId": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "site": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "A",
+            "B",
+            null
+          ]
+        },
+        "x": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "y": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "z": {
+          "$ref": "#/$defs/nullableNumber"
+        }
+      }
+    },
+    "trajectory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sampleOriginTick",
+        "sampleIntervalTicks",
+        "x",
+        "y",
+        "z"
+      ],
+      "properties": {
+        "sampleOriginTick": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sampleIntervalTicks": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "x": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nullableNumber"
+          }
+        },
+        "y": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nullableNumber"
+          }
+        },
+        "z": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nullableNumber"
+          }
+        }
+      }
+    },
+    "utilityPhaseEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tick",
+        "type"
+      ],
+      "properties": {
+        "tick": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "thrown",
+            "bounce",
+            "detonate",
+            "expire"
+          ]
+        },
+        "x": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "y": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "z": {
+          "$ref": "#/$defs/nullableNumber"
+        }
+      }
+    },
+    "utilityEntity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "utilityId",
+        "kind",
+        "startTick",
+        "trajectory",
+        "phaseEvents"
+      ],
+      "properties": {
+        "utilityId": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "smoke",
+            "flashbang",
+            "hegrenade",
+            "molotov",
+            "incendiary",
+            "decoy"
+          ]
+        },
+        "throwerPlayerId": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "startTick": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "detonateTick": {
+          "$ref": "#/$defs/nullableInteger"
+        },
+        "endTick": {
+          "$ref": "#/$defs/nullableInteger"
+        },
+        "trajectory": {
+          "$ref": "#/$defs/trajectory"
+        },
+        "phaseEvents": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/utilityPhaseEvent"
+          }
+        }
+      }
+    },
+    "playerStream": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "playerId",
+        "side",
+        "sampleOriginTick",
+        "sampleIntervalTicks",
+        "x",
+        "y",
+        "z",
+        "yaw",
+        "alive",
+        "hasBomb",
+        "health",
+        "armor",
+        "hasHelmet",
+        "money",
+        "activeWeapon",
+        "mainWeapon",
+        "flashbangs",
+        "smokes",
+        "heGrenades",
+        "fireGrenades",
+        "decoys"
+      ],
+      "properties": {
+        "playerId": {
+          "type": "string"
+        },
+        "side": {
+          "$ref": "#/$defs/side"
+        },
+        "sampleOriginTick": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sampleIntervalTicks": {
+          "type": "integer",
+          "const": 1
+        },
+        "x": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nullableNumber"
+          }
+        },
+        "y": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nullableNumber"
+          }
+        },
+        "z": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nullableNumber"
+          }
+        },
+        "yaw": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nullableNumber"
+          }
+        },
+        "alive": {
+          "type": "array",
+          "items": {
+            "type": "boolean"
+          }
+        },
+        "hasBomb": {
+          "type": "array",
+          "items": {
+            "type": "boolean"
+          }
+        },
+        "health": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nullableInteger"
+          }
+        },
+        "armor": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nullableInteger"
+          }
+        },
+        "hasHelmet": {
+          "type": "array",
+          "items": {
+            "type": "boolean"
+          }
+        },
+        "money": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nullableInteger"
+          }
+        },
+        "activeWeapon": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nullableString"
+          }
+        },
+        "mainWeapon": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nullableString"
+          }
+        },
+        "flashbangs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nullableInteger"
+          }
+        },
+        "smokes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nullableInteger"
+          }
+        },
+        "heGrenades": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nullableInteger"
+          }
+        },
+        "fireGrenades": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nullableInteger"
+          }
+        },
+        "decoys": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nullableInteger"
+          }
+        }
+      }
+    },
+    "round": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "roundNumber",
+        "startTick",
+        "endTick",
+        "scoreBefore",
+        "scoreAfter",
+        "winnerSide",
+        "endReason",
+        "playerStreams",
+        "killEvents",
+        "bombEvents",
+        "utilityEntities"
+      ],
+      "properties": {
+        "roundNumber": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "startTick": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "freezeEndTick": {
+          "$ref": "#/$defs/nullableInteger"
+        },
+        "endTick": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "officialEndTick": {
+          "$ref": "#/$defs/nullableInteger"
+        },
+        "scoreBefore": {
+          "$ref": "#/$defs/score"
+        },
+        "scoreAfter": {
+          "$ref": "#/$defs/score"
+        },
+        "winnerSide": {
+          "$ref": "#/$defs/side"
+        },
+        "endReason": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "playerStreams": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/playerStream"
+          }
+        },
+        "killEvents": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/killEvent"
+          }
+        },
+        "bombEvents": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/bombEvent"
+          }
+        },
+        "utilityEntities": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/utilityEntity"
+          }
+        }
+      }
+    }
+  }
+}

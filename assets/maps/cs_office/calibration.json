@@ -1,0 +1,12 @@
+{
+    "mapId":  "cs_office",
+    "displayName":  "Office",
+    "radarImageKey":  "cs_office/radar.png",
+    "coordinateSystem":  {
+                             "worldXMin":  -1838,
+                             "worldXMax":  2360.3999999999996,
+                             "worldYMin":  -2340.3999999999996,
+                             "worldYMax":  1858,
+                             "rotateDegrees":  0
+                         }
+}

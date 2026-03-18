@@ -1,0 +1,12 @@
+{
+    "mapId":  "cs_italy",
+    "displayName":  "Italy",
+    "radarImageKey":  "cs_italy/radar.png",
+    "coordinateSystem":  {
+                             "worldXMin":  -2647,
+                             "worldXMax":  2063.3999999999996,
+                             "worldYMin":  -2118.3999999999996,
+                             "worldYMax":  2592,
+                             "rotateDegrees":  0
+                         }
+}

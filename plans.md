@@ -1,14 +1,96 @@
 # plans.md
 
 ## Planned
-- Propose clean project structure
-- Define canonical replay schema
-- Define parser pipeline
-- Define minimal viewer scope
-- Define validation strategy
+- Tighten parser edge cases found during visual replay checks
+- Add map calibration spot checks tied to known landmarks
+- Reduce viewer bundle size and split heavy Pixi code paths
+- Improve utility lifecycle fidelity after visual validation
+- Add explicit parser-side spot checks for bomb and kill event positional completeness
+- Tighten canonical replay fields where UI quality is blocked by missing trustworthy render data
 
 ## In Progress
+- Visual validation workflow using staged local replay fixtures
+- Improve viewer inspection fidelity for visual replay checks
+- Reassert parser-first ownership: parser/canonical replay define utility and facing truth, viewer only renders/interpolates
+- Move viewer toward a Skybox-like operator layout using only real replay data
+- Compress chrome and add in-map live HUD derived from replay state
+- Consolidate playback into a bottom operator dock to increase map dominance
+- Add round-phase context to the playback dock using real freeze/live/post-plant timing
+- Improve map readability with selected-player motion context and safer interaction polish
+- Improve utility readability with real lifecycle timers and clearer on-map visuals
+- Add utility motion context on the map and utility presence in the bottom dock
+- Refine utility presentation with calmer flash bursts and icon-style map badges
+- Render full utility throw trajectories and map phase markers without projection artifacts
+- Correct player facing vectors and keep implementation status documented in-repo
+- Keep full-round utility paths visible, reduce right-rail conflicts, and document viewer roadmap
+- Improve operator-dock readability and reduce on-map label/rail clutter
+- Maintain an explicit in-repo agent/debug runbook for continuation quality
+- Truth-check utility trajectory rendering against sparse parser samples and remove uncertain aim vectors
+- Shift utility validation workflow to one utility family at a time with viewer-side focus controls
+- Densify canonical grenade trajectories parser-side and reduce on-map trail linger after detonation
+- Refine smoke-only presentation: smoother path interpolation, faster post-bloom fade, and better smoke cloud readability
+- Replace generic smoke point selection with a smoke-specific projectile/active renderer built from raw trajectory samples plus detonation anchors
+- Rebuild the viewer shell bottom-up around a denser operator dock and cleaner map-first hierarchy
+- Remove or omit viewer-side visuals that are not yet trustworthy, especially facing indicators and noisy utility adornments
+- Incorporate prior-art findings from comparable CS2 2D replay projects without violating the canonical replay contract
+- Add repo-local specialist agent guides so future work stays parser-first and reference-locked
+- Update top-level `AGENTS.md` so it points to specialist guides and reinforces parser/viewer truth boundaries
+- Add a dedicated UI UX specialist guide so shell work stays reference-locked and map-first
+- Rebalance the map stage fit and restore compact always-on player labels without reintroducing noisy overlays
+- Hold utility trajectory lines temporarily while the map shell and player tokens are rebuilt toward the Skybox reference
+- Normalize parser-side smoke and fire lifetimes so viewer timers come from trustworthy canonical replay data
+- Land each round on the first meaningful player sample instead of an empty replay-start tick
+- Hard-disable on-map utility trajectory lines while utility tokens and shell layout are being rebuilt
+- Rebuild the right rail with parser-backed live weapon, health, armor, helmet, and money state
+- Replace active-weapon snapshots with parser-backed main-weapon and utility inventory state in the right rail
+- Keep fixture loading cache-safe and collapse schema validation failures into concise viewer errors
+- Add a simple in-repo overview of how agents and specialist guides fit together
+- Normalize shell density and map fit across 1080p and 1440p/2K so the viewer reads consistently across screens
+- Tighten the right rail and operator dock toward the Skybox reference using compact real-data hierarchy instead of extra badges or chrome
+- Continue compressing the left rail and expose clearer dock row labels so the shell reads more like an operator workspace on both 1080p and 2K
+- Rebuild the operator dock seek/ruler behavior with larger controls, 15-second markers, and a default-off freeze-time view
+- Remove the remaining inner map "box" feel by tightening radar crop detection and loosening stage fit around the actual map content
 
 ## Done
+- Proposed clean project structure and stack direction
+- Defined canonical `mastermind.replay.json` replay schema
+- Added machine-readable schema draft
+- Defined parser pipeline
+- Defined minimal V1 viewer scope
+- Defined validation strategy
+- Scaffolded parser and viewer workspaces
+- Implemented canonical replay types and schema validation hooks
+- Implemented parser CLI with round, kill, bomb, utility, and position extraction paths
+- Added map radar assets and calibration files
+- Implemented viewer file loading, schema validation, round switching, playback, selection, and map rendering foundation
+- Parsed real local demo fixtures into canonical replay artifacts
+- Added fixture batch parsing and replay regression tests
+- Added replay manifest expectations for current real-demo outputs
+- Added fixture staging for direct viewer loading
+- Fixed viewer bootstrap/schema issues and map asset loading
+- Reworked viewer into a three-zone replay workstation layout with live roster and round timeline
+- Added real on-map labels for all alive players with selected-player emphasis
+- Added real utility lifecycle helpers for stage timing and HUD counts
+- Added utility timelines and event ribbons driven by real replay utility data
+- Added utility trajectories, phase markers, and safer path filtering for the map
+- Added current implementation status documentation under `docs`
+- Added viewer roadmap documentation under `docs`
+- Added full-round utility path visibility and a cleaner dock/rail pass
+- Added an agent/debug continuation runbook under `docs`
+- Fixed utility trajectory rendering for sparse sampled grenade paths and removed untrusted player aim lines
+- Added utility focus mode so map, HUD, and timeline can isolate smoke/flash/HE/fire/decoy validation
+- Added per-frame projectile trajectory sampling in the parser and faster post-throw trail fade in the viewer
+- Added smoke-focused path smoothing and richer smoke cloud rendering while keeping utility-family focus mode
+- Added a shared playback clock and a smoke-specific render path to isolate utility flight debugging from the generic utility renderer
+- Added prior-art architecture review under `docs/10-prior-art-review.md`
+- Added repo-local specialist guides under `.github/agents/`
+- Updated top-level `AGENTS.md` to reference specialist guides and the canonical replay boundary
+- Added `.github/agents/ui-ux-specialist.md` and tightened docs around the reference-locked shell rebuild
+- Added parser-backed live player equipment state to the canonical replay schema and parser streams
+- Added parser-backed main-weapon and utility inventory state to canonical player streams and the viewer right rail
+- Made fixture loading cache-safe and reduced schema validation walls to concise viewer errors
+- Added `docs/11-agents-overview.md` to explain the agent system and how specialist guides connect to repo workflow
+- Defaulted utility focus back to `All` and added a larger seek bar, 15-second dock markers, and a freeze-time toggle to the replay dock
 
 ## Blocked
+- Visual truth-checking still needs screenshots or side-by-side demo review

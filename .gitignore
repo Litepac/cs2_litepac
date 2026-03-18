@@ -1,0 +1,13 @@
+parser/mastermind
+parser/mastermind.exe
+parser/fixturestage.exe
+parser/replayinspect.exe
+viewer/node_modules/
+viewer/dist/
+viewer/*.log
+viewer/*.png
+viewer/*.tsbuildinfo
+parser/.cache/
+testdata/demos/*.dem
+testdata/replays/*.json
+assets/fixtures/*.json

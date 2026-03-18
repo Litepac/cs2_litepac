@@ -1,0 +1,12 @@
+{
+    "mapId":  "de_nuke",
+    "displayName":  "Nuke",
+    "radarImageKey":  "de_nuke/radar.png",
+    "coordinateSystem":  {
+                             "worldXMin":  -3453,
+                             "worldXMax":  3715,
+                             "worldYMin":  -4281,
+                             "worldYMax":  2887,
+                             "rotateDegrees":  0
+                         }
+}

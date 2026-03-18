@@ -1,0 +1,12 @@
+{
+    "mapId":  "de_vertigo",
+    "displayName":  "Vertigo",
+    "radarImageKey":  "de_vertigo/radar.png",
+    "coordinateSystem":  {
+                             "worldXMin":  -3168,
+                             "worldXMax":  928,
+                             "worldYMin":  -2334,
+                             "worldYMax":  1762,
+                             "rotateDegrees":  0
+                         }
+}

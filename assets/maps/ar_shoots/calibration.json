@@ -1,0 +1,12 @@
+{
+    "mapId":  "ar_shoots",
+    "displayName":  "Shoots",
+    "radarImageKey":  "ar_shoots/radar.png",
+    "coordinateSystem":  {
+                             "worldXMin":  -1368,
+                             "worldXMax":  1384,
+                             "worldYMin":  -800,
+                             "worldYMax":  1952,
+                             "rotateDegrees":  0
+                         }
+}

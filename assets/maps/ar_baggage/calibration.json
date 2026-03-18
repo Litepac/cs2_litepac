@@ -1,0 +1,12 @@
+{
+    "mapId":  "ar_baggage",
+    "displayName":  "Baggage",
+    "radarImageKey":  "ar_baggage/radar.png",
+    "coordinateSystem":  {
+                             "worldXMin":  -1316,
+                             "worldXMax":  1283.999488,
+                             "worldYMin":  -1311.999488,
+                             "worldYMax":  1288,
+                             "rotateDegrees":  0
+                         }
+}

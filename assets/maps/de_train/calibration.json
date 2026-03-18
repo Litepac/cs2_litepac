@@ -1,0 +1,12 @@
+{
+    "mapId":  "de_train",
+    "displayName":  "Train",
+    "radarImageKey":  "de_train/radar.png",
+    "coordinateSystem":  {
+                             "worldXMin":  -2308,
+                             "worldXMax":  1872.046848,
+                             "worldYMin":  -2102.046848,
+                             "worldYMax":  2078,
+                             "rotateDegrees":  0
+                         }
+}

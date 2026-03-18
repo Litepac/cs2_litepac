@@ -1,0 +1,12 @@
+{
+    "mapId":  "de_ancient",
+    "displayName":  "Ancient",
+    "radarImageKey":  "de_ancient/radar.png",
+    "coordinateSystem":  {
+                             "worldXMin":  -2953,
+                             "worldXMax":  2167,
+                             "worldYMin":  -2956,
+                             "worldYMax":  2164,
+                             "rotateDegrees":  0
+                         }
+}

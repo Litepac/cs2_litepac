@@ -1,0 +1,12 @@
+{
+    "mapId":  "de_anubis",
+    "displayName":  "Anubis",
+    "radarImageKey":  "de_anubis/radar.png",
+    "coordinateSystem":  {
+                             "worldXMin":  -2796,
+                             "worldXMax":  2549.2799999999997,
+                             "worldYMin":  -2017.2799999999997,
+                             "worldYMax":  3328,
+                             "rotateDegrees":  0
+                         }
+}

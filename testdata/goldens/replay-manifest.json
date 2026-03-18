@@ -1,0 +1,49 @@
+{
+  "files": [
+    {
+      "replayFile": "test1.replay.json",
+      "map": "de_ancient",
+      "rounds": 24,
+      "players": 10,
+      "teams": 2,
+      "tickRate": 64,
+      "kills": 173,
+      "bombEvents": 128,
+      "utility": 482,
+      "emptyStreams": 0,
+      "zeroTrajectories": 0,
+      "shortRounds": 0,
+      "longestRoundTicks": 11715
+    },
+    {
+      "replayFile": "test2.replay.json",
+      "map": "de_overpass",
+      "rounds": 23,
+      "players": 10,
+      "teams": 2,
+      "tickRate": 64,
+      "kills": 169,
+      "bombEvents": 103,
+      "utility": 400,
+      "emptyStreams": 0,
+      "zeroTrajectories": 0,
+      "shortRounds": 0,
+      "longestRoundTicks": 9529
+    },
+    {
+      "replayFile": "test3.replay.json",
+      "map": "de_inferno",
+      "rounds": 29,
+      "players": 10,
+      "teams": 2,
+      "tickRate": 64,
+      "kills": 210,
+      "bombEvents": 152,
+      "utility": 513,
+      "emptyStreams": 0,
+      "zeroTrajectories": 0,
+      "shortRounds": 0,
+      "longestRoundTicks": 10870
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+    "mapId":  "de_overpass",
+    "displayName":  "Overpass",
+    "radarImageKey":  "de_overpass/radar.png",
+    "coordinateSystem":  {
+                             "worldXMin":  -4831,
+                             "worldXMax":  493.80000000000018,
+                             "worldYMin":  -3543.8,
+                             "worldYMax":  1781,
+                             "rotateDegrees":  0
+                         }
+}

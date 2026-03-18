@@ -1,0 +1,12 @@
+{
+    "mapId":  "de_mirage",
+    "displayName":  "Mirage",
+    "radarImageKey":  "de_mirage/radar.png",
+    "coordinateSystem":  {
+                             "worldXMin":  -3230,
+                             "worldXMax":  1890,
+                             "worldYMin":  -3407,
+                             "worldYMax":  1713,
+                             "rotateDegrees":  0
+                         }
+}

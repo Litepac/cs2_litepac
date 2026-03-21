@@ -222,6 +222,56 @@ func (s *parseState) registerHandlers() {
 		})
 	})
 
+	s.parser.RegisterEventHandler(func(e demoevents.WeaponFire) {
+		if s.currentRound == nil || s.currentRound.HasEnded() {
+			return
+		}
+
+		playerID := s.ensurePlayer(e.Shooter)
+		if playerID == "" {
+			return
+		}
+
+		pos := positionOrNil(e.Shooter)
+		s.currentRound.AppendFire(replay.FireEvent{
+			Tick:       s.parser.CurrentFrame(),
+			PlayerID:   nilIfEmpty(playerID),
+			WeaponName: norm.WeaponName(e.Weapon),
+			X:          pos.x,
+			Y:          pos.y,
+			Z:          pos.z,
+		})
+	})
+
+	s.parser.RegisterEventHandler(func(e demoevents.PlayerHurt) {
+		if s.currentRound == nil || s.currentRound.HasEnded() {
+			return
+		}
+
+		victimID := s.ensurePlayer(e.Player)
+		if victimID == "" {
+			return
+		}
+
+		attackerID := s.ensurePlayer(e.Attacker)
+		attackerPos := positionOrNil(e.Attacker)
+		victimPos := positionOrNil(e.Player)
+		s.currentRound.AppendHurt(replay.HurtEvent{
+			Tick:              s.parser.CurrentFrame(),
+			AttackerPlayerID:  nilIfEmpty(attackerID),
+			VictimPlayerID:    nilIfEmpty(victimID),
+			WeaponName:        norm.WeaponName(e.Weapon),
+			HealthDamageTaken: e.HealthDamageTaken,
+			ArmorDamageTaken:  e.ArmorDamageTaken,
+			AttackerX:         attackerPos.x,
+			AttackerY:         attackerPos.y,
+			AttackerZ:         attackerPos.z,
+			VictimX:           victimPos.x,
+			VictimY:           victimPos.y,
+			VictimZ:           victimPos.z,
+		})
+	})
+
 	s.parser.RegisterEventHandler(func(e demoevents.BombPickup) {
 		s.appendBombEvent("pickup", e.Player, nil, positionOrBomb(s.parser.GameState().Bomb()))
 	})
@@ -356,6 +406,7 @@ func (s *parseState) registerHandlers() {
 		}
 
 		gs := s.parser.GameState()
+		s.currentRound.UtilityTracker().SyncInfernos(s.parser.CurrentFrame(), gs.Infernos())
 		for _, projectile := range gs.GrenadeProjectiles() {
 			if projectile == nil {
 				continue
@@ -436,7 +487,7 @@ func (s *parseState) finalizeOpenRound(endTick int) {
 		s.currentRound.ForceEnd(endTick)
 	}
 
-	s.roundList = append(s.roundList, s.currentRound.Build())
+	s.roundList = append(s.roundList, s.currentRound.Build(s.parser.TickRate()))
 	s.currentRound = nil
 }
 

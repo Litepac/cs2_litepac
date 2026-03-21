@@ -329,6 +329,98 @@
         }
       }
     },
+    "fireEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tick",
+        "playerId",
+        "weaponName",
+        "x",
+        "y",
+        "z"
+      ],
+      "properties": {
+        "tick": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "playerId": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "weaponName": {
+          "type": "string"
+        },
+        "x": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "y": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "z": {
+          "$ref": "#/$defs/nullableNumber"
+        }
+      }
+    },
+    "hurtEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tick",
+        "attackerPlayerId",
+        "victimPlayerId",
+        "weaponName",
+        "healthDamageTaken",
+        "armorDamageTaken",
+        "attackerX",
+        "attackerY",
+        "attackerZ",
+        "victimX",
+        "victimY",
+        "victimZ"
+      ],
+      "properties": {
+        "tick": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "attackerPlayerId": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "victimPlayerId": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "weaponName": {
+          "type": "string"
+        },
+        "healthDamageTaken": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "armorDamageTaken": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "attackerX": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "attackerY": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "attackerZ": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "victimX": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "victimY": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "victimZ": {
+          "$ref": "#/$defs/nullableNumber"
+        }
+      }
+    },
     "bombEvent": {
       "type": "object",
       "additionalProperties": false,
@@ -655,6 +747,8 @@
         "winnerSide",
         "endReason",
         "playerStreams",
+        "fireEvents",
+        "hurtEvents",
         "killEvents",
         "bombEvents",
         "utilityEntities"
@@ -694,6 +788,18 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/playerStream"
+          }
+        },
+        "fireEvents": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/fireEvent"
+          }
+        },
+        "hurtEvents": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/hurtEvent"
           }
         },
         "killEvents": {

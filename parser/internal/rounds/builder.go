@@ -30,6 +30,8 @@ func NewBuilder(roundNumber, startTick int, scoreBefore replay.Score) *Builder {
 			WinnerSide:      nil,
 			EndReason:       nil,
 			PlayerStreams:   []replay.PlayerStream{},
+			FireEvents:      []replay.FireEvent{},
+			HurtEvents:      []replay.HurtEvent{},
 			KillEvents:      []replay.KillEvent{},
 			BombEvents:      []replay.BombEvent{},
 			UtilityEntities: []replay.UtilityEntity{},
@@ -69,6 +71,14 @@ func (b *Builder) SetOfficialEnd(tick int) {
 
 func (b *Builder) AppendKill(event replay.KillEvent) {
 	b.round.KillEvents = append(b.round.KillEvents, event)
+}
+
+func (b *Builder) AppendFire(event replay.FireEvent) {
+	b.round.FireEvents = append(b.round.FireEvents, event)
+}
+
+func (b *Builder) AppendHurt(event replay.HurtEvent) {
+	b.round.HurtEvents = append(b.round.HurtEvents, event)
 }
 
 func (b *Builder) AppendBombEvent(event replay.BombEvent) {
@@ -135,7 +145,7 @@ func (b *Builder) SamplePlayer(
 	})
 }
 
-func (b *Builder) Build() replay.Round {
+func (b *Builder) Build(tickRate float64) replay.Round {
 	out := b.round
 	out.PlayerStreams = make([]replay.PlayerStream, 0, len(b.playerStreams))
 	for _, stream := range b.playerStreams {
@@ -147,13 +157,19 @@ func (b *Builder) Build() replay.Round {
 	sort.Slice(out.PlayerStreams, func(i, j int) bool {
 		return out.PlayerStreams[i].PlayerID < out.PlayerStreams[j].PlayerID
 	})
+	sort.Slice(out.FireEvents, func(i, j int) bool {
+		return out.FireEvents[i].Tick < out.FireEvents[j].Tick
+	})
+	sort.Slice(out.HurtEvents, func(i, j int) bool {
+		return out.HurtEvents[i].Tick < out.HurtEvents[j].Tick
+	})
 	sort.Slice(out.KillEvents, func(i, j int) bool {
 		return out.KillEvents[i].Tick < out.KillEvents[j].Tick
 	})
 	sort.Slice(out.BombEvents, func(i, j int) bool {
 		return out.BombEvents[i].Tick < out.BombEvents[j].Tick
 	})
-	out.UtilityEntities = b.utilityTracker.Build()
+	out.UtilityEntities = b.utilityTracker.Build(tickRate)
 
 	return out
 }

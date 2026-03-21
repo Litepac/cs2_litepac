@@ -80,6 +80,8 @@ type Round struct {
 	WinnerSide      *string         `json:"winnerSide"`
 	EndReason       *string         `json:"endReason"`
 	PlayerStreams   []PlayerStream  `json:"playerStreams"`
+	FireEvents      []FireEvent     `json:"fireEvents"`
+	HurtEvents      []HurtEvent     `json:"hurtEvents"`
 	KillEvents      []KillEvent     `json:"killEvents"`
 	BombEvents      []BombEvent     `json:"bombEvents"`
 	UtilityEntities []UtilityEntity `json:"utilityEntities"`
@@ -126,6 +128,30 @@ type KillEvent struct {
 	KillerX           *float64 `json:"killerX"`
 	KillerY           *float64 `json:"killerY"`
 	KillerZ           *float64 `json:"killerZ"`
+	VictimX           *float64 `json:"victimX"`
+	VictimY           *float64 `json:"victimY"`
+	VictimZ           *float64 `json:"victimZ"`
+}
+
+type FireEvent struct {
+	Tick       int      `json:"tick"`
+	PlayerID   *string  `json:"playerId"`
+	WeaponName string   `json:"weaponName"`
+	X          *float64 `json:"x"`
+	Y          *float64 `json:"y"`
+	Z          *float64 `json:"z"`
+}
+
+type HurtEvent struct {
+	Tick              int      `json:"tick"`
+	AttackerPlayerID  *string  `json:"attackerPlayerId"`
+	VictimPlayerID    *string  `json:"victimPlayerId"`
+	WeaponName        string   `json:"weaponName"`
+	HealthDamageTaken int      `json:"healthDamageTaken"`
+	ArmorDamageTaken  int      `json:"armorDamageTaken"`
+	AttackerX         *float64 `json:"attackerX"`
+	AttackerY         *float64 `json:"attackerY"`
+	AttackerZ         *float64 `json:"attackerZ"`
 	VictimX           *float64 `json:"victimX"`
 	VictimY           *float64 `json:"victimY"`
 	VictimZ           *float64 `json:"victimZ"`

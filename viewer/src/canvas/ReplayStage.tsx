@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Application, Assets, Container, Graphics, Rectangle, Sprite, Text, Texture } from "pixi.js";
 
 import { drawUtilityVisual } from "./utilityVisuals";
@@ -42,8 +42,7 @@ const DEFAULT_STAGE_WIDTH = 1180;
 const DEFAULT_STAGE_HEIGHT = 760;
 const MIN_STAGE_WIDTH = 680;
 const MIN_STAGE_HEIGHT = 420;
-const MAX_STAGE_WIDTH = 1680;
-const MAX_STAGE_HEIGHT = 1180;
+const RECENT_HURT_WINDOW_TICKS = 64 * 2;
 const RECENT_KILL_WINDOW_TICKS = 64 * 6;
 const RECENT_BOMB_WINDOW_TICKS = 64 * 8;
 export function ReplayStage({
@@ -72,6 +71,21 @@ export function ReplayStage({
     width: DEFAULT_STAGE_WIDTH,
   });
 
+  function syncViewportSizeFromHost(hostElement: HTMLDivElement) {
+    const bounds = hostElement.getBoundingClientRect();
+    const nextViewportSize = resolveViewportDimensions(bounds.width, bounds.height);
+    setViewportSize((value) =>
+      value.width === nextViewportSize.width && value.height === nextViewportSize.height ? value : nextViewportSize,
+    );
+
+    const stage = stageRef.current;
+    if (stage) {
+      stage.app.renderer.resize(nextViewportSize.width, nextViewportSize.height);
+      applyCameraTransform(stage);
+      setStageRevision((value) => value + 1);
+    }
+  }
+
   useEffect(() => {
     currentTickRef.current = currentTick;
     replayRef.current = replay;
@@ -82,27 +96,63 @@ export function ReplayStage({
     onSelectPlayerRef.current = onSelectPlayer;
   }, [currentTick, onSelectPlayer, playerById, replay, round, selectedPlayerId, utilityFocus]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!hostRef.current) {
       return;
     }
+
+    const hostElement = hostRef.current;
+    let frameA: number | null = null;
+    let frameB: number | null = null;
 
     const observer = new ResizeObserver((entries) => {
       const entry = entries[0];
       if (!entry) {
         return;
       }
-
-      const nextViewportSize = resolveViewportDimensions(entry.contentRect.width, entry.contentRect.height);
-      setViewportSize((value) =>
-        value.width === nextViewportSize.width && value.height === nextViewportSize.height ? value : nextViewportSize,
-      );
+      syncViewportSizeFromHost(hostElement);
     });
 
-    observer.observe(hostRef.current);
+    observer.observe(hostElement);
+    syncViewportSizeFromHost(hostElement);
+    frameA = window.requestAnimationFrame(() => {
+      syncViewportSizeFromHost(hostElement);
+      frameB = window.requestAnimationFrame(() => syncViewportSizeFromHost(hostElement));
+    });
 
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      if (frameA != null) {
+        window.cancelAnimationFrame(frameA);
+      }
+      if (frameB != null) {
+        window.cancelAnimationFrame(frameB);
+      }
+    };
   }, []);
+
+  useEffect(() => {
+    if (!hostRef.current) {
+      return;
+    }
+
+    const hostElement = hostRef.current;
+    let frameA: number | null = window.requestAnimationFrame(() => syncViewportSizeFromHost(hostElement));
+    let frameB: number | null = null;
+    const timeoutId = window.setTimeout(() => {
+      frameB = window.requestAnimationFrame(() => syncViewportSizeFromHost(hostElement));
+    }, 60);
+
+    return () => {
+      if (frameA != null) {
+        window.cancelAnimationFrame(frameA);
+      }
+      if (frameB != null) {
+        window.cancelAnimationFrame(frameB);
+      }
+      window.clearTimeout(timeoutId);
+    };
+  }, [replay.sourceDemo.fileName, round.roundNumber]);
 
   useEffect(() => {
     let cancelled = false;
@@ -170,6 +220,7 @@ export function ReplayStage({
         cameraOffsetY: 0,
         cameraScale: 1,
       };
+      syncViewportSizeFromHost(hostRef.current);
       setStageRevision((value) => value + 1);
     }
 
@@ -462,6 +513,10 @@ function renderDynamicFrame(
     drawBombEvent(stage.bombLayer, replay, bombEvent, fullRenderTick, radarViewport);
   }
 
+  for (const hurtEvent of round.hurtEvents) {
+    drawHurtEvent(stage.killLayer, replay, round, hurtEvent, fullRenderTick, radarViewport);
+  }
+
   for (const killEvent of round.killEvents) {
     drawKillEvent(stage.killLayer, replay, killEvent, fullRenderTick, radarViewport);
   }
@@ -509,21 +564,10 @@ function renderDynamicFrame(
     });
   }
 
-  for (const entry of livePlayers) {
-    if (!entry.player) {
-      continue;
-    }
-
-    drawPlayerLabel(
-      stage.eventLayer,
-      entry.point.x,
-      entry.point.y,
-      compactPlayerLabel(entry.player.displayName, entry.selected ? 12 : 10),
-      entry.selected,
-      entry.side,
-      entry.hasBomb,
-    );
-  }
+  drawPlayerLabels(
+    stage.eventLayer,
+    livePlayers.filter((entry): entry is typeof entry & { player: Replay["players"][number] } => entry.player != null),
+  );
 }
 
 function interpolatePlayerSample(
@@ -583,8 +627,8 @@ function interpolateAngle(left: number | null, right: number | null, mix: number
 
 function drawPlayerLabel(
   layer: Container,
-  playerX: number,
-  playerY: number,
+  labelX: number,
+  labelY: number,
   displayName: string,
   selected: boolean,
   side: "T" | "CT" | null,
@@ -607,13 +651,10 @@ function drawPlayerLabel(
   const paddingY = 1.5;
   const labelWidth = text.width + paddingX * 2;
   const labelHeight = text.height + paddingY * 2;
-  const markerRadius = selected ? 11 : 8;
-  const labelX = Math.round(playerX - labelWidth / 2);
-  const labelY = Math.round(playerY + markerRadius + 6);
 
   const background = new Graphics();
-  background.roundRect(labelX, labelY, labelWidth, labelHeight, 3);
-  background.fill({ color: selected ? 0x121a22 : 0x0b1117, alpha: selected ? 0.95 : 0.9 });
+  background.roundRect(labelX, labelY, labelWidth, labelHeight, 2);
+  background.fill({ color: selected ? 0x121a22 : 0x0b1117, alpha: selected ? 0.95 : 0.86 });
   background.stroke({
     color:
       hasBomb ? 0xffc56d : side === "CT" ? 0x3f95d4 : side === "T" ? 0xd68c2c : 0x2c3c49,
@@ -638,25 +679,36 @@ function drawPlayerMarker(
   const fillColor = side === "CT" ? 0x3fa8ff : 0xf3a448;
   const strokeColor = selected ? 0xf6fbff : 0x091116;
   const radius = selected ? 9 : 7;
+  const ringColor = selected ? 0xf6fbff : 0xe9f0f5;
   marker.circle(x, y, radius);
   marker.fill({ color: fillColor, alpha: selected ? 1 : 0.96 });
   marker.stroke({ color: strokeColor, width: selected ? 2.4 : 2 });
-  marker.circle(x - radius * 0.26, y - radius * 0.3, selected ? 1.7 : 1.4);
-  marker.fill({ color: 0xf7fbff, alpha: 0.22 });
-
-  marker.moveTo(x, y + radius - 0.4);
-  marker.lineTo(x, y + radius + (selected ? 4.4 : 4));
-  marker.stroke({ color: strokeColor, width: selected ? 1.6 : 1.4, alpha: 0.92 });
+  marker.circle(x, y, selected ? 2.2 : 1.7);
+  marker.fill({ color: 0xf7fbff, alpha: 0.2 });
+  marker.circle(x, y, radius + (selected ? 1.2 : 0.8));
+  marker.stroke({ color: ringColor, width: selected ? 1.1 : 0.8, alpha: 0.18 });
 
   if (yaw != null) {
     const radians = (yaw * Math.PI) / 180;
-    const aimRadius = selected ? 2.2 : 1.9;
-    const aimDistance = radius + (selected ? 6 : 5.1);
-    const aimX = x + Math.cos(radians) * aimDistance;
-    const aimY = y - Math.sin(radians) * aimDistance;
-    marker.circle(aimX, aimY, aimRadius);
+    const pointerBaseDistance = radius - 0.8;
+    const pointerTipDistance = radius + (selected ? 5.6 : 4.8);
+    const pointerHalfWidth = selected ? 3.2 : 2.8;
+    const baseX = x + Math.cos(radians) * pointerBaseDistance;
+    const baseY = y - Math.sin(radians) * pointerBaseDistance;
+    const tipX = x + Math.cos(radians) * pointerTipDistance;
+    const tipY = y - Math.sin(radians) * pointerTipDistance;
+    const normalX = Math.cos(radians + Math.PI / 2) * pointerHalfWidth;
+    const normalY = -Math.sin(radians + Math.PI / 2) * pointerHalfWidth;
+
+    marker.moveTo(baseX + normalX, baseY + normalY);
+    marker.lineTo(baseX - normalX, baseY - normalY);
+    marker.lineTo(tipX, tipY);
+    marker.closePath();
     marker.fill({ color: fillColor, alpha: 0.98 });
-    marker.stroke({ color: strokeColor, width: selected ? 1.5 : 1.2, alpha: 0.94 });
+    marker.stroke({ color: strokeColor, width: selected ? 1.4 : 1.1, alpha: 0.92 });
+
+    marker.circle(tipX, tipY, selected ? 1.8 : 1.5);
+    marker.fill({ color: 0xf6fbff, alpha: 0.9 });
   }
 }
 
@@ -744,12 +796,74 @@ function drawKillEvent(
   layer.addChild(marker);
 }
 
+function drawHurtEvent(
+  layer: Container,
+  replay: Replay,
+  round: Round,
+  event: Round["hurtEvents"][number],
+  currentTick: number,
+  radarViewport: RadarViewport,
+) {
+  if (event.tick > currentTick || currentTick - event.tick > RECENT_HURT_WINDOW_TICKS) {
+    return;
+  }
+
+  if (event.attackerX == null || event.attackerY == null || event.victimX == null || event.victimY == null) {
+    return;
+  }
+
+  const ageRatio = 1 - (currentTick - event.tick) / RECENT_HURT_WINDOW_TICKS;
+  const attackerPoint = worldToScreen(replay, radarViewport, event.attackerX, event.attackerY);
+  const victimPoint = worldToScreen(replay, radarViewport, event.victimX, event.victimY);
+  const side = resolvePlayerSide(round, event.attackerPlayerId);
+  const accentColor = side === "CT" ? 0x8ed1ff : side === "T" ? 0xffca78 : 0xffe2ad;
+  const damageValue = event.healthDamageTaken > 0 ? event.healthDamageTaken : event.armorDamageTaken;
+
+  const marker = new Graphics();
+  marker.moveTo(attackerPoint.x, attackerPoint.y);
+  marker.lineTo(victimPoint.x, victimPoint.y);
+  marker.stroke({ color: accentColor, width: 2.6, alpha: 0.16 + ageRatio * 0.22 });
+  marker.moveTo(attackerPoint.x, attackerPoint.y);
+  marker.lineTo(victimPoint.x, victimPoint.y);
+  marker.stroke({ color: 0xfff1cf, width: 1.2, alpha: 0.34 + ageRatio * 0.38 });
+  marker.circle(victimPoint.x, victimPoint.y, 3 + ageRatio * 1.6);
+  marker.fill({ color: accentColor, alpha: 0.08 + ageRatio * 0.14 });
+  layer.addChild(marker);
+
+  if (damageValue > 0) {
+    const damageText = new Text({
+      text: `${damageValue}`,
+      style: {
+        fill: 0xf3f5f8,
+        fontFamily: "IBM Plex Sans, Segoe UI, sans-serif",
+        fontSize: 10,
+        fontWeight: "700",
+        stroke: { color: 0x0a1218, width: 3, join: "round" },
+      },
+    });
+    damageText.anchor.set(0.5, 1);
+    damageText.roundPixels = true;
+    damageText.resolution = 2;
+    damageText.position.set(victimPoint.x, victimPoint.y - 8 - ageRatio * 8);
+    damageText.alpha = 0.36 + ageRatio * 0.52;
+    layer.addChild(damageText);
+  }
+}
+
 function resolveUtilityThrowerSide(round: Round, throwerPlayerId: string | null) {
   if (!throwerPlayerId) {
     return null;
   }
 
   return round.playerStreams.find((stream) => stream.playerId === throwerPlayerId)?.side ?? null;
+}
+
+function resolvePlayerSide(round: Round, playerId: string | null) {
+  if (!playerId) {
+    return null;
+  }
+
+  return round.playerStreams.find((stream) => stream.playerId === playerId)?.side ?? null;
 }
 
 function resolveViewportDimensions(width: number, height: number) {
@@ -761,7 +875,79 @@ function resolveViewportDimensions(width: number, height: number) {
   }
 
   return {
-    height: Math.max(MIN_STAGE_HEIGHT, Math.min(MAX_STAGE_HEIGHT, Math.floor(height - 8))),
-    width: Math.max(MIN_STAGE_WIDTH, Math.min(MAX_STAGE_WIDTH, Math.floor(width - 8))),
+    height: Math.max(MIN_STAGE_HEIGHT, Math.floor(height)),
+    width: Math.max(MIN_STAGE_WIDTH, Math.floor(width)),
   };
+}
+
+function drawPlayerLabels(
+  layer: Container,
+  livePlayers: Array<{
+    hasBomb: boolean;
+    player: Replay["players"][number];
+    point: { x: number; y: number };
+    selected: boolean;
+    side: "T" | "CT" | null;
+  }>,
+) {
+  const occupied: Array<{ bottom: number; left: number; right: number; top: number }> = [];
+  const ordered = [...livePlayers].sort((left, right) => {
+    if (left.selected !== right.selected) {
+      return left.selected ? -1 : 1;
+    }
+
+    return left.point.y - right.point.y;
+  });
+
+  for (const entry of ordered) {
+    const displayName = compactPlayerLabel(entry.player.displayName, entry.selected ? 12 : 9);
+    const fontSize = entry.selected ? 9 : 8;
+    const paddingX = entry.selected ? 6 : 5;
+    const labelWidth = estimateLabelWidth(displayName, fontSize) + paddingX * 2;
+    const labelHeight = fontSize + 6;
+    const markerRadius = entry.selected ? 11 : 8;
+    const positions = [
+      {
+        x: Math.round(entry.point.x - labelWidth / 2),
+        y: Math.round(entry.point.y - markerRadius - labelHeight - 6),
+      },
+      {
+        x: Math.round(entry.point.x - labelWidth / 2),
+        y: Math.round(entry.point.y + markerRadius + 6),
+      },
+    ];
+    if (entry.side === "T") {
+      positions.reverse();
+    }
+
+    const placement =
+      positions.find((candidate) => !intersectsAny(candidate.x, candidate.y, labelWidth, labelHeight, occupied)) ??
+      (entry.selected ? positions[0] : null);
+
+    if (!placement) {
+      continue;
+    }
+
+    drawPlayerLabel(layer, placement.x, placement.y, displayName, entry.selected, entry.side, entry.hasBomb);
+    occupied.push({
+      bottom: placement.y + labelHeight,
+      left: placement.x,
+      right: placement.x + labelWidth,
+      top: placement.y,
+    });
+  }
+}
+
+function estimateLabelWidth(label: string, fontSize: number) {
+  return Math.max(24, Math.round(label.length * fontSize * 0.58));
+}
+
+function intersectsAny(
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  occupied: Array<{ bottom: number; left: number; right: number; top: number }>,
+) {
+  return occupied.some((entry) => x < entry.right && x + width > entry.left && y < entry.bottom && y + height > entry.top);
 }

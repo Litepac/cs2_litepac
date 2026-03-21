@@ -57,6 +57,8 @@ export type Round = {
   winnerSide: "T" | "CT" | null;
   endReason: string | null;
   playerStreams: PlayerStream[];
+  fireEvents: FireEvent[];
+  hurtEvents: HurtEvent[];
   killEvents: KillEvent[];
   bombEvents: BombEvent[];
   utilityEntities: UtilityEntity[];
@@ -98,6 +100,30 @@ export type KillEvent = {
   killerX: number | null;
   killerY: number | null;
   killerZ: number | null;
+  victimX: number | null;
+  victimY: number | null;
+  victimZ: number | null;
+};
+
+export type FireEvent = {
+  tick: number;
+  playerId: string | null;
+  weaponName: string;
+  x: number | null;
+  y: number | null;
+  z: number | null;
+};
+
+export type HurtEvent = {
+  tick: number;
+  attackerPlayerId: string | null;
+  victimPlayerId: string | null;
+  weaponName: string;
+  healthDamageTaken: number;
+  armorDamageTaken: number;
+  attackerX: number | null;
+  attackerY: number | null;
+  attackerZ: number | null;
   victimX: number | null;
   victimY: number | null;
   victimZ: number | null;

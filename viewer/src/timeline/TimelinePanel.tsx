@@ -1,14 +1,16 @@
 import { useEffect, useRef } from "react";
 
+import { scoreForSide, sideTeam } from "../replay/derived";
 import type { UtilityFocus } from "../replay/utilityFilter";
-import type { Round } from "../replay/types";
-import type { TimelineEventItem, TimelineUtilityWindow } from "../replay/timeline";
+import type { Replay, Round } from "../replay/types";
+import type { TimelineEventItem } from "../replay/timeline";
 
 type Props = {
   activeRoundIndex: number;
   currentTick: number;
   markers: TimelineEventItem[];
   playing: boolean;
+  replay: Replay;
   roundClock: string | null;
   round: Round;
   rounds: Round[];
@@ -17,7 +19,6 @@ type Props = {
   tick: number;
   tickRate: number;
   utilityFocus: UtilityFocus;
-  utilityWindows: TimelineUtilityWindow[];
   onPlayToggle: () => void;
   onReset: () => void;
   onSelectRound: (index: number) => void;
@@ -42,6 +43,7 @@ export function TimelinePanel({
   currentTick,
   markers,
   playing,
+  replay,
   roundClock,
   round,
   rounds,
@@ -50,7 +52,6 @@ export function TimelinePanel({
   tick,
   tickRate,
   utilityFocus,
-  utilityWindows,
   onPlayToggle,
   onReset,
   onSelectRound,
@@ -60,22 +61,19 @@ export function TimelinePanel({
   onUtilityFocusChange,
 }: Props) {
   const displayStartTick = showFreezeTime ? round.startTick : clamp(round.freezeEndTick ?? round.startTick, round.startTick, round.endTick);
-  const displayEndTick = round.endTick;
+  const displayEndTick =
+    round.officialEndTick != null && round.officialEndTick > round.endTick ? round.officialEndTick : round.endTick;
   const range = Math.max(1, displayEndTick - displayStartTick);
   const seekValue = clamp(currentTick, displayStartTick, displayEndTick);
   const currentPercent = `${((seekValue - displayStartTick) / range) * 100}%`;
   const phases = buildRoundPhases(round).filter((phase) => showFreezeTime || phase.kind !== "freeze");
-  const secondMarkers = buildSecondMarkers(round, tickRate, displayStartTick);
+  const secondMarkers = buildSecondMarkers(displayStartTick, displayEndTick, tickRate);
   const visibleMarkers = markers.filter((event) => event.tick >= displayStartTick && event.tick <= displayEndTick);
-  const visibleUtilityWindows = utilityWindows
-    .map((window) => ({
-      ...window,
-      startTick: clamp(window.startTick, displayStartTick, displayEndTick),
-      endTick: clamp(window.endTick, displayStartTick, displayEndTick),
-    }))
-    .filter((window) => window.endTick > window.startTick);
   const officialOffsetTicks =
     round.officialEndTick != null && round.officialEndTick > round.endTick ? round.officialEndTick - round.endTick : null;
+  const ctTeam = sideTeam(replay, round, "CT");
+  const tTeam = sideTeam(replay, round, "T");
+  const currentPhase = resolveCurrentPhase(phases, seekValue);
   const rowRef = useRef<HTMLDivElement | null>(null);
   const buttonRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
@@ -95,25 +93,6 @@ export function TimelinePanel({
   return (
     <section className="timeline-shell timeline-shell-operator">
       <div className="timeline-operator-top">
-        <div className="timeline-utility-toggle-row">
-          <span className="timeline-section-tag">Replay</span>
-          <button
-            className={showFreezeTime ? "control-button control-button-active" : "control-button"}
-            onClick={() => onShowFreezeTimeChange(!showFreezeTime)}
-          >
-            Freeze
-          </button>
-          {UTILITY_OPTIONS.map((option) => (
-            <button
-              key={option.value}
-              className={option.value === utilityFocus ? "control-button control-button-active" : "control-button"}
-              onClick={() => onUtilityFocusChange(option.value)}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-
         <div className="timeline-round-nav">
           <button
             className="timeline-chevron"
@@ -149,6 +128,14 @@ export function TimelinePanel({
             {">"}
           </button>
         </div>
+
+        <div className="timeline-top-meta">
+          <span className="timeline-map-label">{replay.map.displayName}</span>
+          <div className="timeline-compact-scoreboard">
+            <CompactScore side="CT" score={scoreForSide(round, "CT", "before")} label={ctTeam?.displayName ?? "CT Side"} />
+            <CompactScore side="T" score={scoreForSide(round, "T", "before")} label={tTeam?.displayName ?? "T Side"} />
+          </div>
+        </div>
       </div>
 
       <div className="timeline-main-dock">
@@ -165,15 +152,25 @@ export function TimelinePanel({
         <div className="timeline-center-dock">
           <div className="timeline-readout-row">
             <span className="timeline-readout-round">Round {round.roundNumber}</span>
-            <strong>{roundClock ?? "--:--"}</strong>
             <span className="timeline-readout-tick">Tick {tick}</span>
-            {round.endReason ? <span className="timeline-end-reason">{round.endReason}</span> : null}
-            {officialOffsetTicks != null ? <span className="timeline-end-offset">official +{officialOffsetTicks} ticks</span> : null}
+            <span className={`timeline-readout-chip timeline-readout-chip-${currentPhase.kind}`}>{currentPhase.label}</span>
+            {utilityFocus !== "all" ? (
+              <span className="timeline-readout-chip timeline-readout-chip-muted">{utilityFocusLabel(utilityFocus)}</span>
+            ) : null}
+            {round.winnerSide ? <span className={`timeline-readout-side timeline-readout-side-${round.winnerSide.toLowerCase()}`}>{round.winnerSide}</span> : null}
+            {round.endReason ? <span className="timeline-readout-meta">{round.endReason}</span> : null}
+            {officialOffsetTicks != null ? <span className="timeline-readout-meta">official +{officialOffsetTicks}</span> : null}
           </div>
 
-          <div className="timeline-bands-grid">
-            <span className="timeline-row-label">TIME</span>
-            <div className="timeline-ruler-row timeline-operator-row">
+          <div className="timeline-bands-layout">
+            <div className="timeline-label-column">
+              <span className="timeline-row-label">TIME</span>
+              <span className="timeline-row-label">EVENTS</span>
+              <span className="timeline-row-label">SEEK</span>
+            </div>
+
+            <div className="timeline-track-shell">
+              <div className="timeline-ruler-row timeline-track-lane">
               {secondMarkers.map((marker) => (
                 <span
                   key={marker.tick}
@@ -185,78 +182,68 @@ export function TimelinePanel({
                 </span>
               ))}
               <span className="timeline-current-line" style={{ left: currentPercent }} />
-            </div>
+              </div>
 
-            <span className="timeline-row-label">PHASE</span>
-            <div className="timeline-phase-band">
-              {phases.map((phase) => (
-                <span
-                  key={`${phase.kind}-${phase.startTick}-${phase.endTick}`}
-                  className={`timeline-phase timeline-phase-${phase.kind}`}
-                  style={{
-                    left: `${((clamp(phase.startTick, displayStartTick, displayEndTick) - displayStartTick) / range) * 100}%`,
-                    width: `${((clamp(phase.endTick, displayStartTick, displayEndTick) - clamp(phase.startTick, displayStartTick, displayEndTick)) / range) * 100}%`,
-                  }}
-                  title={phase.label}
+              <div className="timeline-marker-row timeline-track-lane">
+                {visibleMarkers.map((event) => (
+                  <span
+                    key={event.key}
+                    className={timelineMarkerClassName(event)}
+                    style={{ left: `${((event.tick - displayStartTick) / range) * 100}%` }}
+                    title={event.label}
+                  />
+                ))}
+                <span className="timeline-current-line" style={{ left: currentPercent }} />
+              </div>
+
+              <div className="timeline-seek-row timeline-track-lane">
+                <input
+                  type="range"
+                  min={displayStartTick}
+                  max={displayEndTick}
+                  value={seekValue}
+                  onChange={(event) => onTickChange(Number(event.target.value))}
                 />
-              ))}
-              <span className="timeline-current-line" style={{ left: currentPercent }} />
-            </div>
-
-            <span className="timeline-row-label">UTIL</span>
-            <div className="timeline-utility-row timeline-operator-row">
-              {visibleUtilityWindows.map((utilityWindow) => (
-                <span
-                  key={utilityWindow.key}
-                  className={`timeline-utility-window timeline-utility-window-${utilityWindow.kind}`}
-                  style={{
-                    left: `${((utilityWindow.startTick - displayStartTick) / range) * 100}%`,
-                    width: `${((utilityWindow.endTick - utilityWindow.startTick) / range) * 100}%`,
-                  }}
-                  title={utilityWindow.label}
-                />
-              ))}
-              <span className="timeline-current-line" style={{ left: currentPercent }} />
-            </div>
-
-            <span className="timeline-row-label">EVENTS</span>
-            <div className="timeline-marker-row timeline-operator-row">
-              {visibleMarkers.map((event) => (
-                <span
-                  key={event.key}
-                  className={timelineMarkerClassName(event)}
-                  style={{ left: `${((event.tick - displayStartTick) / range) * 100}%` }}
-                  title={event.label}
-                />
-              ))}
-              <span className="timeline-current-line" style={{ left: currentPercent }} />
-            </div>
-
-            <span className="timeline-row-label">SEEK</span>
-            <div className="timeline-seek-row timeline-operator-row">
-              <input
-                type="range"
-                min={displayStartTick}
-                max={displayEndTick}
-                value={seekValue}
-                onChange={(event) => onTickChange(Number(event.target.value))}
-              />
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="timeline-right-controls">
-          <button className="control-button" onClick={onReset}>Reset</button>
-          <div className="timeline-speed-row">
-            {SPEEDS.map((entry) => (
-              <button
-                key={entry}
-                className={entry === speed ? "control-button control-button-active" : "control-button"}
-                onClick={() => onSpeedChange(entry)}
-              >
-                {entry}x
-              </button>
-            ))}
+          <div className="timeline-controls-panel">
+            <div className="timeline-control-strip">
+              <div className="timeline-utility-toggle-row timeline-segmented-row">
+                <button
+                  className={showFreezeTime ? "control-button control-button-active" : "control-button"}
+                  onClick={() => onShowFreezeTimeChange(!showFreezeTime)}
+                >
+                  Freeze
+                </button>
+                {UTILITY_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    className={option.value === utilityFocus ? "control-button control-button-active" : "control-button"}
+                    onClick={() => onUtilityFocusChange(option.value)}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="timeline-control-strip">
+              <div className="timeline-speed-row timeline-segmented-row timeline-segmented-row-speed">
+                {SPEEDS.map((entry) => (
+                  <button
+                    key={entry}
+                    className={entry === speed ? "control-button control-button-active" : "control-button"}
+                    onClick={() => onSpeedChange(entry)}
+                  >
+                    {entry}x
+                  </button>
+                ))}
+                <button className="control-button" onClick={onReset}>
+                  Reset
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -264,9 +251,25 @@ export function TimelinePanel({
   );
 }
 
+type CompactScoreProps = {
+  label: string;
+  score: number;
+  side: "CT" | "T";
+};
+
+function CompactScore({ label, score, side }: CompactScoreProps) {
+  return (
+    <div className={`timeline-score-chip timeline-score-chip-${side.toLowerCase()}`}>
+      <span>{side}</span>
+      <strong>{score}</strong>
+      <small>{label}</small>
+    </div>
+  );
+}
+
 function timelineMarkerClassName(event: TimelineEventItem) {
   if (event.kind === "bomb") {
-    return "timeline-marker timeline-marker-bomb";
+    return `timeline-marker timeline-marker-bomb timeline-marker-bomb-${event.bombType ?? "generic"}`;
   }
 
   if (event.kind === "utility") {
@@ -328,11 +331,11 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
-function buildSecondMarkers(round: Round, tickRate: number, displayStartTick: number) {
+function buildSecondMarkers(displayStartTick: number, displayEndTick: number, tickRate: number) {
   const markers: Array<{ label: string; tick: number }> = [];
   const stepTicks = Math.max(1, Math.round(tickRate * 15));
 
-  for (let tick = displayStartTick + stepTicks; tick < round.endTick; tick += stepTicks) {
+  for (let tick = displayStartTick + stepTicks; tick < displayEndTick; tick += stepTicks) {
     const seconds = Math.round((tick - displayStartTick) / tickRate);
     markers.push({
       label: `${seconds}s`,
@@ -341,4 +344,20 @@ function buildSecondMarkers(round: Round, tickRate: number, displayStartTick: nu
   }
 
   return markers;
+}
+
+function resolveCurrentPhase(phases: RoundPhase[], tick: number) {
+  const phase = phases.find((entry) => tick >= entry.startTick && tick <= entry.endTick) ?? phases[phases.length - 1];
+  return phase ?? { kind: "live", label: "Live", startTick: tick, endTick: tick };
+}
+
+function utilityFocusLabel(focus: UtilityFocus) {
+  switch (focus) {
+    case "flashbang":
+      return "flash";
+    case "hegrenade":
+      return "he";
+    default:
+      return focus;
+  }
 }

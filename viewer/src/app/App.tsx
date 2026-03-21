@@ -1,15 +1,13 @@
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import { ReplayStage } from "../canvas/ReplayStage";
-import { MapHud } from "../controls/MapHud";
-import { PlaybackHeader } from "../controls/PlaybackHeader";
 import { KillFeed } from "../controls/KillFeed";
 import { RosterPanel } from "../controls/RosterPanel";
 import { Sidebar } from "../controls/Sidebar";
 import { formatRoundClock } from "../replay/derived";
 import { loadFixtureIndex, type FixtureIndex } from "../replay/fixtures";
 import { loadReplayFile, loadReplayURL } from "../replay/loader";
-import { buildTimelineMarkers, buildUtilityWindows } from "../replay/timeline";
+import { buildTimelineMarkers } from "../replay/timeline";
 import type { Replay } from "../replay/types";
 import type { UtilityFocus } from "../replay/utilityFilter";
 import { TimelinePanel } from "../timeline/TimelinePanel";
@@ -30,6 +28,13 @@ export function App() {
 
   const round = replay?.rounds[roundIndex] ?? null;
   const initialRoundTick = round ? resolveInitialRoundTick(round) : 0;
+  const effectiveRoundEndTick = round ? resolveVisibleRoundEndTick(round) : 0;
+  const renderTick = round ? clampTick(displayTick, round.startTick, round.endTick) : 0;
+  const clockStartTick = round
+    ? showFreezeTime
+      ? round.startTick
+      : clampTick(round.freezeEndTick ?? round.startTick, round.startTick, round.endTick)
+    : 0;
 
   useEffect(() => {
     void loadFixtureIndex().then((index) => {
@@ -61,8 +66,8 @@ export function App() {
       const elapsedSeconds = Math.max(0, (timestamp - previous) / 1000);
 
       setDisplayTick((current) => {
-        const next = Math.min(round.endTick, current + elapsedSeconds * tickRate * speed);
-        if (next >= round.endTick) {
+        const next = Math.min(effectiveRoundEndTick, current + elapsedSeconds * tickRate * speed);
+        if (next >= effectiveRoundEndTick) {
           setPlaying(false);
         }
         return next;
@@ -79,12 +84,12 @@ export function App() {
       }
       lastFrameTimeRef.current = null;
     };
-  }, [playing, replay?.match.tickRate, replay?.sourceDemo.tickRate, round, speed]);
+  }, [effectiveRoundEndTick, playing, replay?.match.tickRate, replay?.sourceDemo.tickRate, round, speed]);
 
   const tick = Math.round(displayTick);
-  const roundClock = replay && round ? formatRoundClock(tick, round.startTick, replay.match.tickRate) : null;
+  const renderTickRounded = Math.round(renderTick);
+  const roundClock = replay && round ? formatRoundClock(tick, clockStartTick, replay.match.tickRate) : null;
   const timelineMarkers = useMemo(() => buildTimelineMarkers(replay, round, utilityFocus), [replay, round, utilityFocus]);
-  const utilityWindows = useMemo(() => buildUtilityWindows(replay, round, utilityFocus), [replay, round, utilityFocus]);
 
   function togglePlayback() {
     if (!round) {
@@ -96,8 +101,8 @@ export function App() {
       return;
     }
 
-    if (displayTick >= round.endTick) {
-      setDisplayTick(round.startTick);
+    if (displayTick >= effectiveRoundEndTick) {
+      setDisplayTick(initialRoundTick);
     }
 
     lastFrameTimeRef.current = null;
@@ -148,35 +153,23 @@ export function App() {
       <main className="viewer-shell">
         {replay && round ? (
           <>
-            <PlaybackHeader
-              replay={replay}
-              round={round}
-            />
-
             <section className="map-workspace">
               <div className="map-stage-frame">
                 <ReplayStage
                   key={`${replay.sourceDemo.fileName}:${round.roundNumber}`}
-                  currentTick={displayTick}
+                  currentTick={renderTick}
                   replay={replay}
                   round={round}
                   selectedPlayerId={selectedPlayerId}
                   utilityFocus={utilityFocus}
                   onSelectPlayer={setSelectedPlayerId}
                 />
-                <MapHud
-                  currentTick={tick}
-                  replay={replay}
-                  round={round}
-                  selectedPlayerId={selectedPlayerId}
-                  utilityFocus={utilityFocus}
-                />
-                <KillFeed currentTick={tick} replay={replay} round={round} />
+                <KillFeed currentTick={renderTickRounded} replay={replay} round={round} />
                 <aside className="right-shell right-shell-overlay">
                   <RosterPanel
                     replay={replay}
                     round={round}
-                    currentTick={tick}
+                    currentTick={renderTickRounded}
                     selectedPlayerId={selectedPlayerId}
                     onSelectPlayer={setSelectedPlayerId}
                   />
@@ -187,6 +180,7 @@ export function App() {
             <TimelinePanel
               activeRoundIndex={roundIndex}
               currentTick={tick}
+              replay={replay}
               markers={timelineMarkers}
               playing={playing}
               roundClock={roundClock}
@@ -197,7 +191,6 @@ export function App() {
               tick={tick}
               tickRate={replay.match.tickRate}
               utilityFocus={utilityFocus}
-              utilityWindows={utilityWindows}
               onSelectRound={setRoundIndex}
               onPlayToggle={togglePlayback}
               onReset={() => {
@@ -230,16 +223,17 @@ export function App() {
 }
 
 function resolveInitialRoundTick(round: NonNullable<Replay["rounds"][number]>) {
-  const searchEndTick = Math.min(round.endTick, (round.freezeEndTick ?? round.startTick) + 64 * 8);
+  const liveStartTick = clampTick(round.freezeEndTick ?? round.startTick, round.startTick, round.endTick);
+  const searchEndTick = Math.min(round.endTick, liveStartTick + 64 * 8);
   let firstVisibleTick: number | null = null;
   let firstBalancedTick: number | null = null;
   let bestTick = Math.max(
-    round.freezeEndTick ?? round.startTick,
+    liveStartTick,
     Math.min(...round.playerStreams.map((stream) => stream.sampleOriginTick)),
   );
   let bestVisibleCount = -1;
 
-  for (let tick = round.startTick; tick <= searchEndTick; tick += 1) {
+  for (let tick = liveStartTick; tick <= searchEndTick; tick += 1) {
     let ctVisibleCount = 0;
     let tVisibleCount = 0;
 
@@ -293,4 +287,16 @@ function resolveInitialRoundTick(round: NonNullable<Replay["rounds"][number]>) {
   }
 
   return bestTick;
+}
+
+function resolveVisibleRoundEndTick(round: NonNullable<Replay["rounds"][number]>) {
+  if (round.officialEndTick != null && round.officialEndTick > round.endTick) {
+    return round.officialEndTick;
+  }
+
+  return round.endTick;
+}
+
+function clampTick(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
 }

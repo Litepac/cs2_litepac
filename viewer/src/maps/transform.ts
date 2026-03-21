@@ -44,15 +44,14 @@ export function createRadarViewport(
   const safeCropTop = clamp(cropTop, 0, safeImageHeight - 1);
   const safeCropWidth = clamp(cropWidth, 1, safeImageWidth - safeCropLeft);
   const safeCropHeight = clamp(cropHeight, 1, safeImageHeight - safeCropTop);
-  const horizontalPadding = 0;
-  const topPadding = 0;
-  const bottomPadding = 0;
-  const leftPadding = horizontalPadding;
-  const rightPadding = horizontalPadding;
+  const leftPadding = clamp(Math.round(viewportWidth * 0.02), 12, 32);
+  const rightPadding = clamp(Math.round(viewportWidth * 0.13), 44, 180);
+  const topPadding = clamp(Math.round(viewportHeight * 0.018), 10, 28);
+  const bottomPadding = clamp(Math.round(viewportHeight * 0.02), 12, 32);
   const fitWidth = Math.max(1, viewportWidth - leftPadding - rightPadding);
   const fitHeight = Math.max(1, viewportHeight - topPadding - bottomPadding);
   const fitScale = Math.min(fitWidth / safeCropWidth, fitHeight / safeCropHeight);
-  const scale = fitScale * 1.05;
+  const scale = fitScale * 1.08;
   const scaledWidth = safeCropWidth * scale;
   const scaledHeight = safeCropHeight * scale;
 

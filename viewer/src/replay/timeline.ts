@@ -3,6 +3,7 @@ import { utilityMatchesFocus, type UtilityFocus } from "./utilityFilter";
 import { utilityActivationTick, utilityEventTick, utilityLifecycleEndTick } from "./utility";
 
 export type TimelineEventItem = {
+  bombType?: "defuse_start" | "defused" | "exploded" | "plant_start" | "planted";
   key: string;
   kind: "bomb" | "kill" | "utility";
   label: string;
@@ -59,6 +60,7 @@ const utilityMarkers = round.utilityEntities
   const stageBombMarkers = round.bombEvents
     .filter((event) => ["plant_start", "planted", "defuse_start", "defused", "exploded"].includes(event.type))
     .map((event) => ({
+      bombType: event.type as TimelineEventItem["bombType"],
       key: `bomb-${event.tick}-${event.type}`,
       kind: "bomb" as const,
       label: `${playerName(event.playerId)}: bomb ${event.type}${event.site ? ` @ ${event.site}` : ""}`,

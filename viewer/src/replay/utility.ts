@@ -28,7 +28,7 @@ export function utilityActivationTick(utility: UtilityEntity) {
 }
 
 export function utilityEventTick(utility: UtilityEntity) {
-  return utility.detonateTick ?? utility.endTick ?? utility.startTick;
+  return utility.startTick;
 }
 
 export function utilitySceneStateAtTick(

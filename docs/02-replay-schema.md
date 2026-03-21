@@ -106,6 +106,8 @@ Each round contains:
 - round boundary ticks
 - winner side and end reason if confidently known
 - per-player side assignment and position stream
+- fire events
+- hurt events
 - kill events
 - bomb events
 - utility lifecycles
@@ -139,6 +141,31 @@ Invariants:
 - values may be `null` when the parser cannot trust them
 
 ## Event Model
+
+### Weapon Fire
+
+Weapon fire is stored as a discrete event stream:
+
+- tick
+- shooter id if known
+- weapon name
+- shooter position if known
+
+This is intentionally narrower than a bullet or hit model. It tells the viewer that a player fired at a tick, without guessing bullet path, recoil, or impact semantics.
+
+### Hurt
+
+Hurt events are stored separately from kills:
+
+- tick
+- attacker id if known
+- victim id if known
+- weapon name
+- health damage taken
+- armor damage taken
+- attacker and victim positions if known
+
+This gives the viewer a trustworthy way to show combat connections and damage numbers without guessing from HP deltas alone.
 
 ### Kills
 

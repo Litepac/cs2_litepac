@@ -27,6 +27,28 @@ func ValidateReplay(data replay.Replay) error {
 			}
 		}
 
+		for _, fire := range round.FireEvents {
+			endTick := round.EndTick
+			if round.OfficialEndTick != nil && *round.OfficialEndTick > endTick {
+				endTick = *round.OfficialEndTick
+			}
+
+			if fire.Tick < round.StartTick || fire.Tick > endTick {
+				return fmt.Errorf("round %d fire event at tick %d is outside round bounds", round.RoundNumber, fire.Tick)
+			}
+		}
+
+		for _, hurt := range round.HurtEvents {
+			endTick := round.EndTick
+			if round.OfficialEndTick != nil && *round.OfficialEndTick > endTick {
+				endTick = *round.OfficialEndTick
+			}
+
+			if hurt.Tick < round.StartTick || hurt.Tick > endTick {
+				return fmt.Errorf("round %d hurt event at tick %d is outside round bounds", round.RoundNumber, hurt.Tick)
+			}
+		}
+
 		for _, bomb := range round.BombEvents {
 			if bomb.Tick < round.StartTick || bomb.Tick > round.EndTick {
 				return fmt.Errorf("round %d bomb event at tick %d is outside round bounds", round.RoundNumber, bomb.Tick)

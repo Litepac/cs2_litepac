@@ -10,6 +10,8 @@ type Props = {
   onSelectPlayer: (playerId: string) => void;
 };
 
+type UtilityKind = "decoy" | "fire" | "flashbang" | "hegrenade" | "smoke";
+
 export function RosterPanel({ replay, round, currentTick, selectedPlayerId, onSelectPlayer }: Props) {
   const snapshots = livePlayersAtTick(replay, round, currentTick);
   const ctPlayers = snapshots.filter((entry) => entry.side === "CT");
@@ -52,6 +54,13 @@ type SectionProps = {
   onSelectPlayer: (playerId: string) => void;
 };
 
+type HeldUtilityItem = {
+  active: boolean;
+  count: number;
+  kind: UtilityKind;
+  title: string;
+};
+
 function RosterSection({
   aliveCount,
   currentScore,
@@ -80,52 +89,64 @@ function RosterSection({
       </div>
 
       <div className="roster-list">
-        {players.map((player) => (
-          <button
-            key={player.playerId}
-            className={[
-              "roster-item",
-              player.playerId === selectedPlayerId ? "roster-item-active" : "",
-              player.alive ? "" : "roster-item-dead",
-            ].filter(Boolean).join(" ")}
-            onClick={() => onSelectPlayer(player.playerId)}
-          >
+        {players.map((player) => {
+          const heldUtility = utilityInventory(player);
+          const activeUtility = heldUtility.find((item) => item.active) ?? null;
+          return (
+            <button
+              key={player.playerId}
+              className={[
+                "roster-item",
+                player.playerId === selectedPlayerId ? "roster-item-active" : "",
+                player.alive ? "" : "roster-item-dead",
+              ].filter(Boolean).join(" ")}
+              onClick={() => onSelectPlayer(player.playerId)}
+            >
               <span className="roster-player-main">
                 <span className="roster-player-header">
                   <span className="roster-player-name">{player.name}</span>
-                  <span className="roster-player-weapon">{displayWeaponName(player.mainWeapon ?? player.activeWeapon)}</span>
+                  <span className="roster-player-weapon">{displayWeaponName(primaryWeaponName(player))}</span>
                 </span>
                 <span className="roster-player-support-row">
                   <span className="roster-player-economy">{formatMoney(player.money)}</span>
-                  <span className="roster-player-meta-row">
-                    <span className="roster-utility-row">
-                      {utilityIcons(player).map((icon, index) => (
-                        <span
-                          key={`${icon.kind}-${index}`}
-                          className={`roster-utility-icon roster-utility-icon-${icon.kind}`}
-                          title={icon.title}
-                        >
-                          {icon.glyph}
-                        </span>
-                      ))}
-                    </span>
-                    <span className="roster-player-vitals-inline">
-                      <span className="roster-player-mini-stat">{formatHealth(player)}</span>
-                      <span className="roster-player-mini-stat">{formatArmor(player)}</span>
-                    </span>
-                    {player.hasBomb ? <span className="roster-player-mini-stat roster-player-mini-stat-bomb">BOMB</span> : null}
+                  <span className="roster-player-vitals-inline">
+                    <span className="roster-player-mini-stat">{formatHealth(player)}</span>
+                    <span className="roster-player-mini-stat">{formatArmor(player)}</span>
                   </span>
+                  {activeUtility ? <span className={`roster-player-mini-stat roster-player-mini-stat-utility roster-player-mini-stat-utility-${activeUtility.kind}`}>{activeUtilityLabel(activeUtility)}</span> : null}
+                  {player.hasBomb ? <span className="roster-player-mini-stat roster-player-mini-stat-bomb">BOMB</span> : null}
+                </span>
+                <span className="roster-utility-strip" aria-label="Held utility">
+                  {heldUtility.length > 0 ? (
+                    heldUtility.map((item) => (
+                      <span
+                        key={item.kind}
+                        className={[
+                          "roster-utility-item",
+                          `roster-utility-item-${item.kind}`,
+                          item.active ? "roster-utility-item-active" : "",
+                        ].filter(Boolean).join(" ")}
+                        title={item.title}
+                      >
+                        <span className="roster-utility-shape" />
+                        {item.count > 1 ? <span className="roster-utility-count">{item.count}</span> : null}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="roster-utility-strip-empty">Empty</span>
+                  )}
                 </span>
                 <span className="roster-health-track" aria-hidden="true">
                   <span
                     className={`roster-health-fill ${sideClass}`}
                     style={{ width: `${healthWidth(player)}%` }}
-                />
+                  />
+                </span>
+                <span className={`roster-player-rule ${sideClass}`} />
               </span>
-              <span className={`roster-player-rule ${sideClass}`} />
-            </span>
-          </button>
-        ))}
+            </button>
+          );
+        })}
       </div>
     </section>
   );
@@ -163,6 +184,10 @@ function healthWidth(player: LivePlayerState) {
   return Math.min(100, Math.max(0, player.health));
 }
 
+function primaryWeaponName(player: LivePlayerState) {
+  return utilityKindFromWeaponName(player.activeWeapon) ? player.mainWeapon ?? player.activeWeapon : player.activeWeapon ?? player.mainWeapon;
+}
+
 function displayWeaponName(weaponName: string | null) {
   if (!weaponName) {
     return "--";
@@ -194,24 +219,63 @@ function displayWeaponName(weaponName: string | null) {
   return aliases[normalized] ?? normalized;
 }
 
-function utilityIcons(player: LivePlayerState) {
-  return [
-    ...repeatUtilityIcon("flashbang", player.flashbangs, "FB", "Flashbang"),
-    ...repeatUtilityIcon("smoke", player.smokes, "SM", "Smoke"),
-    ...repeatUtilityIcon("hegrenade", player.heGrenades, "HE", "HE grenade"),
-    ...repeatUtilityIcon("fire", player.fireGrenades, "MO", "Molotov / incendiary"),
-    ...repeatUtilityIcon("decoy", player.decoys, "DE", "Decoy"),
+function utilityInventory(player: LivePlayerState): HeldUtilityItem[] {
+  const activeUtilityKind = utilityKindFromWeaponName(player.activeWeapon);
+  const capacities: Array<{ count: number | null; kind: UtilityKind; label: string; slots: number }> = [
+    { count: player.flashbangs, kind: "flashbang", label: "Flashbang", slots: 2 },
+    { count: player.smokes, kind: "smoke", label: "Smoke", slots: 1 },
+    { count: player.heGrenades, kind: "hegrenade", label: "HE grenade", slots: 1 },
+    { count: player.fireGrenades, kind: "fire", label: "Molotov / incendiary", slots: 1 },
+    { count: player.decoys, kind: "decoy", label: "Decoy", slots: 1 },
   ];
+
+  return capacities
+    .map((entry) => ({
+      active: activeUtilityKind === entry.kind && (entry.count ?? 0) > 0,
+      count: Math.min(entry.slots, Math.max(0, entry.count ?? 0)),
+      kind: entry.kind,
+      title: `${entry.label}${(entry.count ?? 0) > 1 ? ` x${Math.min(entry.slots, Math.max(0, entry.count ?? 0))}` : ""}`,
+    }))
+    .filter((entry) => entry.count > 0);
 }
 
-function repeatUtilityIcon(kind: string, value: number | null, glyph: string, title: string) {
-  if (value == null || value <= 0) {
-    return [];
+function utilityKindFromWeaponName(weaponName: string | null): UtilityKind | null {
+  if (!weaponName) {
+    return null;
   }
 
-  return Array.from({ length: value }, () => ({
-    glyph,
-    kind,
-    title,
-  }));
+  const normalized = weaponName.replace("weapon_", "").toLowerCase();
+  switch (normalized) {
+    case "flashbang":
+      return "flashbang";
+    case "smokegrenade":
+      return "smoke";
+    case "hegrenade":
+      return "hegrenade";
+    case "molotov":
+    case "incgrenade":
+    case "incendiarygrenade":
+      return "fire";
+    case "decoy":
+      return "decoy";
+    default:
+      return null;
+  }
+}
+
+function activeUtilityLabel(item: HeldUtilityItem) {
+  switch (item.kind) {
+    case "flashbang":
+      return item.count > 1 ? "FLASH x2" : "FLASH";
+    case "smoke":
+      return "SMOKE";
+    case "hegrenade":
+      return "HE";
+    case "fire":
+      return "FIRE";
+    case "decoy":
+      return "DECOY";
+    default:
+      return "UTIL";
+  }
 }

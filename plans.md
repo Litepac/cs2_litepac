@@ -2,6 +2,9 @@
 
 ## Planned
 - Tighten parser edge cases found during visual replay checks
+- Add parser-side yaw validation before relying more heavily on facing semantics
+- Add canonical flash-effect truth if future UI needs more than detonation-point bloom
+- Add canonical inferno footprint truth if future UI needs more than soft center-based fire rendering
 - Add map calibration spot checks tied to known landmarks
 - Reduce viewer bundle size and split heavy Pixi code paths
 - Improve utility lifecycle fidelity after visual validation
@@ -9,6 +12,10 @@
 - Tighten canonical replay fields where UI quality is blocked by missing trustworthy render data
 
 ## In Progress
+- Strengthen repo-local agent workflow around explicit planning, bounded subagents, verification, and re-planning without introducing a second task-tracking system
+- Push the viewer shell, dock, rail, and utility presentation closer to the Skybox reference using only parser-backed replay truth
+- Replace debug-like right-rail utility pills with Skybox-style held-utility presentation and clearer active-vs-main-weapon hierarchy
+- Rebuild player token styling and utility visuals toward stronger operator readability without inventing live fire cues
 - Visual validation workflow using staged local replay fixtures
 - Improve viewer inspection fidelity for visual replay checks
 - Reassert parser-first ownership: parser/canonical replay define utility and facing truth, viewer only renders/interpolates
@@ -47,9 +54,14 @@
 - Add a simple in-repo overview of how agents and specialist guides fit together
 - Normalize shell density and map fit across 1080p and 1440p/2K so the viewer reads consistently across screens
 - Tighten the right rail and operator dock toward the Skybox reference using compact real-data hierarchy instead of extra badges or chrome
+- Simplify the bottom operator dock by subtraction so the timeline reads closer to the cleaner Skybox reference
+- Rebuild the timeline as one larger unified operator panel with internal lanes, larger readable text, and clearer bomb/utility marker language
+- Remove low-value phase and utility bars from the dock and make utility event markers reflect throw time, not detonation time
 - Continue compressing the left rail and expose clearer dock row labels so the shell reads more like an operator workspace on both 1080p and 2K
 - Rebuild the operator dock seek/ruler behavior with larger controls, 15-second markers, and a default-off freeze-time view
 - Remove the remaining inner map "box" feel by tightening radar crop detection and loosening stage fit around the actual map content
+- Move round and score context into the operator dock so the map no longer loses a dedicated top header row
+- Replace breakpoint-heavy viewer shell collapse with more fluid density scaling across 1080p and 1440p/2K
 
 ## Done
 - Proposed clean project structure and stack direction
@@ -88,9 +100,13 @@
 - Added `.github/agents/ui-ux-specialist.md` and tightened docs around the reference-locked shell rebuild
 - Added parser-backed live player equipment state to the canonical replay schema and parser streams
 - Added parser-backed main-weapon and utility inventory state to canonical player streams and the viewer right rail
+- Added parser-backed weapon-fire events to canonical rounds and restrained viewer shot cues on the map and timeline
+- Added parser-backed hurt events so map combat cues can use attacker-victim truth and damage values
 - Made fixture loading cache-safe and reduced schema validation walls to concise viewer errors
 - Added `docs/11-agents-overview.md` to explain the agent system and how specialist guides connect to repo workflow
 - Defaulted utility focus back to `All` and added a larger seek bar, 15-second dock markers, and a freeze-time toggle to the replay dock
+- Normalized parser-side utility lifetime clamping to the real demo tick rate instead of a fixed `64`
+- Expired infernos from active fire state so canonical replay can reflect real smoke-extinguish shutdown behavior
 
 ## Blocked
 - Visual truth-checking still needs screenshots or side-by-side demo review

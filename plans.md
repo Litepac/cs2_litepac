@@ -92,6 +92,8 @@ Planning note:
 - Fixed large-fixture staging by streaming replay copies into `assets/fixtures` instead of buffering huge files in memory
 - Centralized utility presentation so rail, timeline, and map icons/colors use one shared kind-normalization and palette path
 - Corrected map projectile utility icons toward Skybox-style side-colored silhouettes instead of pale ring markers, while keeping held utility on player tokens as the small forward dot
+- Refactored `viewer/src/canvas/ReplayStage.tsx` into smaller stage bootstrap, camera, map, frame, player, bomb, and combat helper modules without changing the replay contract
+- Refactored `viewer/src/app/App.tsx` into smaller replay-loading, playback, fixture, and timeline helper modules without changing runtime behavior
 
 ## Blocked
 - Visual truth-checking still needs screenshots or side-by-side demo review

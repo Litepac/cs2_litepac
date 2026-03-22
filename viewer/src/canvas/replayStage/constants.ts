@@ -1,0 +1,9 @@
+export const DEFAULT_STAGE_WIDTH = 1180;
+export const DEFAULT_STAGE_HEIGHT = 760;
+export const MIN_STAGE_WIDTH = 680;
+export const MIN_STAGE_HEIGHT = 420;
+export const RECENT_HURT_WINDOW_TICKS = 34;
+export const RECENT_KILL_WINDOW_TICKS = 64 * 6;
+export const RECENT_BOMB_WINDOW_TICKS = 64 * 8;
+export const HURT_BURST_GAP_TICKS = 5;
+export const RECENT_UTILITY_THROW_MODE_SECONDS = 0.18;

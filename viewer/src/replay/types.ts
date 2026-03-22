@@ -18,6 +18,7 @@ export type Replay = {
     matchId: string | null;
     tickRate: number;
     totalRounds: number;
+    bombTimeSeconds: number | null;
     gameMode: string | null;
   };
   map: {

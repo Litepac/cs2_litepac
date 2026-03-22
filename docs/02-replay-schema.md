@@ -97,6 +97,16 @@ Stable player identity:
 - optional `steamId`
 - `teamId`
 
+### `match`
+
+Match-level timing and identity facts:
+
+- optional `matchId`
+- `tickRate`
+- `totalRounds`
+- optional `gameMode`
+- optional `bombTimeSeconds` when the parser can read the planted C4 timer from game rules
+
 ### `rounds`
 
 Each round contains:
@@ -189,6 +199,7 @@ Bomb events cover:
 - plant start
 - planted
 - defuse start
+- defuse abort
 - defused
 - exploded
 

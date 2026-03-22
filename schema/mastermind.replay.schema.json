@@ -175,6 +175,9 @@
           "type": "integer",
           "minimum": 0
         },
+        "bombTimeSeconds": {
+          "$ref": "#/$defs/nullableNumber"
+        },
         "gameMode": {
           "$ref": "#/$defs/nullableString"
         }
@@ -441,6 +444,7 @@
             "plant_start",
             "planted",
             "defuse_start",
+            "defuse_abort",
             "defused",
             "exploded"
           ]

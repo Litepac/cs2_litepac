@@ -92,50 +92,40 @@ export function TimelinePanel({
 
   return (
     <section className="timeline-shell timeline-shell-operator">
-      <div className="timeline-operator-top">
-        <div className="timeline-round-nav">
-          <button
-            className="timeline-chevron"
-            disabled={activeRoundIndex <= 0}
-            onClick={() => onSelectRound(Math.max(0, activeRoundIndex - 1))}
-          >
-            {"<"}
-          </button>
-          <div className="timeline-round-strip" ref={rowRef}>
-            {rounds.map((entry, index) => (
-              <button
-                key={entry.roundNumber}
-                ref={(element) => {
-                  buttonRefs.current[index] = element;
-                }}
-                className={[
-                  "timeline-round-chip",
-                  index === activeRoundIndex ? "timeline-round-chip-active" : "",
-                  entry.winnerSide === "CT" ? "timeline-round-chip-ct" : "",
-                  entry.winnerSide === "T" ? "timeline-round-chip-t" : "",
-                ].filter(Boolean).join(" ")}
-                onClick={() => onSelectRound(index)}
-              >
-                {entry.roundNumber}
-              </button>
-            ))}
-          </div>
-          <button
-            className="timeline-chevron"
-            disabled={activeRoundIndex >= rounds.length - 1}
-            onClick={() => onSelectRound(Math.min(rounds.length - 1, activeRoundIndex + 1))}
-          >
-            {">"}
-          </button>
+      <div className="timeline-round-nav">
+        <button
+          className="timeline-chevron"
+          disabled={activeRoundIndex <= 0}
+          onClick={() => onSelectRound(Math.max(0, activeRoundIndex - 1))}
+        >
+          {"<"}
+        </button>
+        <div className="timeline-round-strip" ref={rowRef}>
+          {rounds.map((entry, index) => (
+            <button
+              key={entry.roundNumber}
+              ref={(element) => {
+                buttonRefs.current[index] = element;
+              }}
+              className={[
+                "timeline-round-chip",
+                index === activeRoundIndex ? "timeline-round-chip-active" : "",
+                entry.winnerSide === "CT" ? "timeline-round-chip-ct" : "",
+                entry.winnerSide === "T" ? "timeline-round-chip-t" : "",
+              ].filter(Boolean).join(" ")}
+              onClick={() => onSelectRound(index)}
+            >
+              {entry.roundNumber}
+            </button>
+          ))}
         </div>
-
-        <div className="timeline-top-meta">
-          <span className="timeline-map-label">{replay.map.displayName}</span>
-          <div className="timeline-compact-scoreboard">
-            <CompactScore side="CT" score={scoreForSide(round, "CT", "before")} label={ctTeam?.displayName ?? "CT Side"} />
-            <CompactScore side="T" score={scoreForSide(round, "T", "before")} label={tTeam?.displayName ?? "T Side"} />
-          </div>
-        </div>
+        <button
+          className="timeline-chevron"
+          disabled={activeRoundIndex >= rounds.length - 1}
+          onClick={() => onSelectRound(Math.min(rounds.length - 1, activeRoundIndex + 1))}
+        >
+          {">"}
+        </button>
       </div>
 
       <div className="timeline-main-dock">
@@ -151,6 +141,7 @@ export function TimelinePanel({
 
         <div className="timeline-center-dock">
           <div className="timeline-readout-row">
+            <span className="timeline-map-label">{replay.map.displayName}</span>
             <span className="timeline-readout-round">Round {round.roundNumber}</span>
             <span className="timeline-readout-tick">Tick {tick}</span>
             <span className={`timeline-readout-chip timeline-readout-chip-${currentPhase.kind}`}>{currentPhase.label}</span>
@@ -160,6 +151,10 @@ export function TimelinePanel({
             {round.winnerSide ? <span className={`timeline-readout-side timeline-readout-side-${round.winnerSide.toLowerCase()}`}>{round.winnerSide}</span> : null}
             {round.endReason ? <span className="timeline-readout-meta">{round.endReason}</span> : null}
             {officialOffsetTicks != null ? <span className="timeline-readout-meta">official +{officialOffsetTicks}</span> : null}
+            <div className="timeline-readout-scoreboard">
+              <CompactScore side="CT" score={scoreForSide(round, "CT", "before")} label={ctTeam?.displayName ?? "CT Side"} />
+              <CompactScore side="T" score={scoreForSide(round, "T", "before")} label={tTeam?.displayName ?? "T Side"} />
+            </div>
           </div>
 
           <div className="timeline-bands-layout">
@@ -170,6 +165,16 @@ export function TimelinePanel({
             </div>
 
             <div className="timeline-track-shell">
+              <div className="timeline-guide-layer" aria-hidden="true">
+                {secondMarkers.map((marker) => (
+                  <span
+                    key={`guide-${marker.tick}`}
+                    className="timeline-guide-line"
+                    style={{ left: `${((marker.tick - displayStartTick) / range) * 100}%` }}
+                  />
+                ))}
+              </div>
+
               <div className="timeline-ruler-row timeline-track-lane">
               {secondMarkers.map((marker) => (
                 <span
@@ -209,27 +214,25 @@ export function TimelinePanel({
           </div>
 
           <div className="timeline-controls-panel">
-            <div className="timeline-control-strip">
-              <div className="timeline-utility-toggle-row timeline-segmented-row">
+            <div className="timeline-segmented-row timeline-utility-toggle-row">
+              <button
+                className={showFreezeTime ? "control-button control-button-active" : "control-button"}
+                onClick={() => onShowFreezeTimeChange(!showFreezeTime)}
+              >
+                Freeze
+              </button>
+              {UTILITY_OPTIONS.map((option) => (
                 <button
-                  className={showFreezeTime ? "control-button control-button-active" : "control-button"}
-                  onClick={() => onShowFreezeTimeChange(!showFreezeTime)}
+                  key={option.value}
+                  className={option.value === utilityFocus ? "control-button control-button-active" : "control-button"}
+                  onClick={() => onUtilityFocusChange(option.value)}
                 >
-                  Freeze
+                  {option.label}
                 </button>
-                {UTILITY_OPTIONS.map((option) => (
-                  <button
-                    key={option.value}
-                    className={option.value === utilityFocus ? "control-button control-button-active" : "control-button"}
-                    onClick={() => onUtilityFocusChange(option.value)}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
+              ))}
             </div>
-            <div className="timeline-control-strip">
-              <div className="timeline-speed-row timeline-segmented-row timeline-segmented-row-speed">
+            <div className="timeline-controls-secondary">
+              <div className="timeline-segmented-row timeline-segmented-row-speed">
                 {SPEEDS.map((entry) => (
                   <button
                     key={entry}
@@ -239,10 +242,10 @@ export function TimelinePanel({
                     {entry}x
                   </button>
                 ))}
-                <button className="control-button" onClick={onReset}>
-                  Reset
-                </button>
               </div>
+              <button className="control-button timeline-reset-button" onClick={onReset}>
+                Reset
+              </button>
             </div>
           </div>
         </div>

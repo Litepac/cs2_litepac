@@ -12,6 +12,10 @@
 - Tighten canonical replay fields where UI quality is blocked by missing trustworthy render data
 
 ## In Progress
+- Refine parser-backed hurt-line combat cues so the map read feels intentional and Skybox-like without inventing bullet-path truth
+- Tighten the right rail toward a denser scoreboard-style hierarchy so weapons, vitals, and held utility read closer to the Skybox reference
+- Collapse the dock further into one calmer operator panel so the round strip stays thin and the main timeline feels less like stacked custom controls
+- Improve bomb readability with parser-backed planted and defusing overlays, including defuse-abort truth so the viewer does not fake continuous defuse state
 - Strengthen repo-local agent workflow around explicit planning, bounded subagents, verification, and re-planning without introducing a second task-tracking system
 - Push the viewer shell, dock, rail, and utility presentation closer to the Skybox reference using only parser-backed replay truth
 - Replace debug-like right-rail utility pills with Skybox-style held-utility presentation and clearer active-vs-main-weapon hierarchy

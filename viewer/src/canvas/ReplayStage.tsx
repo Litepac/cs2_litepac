@@ -42,9 +42,10 @@ const DEFAULT_STAGE_WIDTH = 1180;
 const DEFAULT_STAGE_HEIGHT = 760;
 const MIN_STAGE_WIDTH = 680;
 const MIN_STAGE_HEIGHT = 420;
-const RECENT_HURT_WINDOW_TICKS = 64 * 2;
+const RECENT_HURT_WINDOW_TICKS = 40;
 const RECENT_KILL_WINDOW_TICKS = 64 * 6;
 const RECENT_BOMB_WINDOW_TICKS = 64 * 8;
+const HURT_BURST_GAP_TICKS = 6;
 export function ReplayStage({
   currentTick,
   replay,
@@ -509,12 +510,16 @@ function renderDynamicFrame(
     stream: Round["playerStreams"][number];
   }> = [];
 
+  const bombState = resolveActiveBombState(replay, round, fullRenderTick);
+  if (bombState) {
+    drawBombStateOverlay(stage.bombLayer, replay, bombState, fullRenderTick, radarViewport);
+  }
   for (const bombEvent of round.bombEvents) {
     drawBombEvent(stage.bombLayer, replay, bombEvent, fullRenderTick, radarViewport);
   }
 
-  for (const hurtEvent of round.hurtEvents) {
-    drawHurtEvent(stage.killLayer, replay, round, hurtEvent, fullRenderTick, radarViewport);
+  for (const hurtBurst of buildVisibleHurtBursts(round, fullRenderTick)) {
+    drawHurtBurst(stage.killLayer, replay, round, hurtBurst, fullRenderTick, radarViewport);
   }
 
   for (const killEvent of round.killEvents) {
@@ -737,6 +742,199 @@ function radarImageURL(radarImageKey: string) {
   return normalizedKey.startsWith("maps/") ? `/${normalizedKey}` : `/maps/${normalizedKey}`;
 }
 
+type ActiveBombState = {
+  defuseCompletionTick: number | null;
+  defuseStartTick: number | null;
+  explodeTick: number | null;
+  plantedTick: number;
+  x: number;
+  y: number;
+};
+
+function drawBombStateOverlay(
+  layer: Container,
+  replay: Replay,
+  state: ActiveBombState,
+  currentTick: number,
+  radarViewport: RadarViewport,
+) {
+  const point = worldToScreen(replay, radarViewport, state.x, state.y);
+  const pulse = 0.5 + 0.5 * Math.sin((currentTick - state.plantedTick) / 10);
+  const bombTimeTotalSeconds =
+    state.explodeTick != null ? Math.max(0.1, (state.explodeTick - state.plantedTick) / replay.match.tickRate) : null;
+  const bombTimeRemainingSeconds =
+    state.explodeTick != null ? Math.max(0, (state.explodeTick - currentTick) / replay.match.tickRate) : null;
+  const bombProgress =
+    bombTimeRemainingSeconds != null && bombTimeTotalSeconds != null
+      ? clamp(bombTimeRemainingSeconds / bombTimeTotalSeconds, 0, 1)
+      : null;
+  const countdownColor =
+    bombTimeRemainingSeconds == null
+      ? 0xf3a54d
+      : bombTimeRemainingSeconds > 10
+        ? 0x37c977
+        : bombTimeRemainingSeconds > 5
+          ? 0xf3a54d
+          : 0xff6a62;
+  const marker = new Graphics();
+  const outerRadius = 18;
+  const baseRadius = 14;
+  marker.circle(point.x, point.y, outerRadius + pulse * 1.2);
+  marker.fill({ color: 0x04070b, alpha: 0.16 + pulse * 0.05 });
+  marker.circle(point.x, point.y, outerRadius);
+  marker.stroke({ color: 0x111a22, width: 5, alpha: 0.96 });
+  marker.circle(point.x, point.y, outerRadius - 1);
+  marker.stroke({ color: 0x243342, width: 3, alpha: 0.88 });
+
+  if (bombProgress != null) {
+    drawArcStroke(marker, point.x, point.y, outerRadius - 1, -Math.PI / 2, -Math.PI / 2 + bombProgress * Math.PI * 2);
+    marker.stroke({
+      color: countdownColor,
+      width: 3,
+      alpha: 0.94,
+      cap: "round",
+    });
+  }
+
+  drawBombThresholdTick(marker, point.x, point.y, outerRadius - 1, bombTimeTotalSeconds, 10, bombTimeRemainingSeconds, 0xf0b55a);
+  drawBombThresholdTick(marker, point.x, point.y, outerRadius - 1, bombTimeTotalSeconds, 5, bombTimeRemainingSeconds, 0xff7b72);
+
+  if (state.defuseStartTick != null) {
+    if (state.defuseCompletionTick != null && state.defuseCompletionTick > state.defuseStartTick) {
+      const progress = clamp(
+        (currentTick - state.defuseStartTick) / (state.defuseCompletionTick - state.defuseStartTick),
+        0,
+        1,
+      );
+      drawArcStroke(marker, point.x, point.y, outerRadius + 4, -Math.PI / 2, -Math.PI / 2 + progress * Math.PI * 2);
+      marker.stroke({ color: 0x79c8ff, width: 3.6, alpha: 0.94, cap: "round" });
+    } else {
+      const sweepStart = -Math.PI / 2 + pulse * 0.5;
+      drawArcStroke(marker, point.x, point.y, outerRadius + 4, sweepStart, sweepStart + Math.PI * 0.75);
+      marker.stroke({ color: 0x79c8ff, width: 3.2, alpha: 0.9, cap: "round" });
+    }
+  }
+
+  marker.circle(point.x, point.y, baseRadius);
+  marker.fill({ color: 0x0b1217, alpha: 0.96 });
+  marker.circle(point.x, point.y, baseRadius);
+  marker.stroke({ color: 0x263747, width: 1.4, alpha: 0.92 });
+  marker.roundRect(point.x - 5.5, point.y - 7, 11, 14, 2.5);
+  marker.fill({ color: 0x201a21, alpha: 0.98 });
+  marker.stroke({ color: 0xff7f8d, width: 1.5, alpha: 0.95 });
+  marker.rect(point.x - 3, point.y - 3.5, 6, 7);
+  marker.stroke({ color: 0xff7f8d, width: 1.2, alpha: 0.94 });
+  marker.moveTo(point.x - 2, point.y - 9.5);
+  marker.lineTo(point.x - 2, point.y - 12.5);
+  marker.lineTo(point.x + 3.5, point.y - 12.5);
+  marker.stroke({ color: 0xff7f8d, width: 1.2, alpha: 0.9 });
+  layer.addChild(marker);
+}
+
+function resolveActiveBombState(replay: Replay, round: Round, currentTick: number): ActiveBombState | null {
+  const plantedEvents = round.bombEvents.filter((event) => event.type === "planted" && event.tick <= currentTick);
+  const planted = plantedEvents[plantedEvents.length - 1];
+  if (!planted || planted.x == null || planted.y == null) {
+    return null;
+  }
+
+  const terminal = round.bombEvents.find(
+    (event) => event.tick > planted.tick && ["defused", "exploded"].includes(event.type),
+  );
+  if (terminal && terminal.tick <= currentTick) {
+    return null;
+  }
+
+  const bombFlowEvents = round.bombEvents.filter(
+    (event) => event.tick > planted.tick && ["defuse_start", "defuse_abort", "defused"].includes(event.type),
+  );
+
+  let activeDefuseStart: Round["bombEvents"][number] | null = null;
+  for (const event of bombFlowEvents) {
+    if (event.tick > currentTick) {
+      break;
+    }
+
+    if (event.type === "defuse_start") {
+      activeDefuseStart = event;
+      continue;
+    }
+
+    if (event.type === "defuse_abort" || event.type === "defused") {
+      activeDefuseStart = null;
+    }
+  }
+
+  let defuseCompletionTick: number | null = null;
+  if (activeDefuseStart) {
+    const nextBombFlow = bombFlowEvents.find((event) => event.tick > activeDefuseStart.tick);
+    if (nextBombFlow?.type === "defused") {
+      defuseCompletionTick = nextBombFlow.tick;
+    }
+  }
+
+  const explodeEvent = round.bombEvents.find((event) => event.tick > planted.tick && event.type === "exploded");
+  const explodeTick =
+    replayBombExplodeTick(round, replay.match.tickRate, replay.match.bombTimeSeconds, planted.tick) ?? explodeEvent?.tick ?? null;
+
+  return {
+    defuseCompletionTick,
+    defuseStartTick: activeDefuseStart?.tick ?? null,
+    explodeTick,
+    plantedTick: planted.tick,
+    x: planted.x,
+    y: planted.y,
+  };
+}
+
+function replayBombExplodeTick(round: Round, tickRate: number, bombTimeSeconds: number | null, plantedTick: number) {
+  if (bombTimeSeconds == null || !Number.isFinite(bombTimeSeconds) || bombTimeSeconds <= 0) {
+    return null;
+  }
+
+  return plantedTick + Math.round(bombTimeSeconds * tickRate);
+}
+
+function drawArcStroke(
+  marker: Graphics,
+  centerX: number,
+  centerY: number,
+  radius: number,
+  startAngle: number,
+  endAngle: number,
+) {
+  marker.moveTo(centerX + Math.cos(startAngle) * radius, centerY + Math.sin(startAngle) * radius);
+  marker.arc(centerX, centerY, radius, startAngle, endAngle);
+}
+
+function drawBombThresholdTick(
+  marker: Graphics,
+  centerX: number,
+  centerY: number,
+  radius: number,
+  totalBombSeconds: number | null,
+  thresholdSeconds: number,
+  secondsRemaining: number | null,
+  color: number,
+) {
+  if (totalBombSeconds == null || thresholdSeconds >= totalBombSeconds) {
+    return;
+  }
+
+  const progressAtThreshold = clamp(thresholdSeconds / totalBombSeconds, 0, 1);
+  const angle = -Math.PI / 2 + progressAtThreshold * Math.PI * 2;
+  const innerRadius = radius - 3.5;
+  const outerRadius = radius + 2.5;
+  const startX = centerX + Math.cos(angle) * innerRadius;
+  const startY = centerY + Math.sin(angle) * innerRadius;
+  const endX = centerX + Math.cos(angle) * outerRadius;
+  const endY = centerY + Math.sin(angle) * outerRadius;
+  const active = secondsRemaining != null && secondsRemaining <= thresholdSeconds;
+  marker.moveTo(startX, startY);
+  marker.lineTo(endX, endY);
+  marker.stroke({ color, width: active ? 2.1 : 1.4, alpha: active ? 0.96 : 0.5, cap: "round" });
+}
+
 function drawBombEvent(
   layer: Container,
   replay: Replay,
@@ -744,11 +942,11 @@ function drawBombEvent(
   currentTick: number,
   radarViewport: RadarViewport,
 ) {
-  if (!["plant_start", "planted", "defuse_start", "defused", "exploded"].includes(event.type)) {
+  if (!["defused", "exploded"].includes(event.type)) {
     return;
   }
 
-  if (event.tick > currentTick || currentTick - event.tick > RECENT_BOMB_WINDOW_TICKS) {
+  if (event.tick > currentTick || currentTick - event.tick > RECENT_BOMB_WINDOW_TICKS / 2) {
     return;
   }
 
@@ -756,17 +954,28 @@ function drawBombEvent(
     return;
   }
 
+  const ageRatio = 1 - (currentTick - event.tick) / (RECENT_BOMB_WINDOW_TICKS / 2);
   const point = worldToScreen(replay, radarViewport, event.x, event.y);
   const marker = new Graphics();
-  marker.roundRect(point.x - 11, point.y - 8, 22, 16, 4);
-  marker.fill({ color: 0x0b1217, alpha: 0.88 });
-  marker.stroke({ color: 0xffb14f, width: 1.8, alpha: 0.82 });
-  marker.rect(point.x - 5, point.y - 4, 10, 8);
-  marker.stroke({ color: 0xffd08c, width: 1.4, alpha: 0.76 });
-  marker.moveTo(point.x - 2, point.y - 10);
-  marker.lineTo(point.x - 2, point.y - 15);
-  marker.lineTo(point.x + 5, point.y - 15);
-  marker.stroke({ color: 0xffb14f, width: 1.6, alpha: 0.8 });
+  marker.circle(point.x, point.y, 11);
+  marker.fill({ color: 0x081017, alpha: 0.56 + ageRatio * 0.22 });
+  if (event.type === "defused") {
+    marker.circle(point.x, point.y, 8);
+    marker.stroke({ color: 0x79c8ff, width: 2.2, alpha: 0.5 + ageRatio * 0.35 });
+    marker.moveTo(point.x - 3.5, point.y);
+    marker.lineTo(point.x + 3.5, point.y);
+    marker.moveTo(point.x, point.y - 3.5);
+    marker.lineTo(point.x, point.y + 3.5);
+    marker.stroke({ color: 0xd9f1ff, width: 1.6, alpha: 0.58 + ageRatio * 0.32, cap: "round" });
+  } else {
+    marker.circle(point.x, point.y, 6.5 + ageRatio * 1.2);
+    marker.fill({ color: 0xffb25a, alpha: 0.16 + ageRatio * 0.18 });
+    marker.moveTo(point.x - 4, point.y - 4);
+    marker.lineTo(point.x + 4, point.y + 4);
+    marker.moveTo(point.x + 4, point.y - 4);
+    marker.lineTo(point.x - 4, point.y + 4);
+    marker.stroke({ color: 0xffb25a, width: 2, alpha: 0.56 + ageRatio * 0.26, cap: "round" });
+  }
   layer.addChild(marker);
 }
 
@@ -796,15 +1005,32 @@ function drawKillEvent(
   layer.addChild(marker);
 }
 
-function drawHurtEvent(
+type HurtBurst = {
+  armorDamageTaken: number;
+  attackerPlayerId: string | null;
+  attackerX: number | null;
+  attackerY: number | null;
+  count: number;
+  firstTick: number;
+  healthDamageTaken: number;
+  lastTick: number;
+  labelOffsetIndex: number;
+  showDamageLabel: boolean;
+  victimPlayerId: string | null;
+  victimX: number | null;
+  victimY: number | null;
+  weaponName: string;
+};
+
+function drawHurtBurst(
   layer: Container,
   replay: Replay,
   round: Round,
-  event: Round["hurtEvents"][number],
+  event: HurtBurst,
   currentTick: number,
   radarViewport: RadarViewport,
 ) {
-  if (event.tick > currentTick || currentTick - event.tick > RECENT_HURT_WINDOW_TICKS) {
+  if (event.lastTick > currentTick || currentTick - event.lastTick > RECENT_HURT_WINDOW_TICKS) {
     return;
   }
 
@@ -812,31 +1038,67 @@ function drawHurtEvent(
     return;
   }
 
-  const ageRatio = 1 - (currentTick - event.tick) / RECENT_HURT_WINDOW_TICKS;
+  const ageRatio = 1 - (currentTick - event.lastTick) / RECENT_HURT_WINDOW_TICKS;
   const attackerPoint = worldToScreen(replay, radarViewport, event.attackerX, event.attackerY);
   const victimPoint = worldToScreen(replay, radarViewport, event.victimX, event.victimY);
   const side = resolvePlayerSide(round, event.attackerPlayerId);
   const accentColor = side === "CT" ? 0x8ed1ff : side === "T" ? 0xffca78 : 0xffe2ad;
   const damageValue = event.healthDamageTaken > 0 ? event.healthDamageTaken : event.armorDamageTaken;
+  const armorOnly = event.healthDamageTaken <= 0 && event.armorDamageTaken > 0;
+  const burstDurationTicks = Math.max(1, event.lastTick - event.firstTick + 1);
+  const dx = victimPoint.x - attackerPoint.x;
+  const dy = victimPoint.y - attackerPoint.y;
+  const distance = Math.max(1, Math.hypot(dx, dy));
+  if (distance < 8) {
+    return;
+  }
+  const nx = dx / distance;
+  const ny = dy / distance;
+  const px = -ny;
+  const py = nx;
+  const labelNormalSign = py > 0 ? -1 : 1;
+  const fade = Math.max(0, ageRatio);
+  const burstStrength = Math.min(1.4, 1 + (event.count - 1) * 0.15 + Math.min(0.15, burstDurationTicks / 30));
+  const attackerRadius = 10;
+  const victimRadius = 10;
+  const startX = attackerPoint.x + nx * attackerRadius;
+  const startY = attackerPoint.y + ny * attackerRadius;
+  const endX = victimPoint.x - nx * victimRadius;
+  const endY = victimPoint.y - ny * victimRadius;
+  const glowAlpha = 0.04 + fade * 0.08;
+  const lineAlpha = 0.12 + fade * 0.22;
+  const coreAlpha = 0.18 + fade * 0.28;
+  const labelSpread = 10 + Math.min(2, event.labelOffsetIndex) * 12;
+  const labelRise = 3 + event.labelOffsetIndex * 9 + fade * 5;
+  const labelX = endX + nx * 4 + px * labelNormalSign * labelSpread;
+  const labelY = endY + py * labelNormalSign * labelSpread - labelRise;
+  const impactRadius = 2.7 + burstStrength * 0.9 + fade * 0.9;
 
   const marker = new Graphics();
-  marker.moveTo(attackerPoint.x, attackerPoint.y);
-  marker.lineTo(victimPoint.x, victimPoint.y);
-  marker.stroke({ color: accentColor, width: 2.6, alpha: 0.16 + ageRatio * 0.22 });
-  marker.moveTo(attackerPoint.x, attackerPoint.y);
-  marker.lineTo(victimPoint.x, victimPoint.y);
-  marker.stroke({ color: 0xfff1cf, width: 1.2, alpha: 0.34 + ageRatio * 0.38 });
-  marker.circle(victimPoint.x, victimPoint.y, 3 + ageRatio * 1.6);
-  marker.fill({ color: accentColor, alpha: 0.08 + ageRatio * 0.14 });
+  marker.moveTo(startX, startY);
+  marker.lineTo(endX, endY);
+  marker.stroke({ cap: "round", color: accentColor, join: "round", width: 2.5 * burstStrength, alpha: glowAlpha });
+  marker.moveTo(startX, startY);
+  marker.lineTo(endX, endY);
+  marker.stroke({ cap: "round", color: accentColor, join: "round", width: 1.45, alpha: lineAlpha });
+  marker.moveTo(startX, startY);
+  marker.lineTo(endX, endY);
+  marker.stroke({ cap: "round", color: 0xfff1cf, join: "round", width: 0.75, alpha: coreAlpha });
+  marker.circle(startX, startY, 0.9 + fade * 0.45);
+  marker.fill({ color: accentColor, alpha: 0.12 + fade * 0.1 });
+  marker.circle(endX, endY, impactRadius);
+  marker.stroke({ color: accentColor, width: 0.95, alpha: 0.12 + fade * 0.18 });
+  marker.circle(endX, endY, 1.35 + fade * 0.45);
+  marker.fill({ color: armorOnly ? 0xb8daff : 0xfff1cf, alpha: 0.18 + fade * 0.16 });
   layer.addChild(marker);
 
-  if (damageValue > 0) {
+  if (damageValue > 0 && event.showDamageLabel) {
     const damageText = new Text({
-      text: `${damageValue}`,
+      text: armorOnly ? `${damageValue}A` : `${damageValue}`,
       style: {
-        fill: 0xf3f5f8,
+        fill: armorOnly ? 0xb8daff : 0xf3f5f8,
         fontFamily: "IBM Plex Sans, Segoe UI, sans-serif",
-        fontSize: 10,
+        fontSize: event.count > 1 ? 12 : 11,
         fontWeight: "700",
         stroke: { color: 0x0a1218, width: 3, join: "round" },
       },
@@ -844,10 +1106,71 @@ function drawHurtEvent(
     damageText.anchor.set(0.5, 1);
     damageText.roundPixels = true;
     damageText.resolution = 2;
-    damageText.position.set(victimPoint.x, victimPoint.y - 8 - ageRatio * 8);
-    damageText.alpha = 0.36 + ageRatio * 0.52;
+    damageText.position.set(labelX, labelY);
+    damageText.alpha = 0.42 + fade * 0.38;
     layer.addChild(damageText);
   }
+}
+
+function buildVisibleHurtBursts(round: Round, currentTick: number) {
+  const bursts: HurtBurst[] = [];
+  const activeBursts = new Map<string, HurtBurst>();
+
+  for (const event of round.hurtEvents) {
+    if (event.tick > currentTick || currentTick - event.tick > RECENT_HURT_WINDOW_TICKS) {
+      continue;
+    }
+
+    const key = `${event.attackerPlayerId ?? "unknown"}:${event.victimPlayerId ?? "unknown"}:${event.weaponName}`;
+    const previous = activeBursts.get(key);
+    if (
+      previous &&
+      event.tick - previous.lastTick <= HURT_BURST_GAP_TICKS
+    ) {
+      previous.lastTick = event.tick;
+      previous.count += 1;
+      previous.healthDamageTaken += event.healthDamageTaken;
+      previous.armorDamageTaken += event.armorDamageTaken;
+      previous.attackerX = event.attackerX;
+      previous.attackerY = event.attackerY;
+      previous.victimX = event.victimX;
+      previous.victimY = event.victimY;
+      continue;
+    }
+
+    const burst: HurtBurst = {
+      armorDamageTaken: event.armorDamageTaken,
+      attackerPlayerId: event.attackerPlayerId,
+      attackerX: event.attackerX,
+      attackerY: event.attackerY,
+      count: 1,
+      firstTick: event.tick,
+      healthDamageTaken: event.healthDamageTaken,
+      lastTick: event.tick,
+      labelOffsetIndex: 0,
+      showDamageLabel: true,
+      victimPlayerId: event.victimPlayerId,
+      victimX: event.victimX,
+      victimY: event.victimY,
+      weaponName: event.weaponName,
+    };
+    bursts.push(burst);
+    activeBursts.set(key, burst);
+  }
+
+  const sortedBursts = bursts.sort((left, right) => left.lastTick - right.lastTick);
+  const victimBurstCounts = new Map<string, number>();
+
+  for (let index = sortedBursts.length - 1; index >= 0; index -= 1) {
+    const burst = sortedBursts[index];
+    const victimKey = burst.victimPlayerId ?? `victim:${burst.victimX ?? "x"}:${burst.victimY ?? "y"}`;
+    const visibleCount = victimBurstCounts.get(victimKey) ?? 0;
+    burst.labelOffsetIndex = visibleCount;
+    burst.showDamageLabel = visibleCount < 2;
+    victimBurstCounts.set(victimKey, visibleCount + 1);
+  }
+
+  return sortedBursts;
 }
 
 function resolveUtilityThrowerSide(round: Round, throwerPlayerId: string | null) {

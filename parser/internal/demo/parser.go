@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"sort"
@@ -116,11 +117,16 @@ func Parse(opts Options) error {
 	state.replay.SourceDemo.TickRate = parser.TickRate()
 	state.replay.SourceDemo.TickCount = parser.CurrentFrame()
 	state.replay.SourceDemo.Notes = dedupe(state.notes)
+	bombTimeSeconds := bombTimeSeconds(parser.GameState())
+	if bombTimeSeconds == nil {
+		bombTimeSeconds = inferBombTimeSeconds(state.roundList, parser.TickRate())
+	}
 	state.replay.Match = replay.Match{
-		MatchID:     nil,
-		TickRate:    parser.TickRate(),
-		TotalRounds: len(state.roundList),
-		GameMode:    nil,
+		MatchID:         nil,
+		TickRate:        parser.TickRate(),
+		TotalRounds:     len(state.roundList),
+		GameMode:        nil,
+		BombTimeSeconds: bombTimeSeconds,
 	}
 
 	if state.mapID == "" {
@@ -290,6 +296,10 @@ func (s *parseState) registerHandlers() {
 
 	s.parser.RegisterEventHandler(func(e demoevents.BombDefuseStart) {
 		s.appendBombEvent("defuse_start", e.Player, nil, positionOrNil(e.Player))
+	})
+
+	s.parser.RegisterEventHandler(func(e demoevents.BombDefuseAborted) {
+		s.appendBombEvent("defuse_abort", e.Player, nil, positionOrNil(e.Player))
 	})
 
 	s.parser.RegisterEventHandler(func(e demoevents.BombDefused) {
@@ -694,6 +704,60 @@ func fileSHA256(path string) (string, error) {
 
 	sum := sha256.Sum256(raw)
 	return hex.EncodeToString(sum[:]), nil
+}
+
+func bombTimeSeconds(gs demoinfocs.GameState) *float64 {
+	seconds, err := gs.Rules().BombTime()
+	if err != nil {
+		return nil
+	}
+
+	value := seconds.Seconds()
+	return &value
+}
+
+func inferBombTimeSeconds(rounds []replay.Round, tickRate float64) *float64 {
+	if tickRate <= 0 {
+		return nil
+	}
+
+	observedSeconds := make([]float64, 0, len(rounds))
+	for _, round := range rounds {
+		plantedTick := 0
+		explodedTick := 0
+		hasPlanted := false
+		hasExploded := false
+		for index := range round.BombEvents {
+			event := round.BombEvents[index]
+			if event.Type == "planted" {
+				plantedTick = event.Tick
+				hasPlanted = true
+			}
+			if event.Type == "exploded" {
+				explodedTick = event.Tick
+				hasExploded = true
+				break
+			}
+		}
+
+		if !hasPlanted || !hasExploded || explodedTick <= plantedTick {
+			continue
+		}
+
+		seconds := float64(explodedTick-plantedTick) / tickRate
+		if seconds > 0 {
+			observedSeconds = append(observedSeconds, seconds)
+		}
+	}
+
+	if len(observedSeconds) == 0 {
+		return nil
+	}
+
+	sort.Float64s(observedSeconds)
+	median := observedSeconds[len(observedSeconds)/2]
+	rounded := math.Round(median*10) / 10
+	return &rounded
 }
 
 func writeReplay(path string, data replay.Replay) error {

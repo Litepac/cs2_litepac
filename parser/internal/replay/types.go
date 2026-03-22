@@ -35,10 +35,11 @@ type SourceDemo struct {
 }
 
 type Match struct {
-	MatchID     *string `json:"matchId"`
-	TickRate    float64 `json:"tickRate"`
-	TotalRounds int     `json:"totalRounds"`
-	GameMode    *string `json:"gameMode"`
+	MatchID         *string  `json:"matchId"`
+	TickRate        float64  `json:"tickRate"`
+	TotalRounds     int      `json:"totalRounds"`
+	GameMode        *string  `json:"gameMode"`
+	BombTimeSeconds *float64 `json:"bombTimeSeconds"`
 }
 
 type Map struct {

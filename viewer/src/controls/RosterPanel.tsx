@@ -114,10 +114,7 @@ function RosterSection({
                 </span>
                 <span className="roster-player-support-row">
                   <span className="roster-player-meta">
-                    <span className="roster-player-economy">{formatMoney(player.money)}</span>
-                    <span className="roster-player-vitals-inline">
-                      <span className="roster-player-mini-stat">{formatVitals(player)}</span>
-                    </span>
+                    <span className="roster-player-mini-stat">{formatSupportMeta(player)}</span>
                   </span>
                   <span className="roster-utility-strip" aria-label="Held utility">
                     {heldUtility.length > 0 ? (
@@ -144,7 +141,6 @@ function RosterSection({
                     style={{ width: `${healthWidth(player)}%` }}
                   />
                 </span>
-                <span className={`roster-player-rule ${sideClass}`} />
               </span>
             </button>
           );
@@ -166,6 +162,10 @@ function formatVitals(player: LivePlayerState) {
   const health = player.health == null ? "HP-" : `${Math.max(0, player.health)}HP`;
   const armor = player.armor == null ? "AR-" : `${player.armor}AR`;
   return player.hasHelmet ? `${health} ${armor} H` : `${health} ${armor}`;
+}
+
+function formatSupportMeta(player: LivePlayerState) {
+  return `${formatMoney(player.money)} ${formatVitals(player)}`;
 }
 
 function healthWidth(player: LivePlayerState) {

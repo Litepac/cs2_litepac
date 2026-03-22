@@ -10,7 +10,6 @@ Planning note:
 - Finish player-token polish now that token mode is parser-backed through `activeWeaponClass`
 - Tighten bomb overlay polish toward the Skybox reference, especially planted-ring/icon refinement
 - Keep flattening and simplifying the bottom dock so it reads closer to one calm Skybox-style operator panel
-- Tighten the right rail further toward a denser scoreboard-style hierarchy with cleaner weapon/vitals/utility balance
 - Continue live visual QA against staged fixtures at 1080p and 1440p/2K
 
 ### On Hold / Later
@@ -27,6 +26,7 @@ Planning note:
 - Refine parser-backed hurt-line combat cues so the map read feels intentional and Skybox-like without inventing bullet-path truth
 - Improve bomb readability with parser-backed planted and defusing overlays, including a more Skybox-like segmented planted timer ring and defuse-abort truth so the viewer does not fake continuous defuse state
 - Push the viewer shell, dock, rail, and utility presentation closer to the Skybox reference using only parser-backed replay truth
+- Tighten the right rail toward a denser scoreboard-style hierarchy with cleaner weapon/vitals/utility balance
 - Rebuild player token styling and utility visuals toward stronger operator readability without inventing live fire cues
 - Visual validation workflow using staged local replay fixtures
 

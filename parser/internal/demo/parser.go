@@ -446,7 +446,7 @@ func (s *parseState) registerHandlers() {
 
 			side := norm.SideFromTeam(player.Team)
 			pos, hasPosition, yaw := livePosition(player)
-			health, armor, hasHelmet, money, activeWeapon, mainWeapon, flashbangs, smokes, heGrenades, fireGrenades, decoys := liveEquipment(player)
+			health, armor, hasHelmet, money, activeWeapon, activeWeaponClass, mainWeapon, flashbangs, smokes, heGrenades, fireGrenades, decoys := liveEquipment(player)
 			s.currentRound.SamplePlayer(
 				s.parser.CurrentFrame(),
 				playerID,
@@ -461,6 +461,7 @@ func (s *parseState) registerHandlers() {
 				hasHelmet,
 				money,
 				activeWeapon,
+				activeWeaponClass,
 				mainWeapon,
 				flashbangs,
 				smokes,
@@ -639,9 +640,9 @@ func livePosition(player *common.Player) (r3.Vector, bool, *float64) {
 	return pos, true, yaw
 }
 
-func liveEquipment(player *common.Player) (*int, *int, bool, *int, *string, *string, *int, *int, *int, *int, *int) {
+func liveEquipment(player *common.Player) (*int, *int, bool, *int, *string, *string, *string, *int, *int, *int, *int, *int) {
 	if player == nil {
-		return nil, nil, false, nil, nil, nil, nil, nil, nil, nil, nil
+		return nil, nil, false, nil, nil, nil, nil, nil, nil, nil, nil, nil
 	}
 
 	health := replay.Int(player.Health())
@@ -650,17 +651,19 @@ func liveEquipment(player *common.Player) (*int, *int, bool, *int, *string, *str
 	weapons := player.Weapons()
 
 	var activeWeapon *string
+	var activeWeaponClass *string
 	if weapon := player.ActiveWeapon(); weapon != nil {
 		name := norm.WeaponName(weapon)
 		if name != "" {
 			activeWeapon = replay.String(name)
 		}
+		activeWeaponClass = norm.ActiveWeaponClass(weapon)
 	}
 
 	mainWeapon := norm.MainWeaponName(weapons, player.ActiveWeapon())
 	flashbangs, smokes, heGrenades, fireGrenades, decoys := norm.UtilityInventoryCounts(weapons)
 
-	return health, armor, player.HasHelmet(), money, activeWeapon, mainWeapon, flashbangs, smokes, heGrenades, fireGrenades, decoys
+	return health, armor, player.HasHelmet(), money, activeWeapon, activeWeaponClass, mainWeapon, flashbangs, smokes, heGrenades, fireGrenades, decoys
 }
 
 func infernoCenter(fires common.Fires) r3.Vector {

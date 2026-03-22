@@ -81,6 +81,7 @@ export type PlayerStream = {
   hasHelmet: boolean[];
   money: Array<number | null>;
   activeWeapon: Array<string | null>;
+  activeWeaponClass: Array<"pistol" | "smg" | "heavy" | "rifle" | "sniper" | "knife" | "utility" | "equipment" | "unknown" | null>;
   mainWeapon: Array<string | null>;
   flashbangs: Array<number | null>;
   smokes: Array<number | null>;

@@ -109,6 +109,7 @@ type PlayerStream struct {
 	HasHelmet           []bool     `json:"hasHelmet"`
 	Money               []*int     `json:"money"`
 	ActiveWeapon        []*string  `json:"activeWeapon"`
+	ActiveWeaponClass   []*string  `json:"activeWeaponClass"`
 	MainWeapon          []*string  `json:"mainWeapon"`
 	Flashbangs          []*int     `json:"flashbangs"`
 	Smokes              []*int     `json:"smokes"`

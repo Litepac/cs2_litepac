@@ -6,6 +6,51 @@ import (
 	"mastermind/parser/internal/replay"
 )
 
+func ActiveWeaponClass(active *common.Equipment) *string {
+	if active == nil {
+		return nil
+	}
+
+	switch active.Type {
+	case common.EqKnife:
+		return replay.String("knife")
+	case common.EqAWP, common.EqSSG08, common.EqScar20, common.EqG3SG1:
+		return replay.String("sniper")
+	}
+
+	if _, ok := UtilityKind(active.Type); ok {
+		return replay.String("utility")
+	}
+
+	switch active.Class() {
+	case common.EqClassPistols:
+		return replay.String("pistol")
+	case common.EqClassSMG:
+		return replay.String("smg")
+	case common.EqClassHeavy:
+		return replay.String("heavy")
+	case common.EqClassRifle:
+		return replay.String("rifle")
+	case common.EqClassEquipment:
+		return replay.String("equipment")
+	default:
+		return replay.String("unknown")
+	}
+}
+
+func ActiveUtilityKind(active *common.Equipment) *string {
+	if active == nil {
+		return nil
+	}
+
+	kind, ok := UtilityKind(active.Type)
+	if !ok {
+		return nil
+	}
+
+	return replay.String(kind)
+}
+
 func MainWeaponName(weapons []*common.Equipment, active *common.Equipment) *string {
 	if active != nil && weaponPriority(active.Type) > 0 {
 		name := WeaponName(active)

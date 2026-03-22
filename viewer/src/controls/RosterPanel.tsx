@@ -1,6 +1,7 @@
 import { scoreForSide, sideTeam } from "../replay/derived";
 import { livePlayersAtTick, type LivePlayerState } from "../replay/live";
 import type { Replay, Round } from "../replay/types";
+import { formatWeaponLabel, resolvePlayerEquipmentState, type UtilityKind } from "../replay/weapons";
 
 type Props = {
   replay: Replay;
@@ -10,8 +11,7 @@ type Props = {
   onSelectPlayer: (playerId: string) => void;
 };
 
-type UtilityKind = "decoy" | "fire" | "flashbang" | "hegrenade" | "smoke";
-type RailIconKind = UtilityKind | "bomb";
+type RailIconKind = UtilityKind | "bomb" | "fire";
 
 export function RosterPanel({ replay, round, currentTick, selectedPlayerId, onSelectPlayer }: Props) {
   const snapshots = livePlayersAtTick(replay, round, currentTick);
@@ -92,6 +92,11 @@ function RosterSection({
       <div className="roster-list">
         {players.map((player) => {
           const heldUtility = railIcons(player);
+          const equipment = resolvePlayerEquipmentState({
+            activeWeapon: player.activeWeapon,
+            activeWeaponClass: player.activeWeaponClass,
+            mainWeapon: player.mainWeapon,
+          });
           return (
             <button
               key={player.playerId}
@@ -105,7 +110,7 @@ function RosterSection({
               <span className="roster-player-main">
                 <span className="roster-player-header">
                   <span className="roster-player-name">{player.name}</span>
-                  <span className="roster-player-weapon">{displayWeaponName(primaryWeaponName(player))}</span>
+                  <span className="roster-player-weapon">{formatWeaponLabel(equipment.displayWeapon)}</span>
                 </span>
                 <span className="roster-player-support-row">
                   <span className="roster-player-meta">
@@ -114,24 +119,24 @@ function RosterSection({
                       <span className="roster-player-mini-stat">{formatVitals(player)}</span>
                     </span>
                   </span>
-                </span>
-                <span className="roster-utility-strip" aria-label="Held utility">
-                  {heldUtility.length > 0 ? (
-                    heldUtility.map((item) => (
-                      <span
-                        key={item.kind}
-                        className={[
-                          "roster-utility-item",
-                          `roster-utility-item-${item.kind}`,
-                          item.active ? "roster-utility-item-active" : "",
-                        ].filter(Boolean).join(" ")}
-                        title={item.title}
-                      >
-                        <span className="roster-utility-shape" />
-                        {item.count > 1 ? <span className="roster-utility-count">{item.count}</span> : null}
-                      </span>
-                    ))
-                  ) : null}
+                  <span className="roster-utility-strip" aria-label="Held utility">
+                    {heldUtility.length > 0 ? (
+                      heldUtility.map((item) => (
+                        <span
+                          key={item.kind}
+                          className={[
+                            "roster-utility-item",
+                            `roster-utility-item-${item.kind}`,
+                            item.active ? "roster-utility-item-active" : "",
+                          ].filter(Boolean).join(" ")}
+                          title={item.title}
+                        >
+                          <span className="roster-utility-shape" />
+                          {item.count > 1 ? <span className="roster-utility-count">{item.count}</span> : null}
+                        </span>
+                      ))
+                    ) : null}
+                  </span>
                 </span>
                 <span className="roster-health-track" aria-hidden="true">
                   <span
@@ -171,56 +176,28 @@ function healthWidth(player: LivePlayerState) {
   return Math.min(100, Math.max(0, player.health));
 }
 
-function primaryWeaponName(player: LivePlayerState) {
-  return utilityKindFromWeaponName(player.activeWeapon) ? player.mainWeapon ?? player.activeWeapon : player.activeWeapon ?? player.mainWeapon;
-}
-
-function displayWeaponName(weaponName: string | null) {
-  if (!weaponName) {
-    return "--";
-  }
-
-  const normalized = weaponName
-    .replace("weapon_", "")
-    .replaceAll("_", " ")
-    .trim()
-    .toUpperCase();
-
-  const aliases: Record<string, string> = {
-    "M4A1 SILENCER": "M4A1-S",
-    "USP SILENCER": "USP-S",
-    "GLOCK": "GLOCK-18",
-    "MAG 7": "MAG-7",
-    "MP9": "MP9",
-    "MP7": "MP7",
-    "AK47": "AK-47",
-    "GALIL AR": "GALIL AR",
-    "FAMAS": "FAMAS",
-    "MAC10": "MAC-10",
-    "P250": "P250",
-    "DEAGLE": "DEAGLE",
-    "AWP": "AWP",
-    "FIVESEVEN": "FIVE-SEVEN",
-  };
-
-  return aliases[normalized] ?? normalized;
-}
-
 function utilityInventory(player: LivePlayerState): RailIconItem[] {
-  const activeUtilityKind = utilityKindFromWeaponName(player.activeWeapon);
+  const activeUtilityKind = resolvePlayerEquipmentState({
+    activeWeapon: player.activeWeapon,
+    activeWeaponClass: player.activeWeaponClass,
+    mainWeapon: player.mainWeapon,
+  }).activeUtilityKind;
   const capacities: Array<{ count: number | null; kind: UtilityKind; label: string; slots: number }> = [
     { count: player.flashbangs, kind: "flashbang", label: "Flashbang", slots: 2 },
     { count: player.smokes, kind: "smoke", label: "Smoke", slots: 1 },
     { count: player.heGrenades, kind: "hegrenade", label: "HE grenade", slots: 1 },
-    { count: player.fireGrenades, kind: "fire", label: "Molotov / incendiary", slots: 1 },
+    { count: player.fireGrenades, kind: "molotov", label: "Molotov / incendiary", slots: 1 },
     { count: player.decoys, kind: "decoy", label: "Decoy", slots: 1 },
   ];
 
   return capacities
     .map((entry) => ({
-      active: activeUtilityKind === entry.kind && (entry.count ?? 0) > 0,
+      active:
+        (entry.kind === "molotov"
+          ? activeUtilityKind === "molotov" || activeUtilityKind === "incendiary"
+          : activeUtilityKind === entry.kind) && (entry.count ?? 0) > 0,
       count: Math.min(entry.slots, Math.max(0, entry.count ?? 0)),
-      kind: entry.kind,
+      kind: (entry.kind === "molotov" ? "fire" : entry.kind) as RailIconKind,
       title: `${entry.label}${(entry.count ?? 0) > 1 ? ` x${Math.min(entry.slots, Math.max(0, entry.count ?? 0))}` : ""}`,
     }))
     .filter((entry) => entry.count > 0)
@@ -248,28 +225,4 @@ function railIcons(player: LivePlayerState): RailIconItem[] {
       title: "Bomb",
     },
   ];
-}
-
-function utilityKindFromWeaponName(weaponName: string | null): UtilityKind | null {
-  if (!weaponName) {
-    return null;
-  }
-
-  const normalized = weaponName.replace("weapon_", "").toLowerCase();
-  switch (normalized) {
-    case "flashbang":
-      return "flashbang";
-    case "smokegrenade":
-      return "smoke";
-    case "hegrenade":
-      return "hegrenade";
-    case "molotov":
-    case "incgrenade":
-    case "incendiarygrenade":
-      return "fire";
-    case "decoy":
-      return "decoy";
-    default:
-      return null;
-  }
 }

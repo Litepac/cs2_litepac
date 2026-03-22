@@ -15,6 +15,7 @@ type Sample struct {
 	Helmet       bool
 	Money        *int
 	Weapon       *string
+	WeaponClass  *string
 	MainWeapon   *string
 	Flashbangs   *int
 	Smokes       *int
@@ -42,6 +43,7 @@ type Builder struct {
 	helmet  []bool
 	money   []*int
 	weapon  []*string
+	class   []*string
 	main    []*string
 	flash   []*int
 	smoke   []*int
@@ -65,6 +67,7 @@ func NewBuilder(playerID string, side *string) *Builder {
 		helmet:   []bool{},
 		money:    []*int{},
 		weapon:   []*string{},
+		class:    []*string{},
 		main:     []*string{},
 		flash:    []*int{},
 		smoke:    []*int{},
@@ -111,6 +114,7 @@ func (b *Builder) Build() *replay.PlayerStream {
 		HasHelmet:           b.helmet,
 		Money:               b.money,
 		ActiveWeapon:        b.weapon,
+		ActiveWeaponClass:   b.class,
 		MainWeapon:          b.main,
 		Flashbangs:          b.flash,
 		Smokes:              b.smoke,
@@ -132,6 +136,7 @@ func (b *Builder) appendSample(sample Sample) {
 	b.helmet = append(b.helmet, sample.Helmet)
 	b.money = append(b.money, sample.Money)
 	b.weapon = append(b.weapon, sample.Weapon)
+	b.class = append(b.class, sample.WeaponClass)
 	b.main = append(b.main, sample.MainWeapon)
 	b.flash = append(b.flash, sample.Flashbangs)
 	b.smoke = append(b.smoke, sample.Smokes)

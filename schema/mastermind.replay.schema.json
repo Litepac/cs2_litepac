@@ -613,6 +613,7 @@
         "hasHelmet",
         "money",
         "activeWeapon",
+        "activeWeaponClass",
         "mainWeapon",
         "flashbangs",
         "smokes",
@@ -699,6 +700,27 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/nullableString"
+          }
+        },
+        "activeWeaponClass": {
+          "type": "array",
+          "items": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "pistol",
+              "smg",
+              "heavy",
+              "rifle",
+              "sniper",
+              "knife",
+              "utility",
+              "equipment",
+              "unknown",
+              null
+            ]
           }
         },
         "mainWeapon": {

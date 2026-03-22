@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -72,10 +73,21 @@ func main() {
 }
 
 func copyFile(source, target string) error {
-	raw, err := os.ReadFile(source)
+	input, err := os.Open(source)
+	if err != nil {
+		return err
+	}
+	defer input.Close()
+
+	output, err := os.Create(target)
 	if err != nil {
 		return err
 	}
 
-	return os.WriteFile(target, raw, 0o644)
+	if _, err := io.Copy(output, input); err != nil {
+		output.Close()
+		return err
+	}
+
+	return output.Close()
 }

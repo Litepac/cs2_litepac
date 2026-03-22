@@ -721,7 +721,7 @@ h1 {
 
 .timeline-map-label {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -755,14 +755,14 @@ h1 {
 .timeline-score-chip span,
 .timeline-score-chip small {
   color: var(--muted);
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .timeline-score-chip strong {
   justify-self: end;
-  font-size: 16px;
+  font-size: 18px;
   line-height: 1;
 }
 
@@ -797,7 +797,7 @@ h1 {
 .timeline-left-controls {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   min-width: 0;
   align-self: stretch;
   padding-right: 12px;
@@ -806,7 +806,7 @@ h1 {
 
 .timeline-play-button {
   min-width: 72px;
-  height: 40px;
+  height: 42px;
   padding: 0 12px;
   border: 1px solid var(--line);
   border-radius: 6px;
@@ -828,7 +828,7 @@ h1 {
 
 .timeline-clock-block span {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
@@ -851,7 +851,7 @@ h1 {
   gap: 6px;
   min-width: 0;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   flex-wrap: wrap;
 }
 
@@ -870,7 +870,7 @@ h1 {
   border: 1px solid rgba(42, 57, 69, 0.9);
   background: rgba(13, 20, 27, 0.94);
   color: #dfe7ee;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -899,7 +899,7 @@ h1 {
   padding: 2px 6px;
   border-radius: 999px;
   border: 1px solid rgba(42, 57, 69, 0.94);
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -907,7 +907,7 @@ h1 {
 
 .timeline-readout-meta {
   color: #9cb0bf;
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -946,21 +946,19 @@ h1 {
   min-width: 0;
   display: grid;
   grid-template-rows: 28px 16px 30px;
-  gap: 6px;
-  padding: 6px 10px;
-  border-radius: 10px;
-  border: 1px solid rgba(35, 49, 61, 0.78);
-  background:
-    linear-gradient(180deg, rgba(13, 20, 27, 0.7), rgba(9, 14, 19, 0.78)),
-    rgba(10, 16, 22, 0.72);
+  gap: 7px;
+  padding: 4px 0 0;
+  border-radius: 0;
+  border: none;
+  background: transparent;
 }
 
 .timeline-guide-layer {
   position: absolute;
-  top: 6px;
-  right: 10px;
-  bottom: 6px;
-  left: 10px;
+  top: 4px;
+  right: 0;
+  bottom: 0;
+  left: 0;
   pointer-events: none;
   z-index: 0;
 }
@@ -991,7 +989,7 @@ h1 {
   align-items: center;
   justify-content: flex-start;
   color: #7692a5;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -1021,7 +1019,7 @@ h1 {
 .timeline-ruler-label {
   margin-top: 1px;
   color: #dfe7ee;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.04em;
 }
@@ -1095,16 +1093,17 @@ h1 {
   justify-content: space-between;
   align-items: center;
   gap: 10px;
-  padding-top: 1px;
+  padding-top: 7px;
+  border-top: 1px solid rgba(28, 42, 52, 0.72);
   flex-wrap: wrap;
 }
 
 .timeline-controls-panel .control-button {
   min-width: 0;
-  min-height: 27px;
-  padding: 6px 9px;
+  min-height: 29px;
+  padding: 6px 10px;
   border-radius: 0;
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .timeline-segmented-row {
@@ -1136,7 +1135,7 @@ h1 {
 }
 
 .timeline-segmented-row-speed .control-button {
-  min-width: 38px;
+  min-width: 40px;
 }
 
 .timeline-controls-secondary {
@@ -1146,8 +1145,8 @@ h1 {
 }
 
 .timeline-reset-button {
-  min-height: 27px;
-  padding: 6px 11px;
+  min-height: 29px;
+  padding: 6px 12px;
   border-radius: 6px;
 }
 
@@ -1163,48 +1162,34 @@ h1 {
 }
 
 .timeline-marker-kill {
-  width: 9px;
-  height: 9px;
-  border-radius: 999px 999px 4px 4px;
-  background:
-    radial-gradient(circle at 35% 38%, rgba(7, 16, 24, 0.96) 0 1px, transparent 1.1px),
-    radial-gradient(circle at 65% 38%, rgba(7, 16, 24, 0.96) 0 1px, transparent 1.1px),
-    linear-gradient(180deg, #ffc1bc, #ff7c73);
-  box-shadow: 0 0 0 1px rgba(255, 124, 115, 0.18);
+  width: 10px;
+  height: 10px;
 }
 
+.timeline-marker-kill::before,
 .timeline-marker-kill::after {
   content: "";
   position: absolute;
   left: 50%;
-  bottom: -2px;
-  width: 7px;
-  height: 4px;
-  border-radius: 0 0 2px 2px;
-  background:
-    linear-gradient(90deg,
-      transparent 0,
-      transparent 1px,
-      rgba(7, 16, 24, 0.92) 1px,
-      rgba(7, 16, 24, 0.92) 2px,
-      transparent 2px,
-      transparent 3px,
-      rgba(7, 16, 24, 0.92) 3px,
-      rgba(7, 16, 24, 0.92) 4px,
-      transparent 4px,
-      transparent 5px,
-      rgba(7, 16, 24, 0.92) 5px,
-      rgba(7, 16, 24, 0.92) 6px,
-      transparent 6px);
-  transform: translateX(-50%);
+  top: 50%;
+  width: 10px;
+  height: 2px;
+  border-radius: 999px;
+  background: #ff8f86;
+  box-shadow: 0 0 0 1px rgba(7, 16, 24, 0.65);
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.timeline-marker-kill::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
 }
 
 .timeline-marker-bomb {
-  width: 11px;
-  height: 11px;
+  width: 9px;
+  height: 9px;
   border-radius: 2px;
   background: rgba(10, 16, 22, 0.96);
-  border: 1.5px solid #ffd06d;
+  border: 1px solid #ffd06d;
 }
 
 .timeline-marker-bomb::before,
@@ -1246,19 +1231,19 @@ h1 {
 
 .timeline-marker-bomb-defuse_start::before,
 .timeline-marker-bomb-defused::before {
-  width: 6px;
+  width: 5px;
   height: 1.5px;
 }
 
 .timeline-marker-bomb-defuse_start::after,
 .timeline-marker-bomb-defused::after {
   width: 1.5px;
-  height: 6px;
+  height: 5px;
 }
 
 .timeline-marker-bomb-exploded {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   border-radius: 1px;
   background: linear-gradient(180deg, #ffd06d, #f37b52);
   border: none;
@@ -1357,7 +1342,7 @@ h1 {
 .roster-score-caption {
   margin-top: 2px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
@@ -1375,7 +1360,7 @@ h1 {
 
 .roster-score-block span {
   color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
@@ -1424,16 +1409,16 @@ h1 {
 .roster-player-support-row {
   justify-content: space-between;
   color: var(--muted);
-  font-size: 9px;
+  font-size: 10px;
   line-height: 1;
-  min-height: 16px;
+  min-height: 18px;
 }
 
 .roster-player-meta {
   min-width: 0;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   flex-wrap: wrap;
 }
 
@@ -1448,17 +1433,17 @@ h1 {
   display: inline-flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 3px;
-  min-height: 16px;
+  gap: 4px;
+  min-height: 18px;
   margin-left: auto;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 .roster-utility-item {
   position: relative;
-  min-width: 17px;
-  height: 17px;
-  padding: 0 4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1480,7 +1465,7 @@ h1 {
 
 .roster-utility-count {
   color: #dfe7ee;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   line-height: 1;
 }
@@ -1596,7 +1581,7 @@ h1 {
 .roster-health-track {
   display: block;
   width: 100%;
-  height: 3px;
+  height: 2px;
   border-radius: 999px;
   background: rgba(33, 46, 58, 0.92);
   overflow: hidden;
@@ -1624,16 +1609,16 @@ h1 {
   font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.01em;
-  max-width: 128px;
+  max-width: 136px;
 }
 
 .roster-player-weapon {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 108px;
+  max-width: 118px;
   color: #dfe7ee;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-align: right;
@@ -1643,7 +1628,7 @@ h1 {
 .roster-player-economy,
 .roster-player-mini-stat {
   white-space: nowrap;
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.04em;
 }
 
@@ -1662,7 +1647,7 @@ h1 {
   width: 100%;
   height: 1px;
   border-radius: 999px;
-  opacity: 0.6;
+  opacity: 0.38;
 }
 
 .roster-player-rule.side-ct {
@@ -1832,7 +1817,7 @@ h1 {
   }
 
   .timeline-row-label {
-    font-size: 11px;
+    font-size: 12px;
   }
 }
 

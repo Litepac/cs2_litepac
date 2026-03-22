@@ -85,6 +85,7 @@ func ValidateReplay(data replay.Replay) error {
 				count != len(stream.HasHelmet) ||
 				count != len(stream.Money) ||
 				count != len(stream.ActiveWeapon) ||
+				count != len(stream.ActiveWeaponClass) ||
 				count != len(stream.MainWeapon) ||
 				count != len(stream.Flashbangs) ||
 				count != len(stream.Smokes) ||

@@ -3,6 +3,7 @@ import { Application, Assets, Container, Graphics, Rectangle, Sprite, Text, Text
 
 import { drawUtilityVisual } from "./utilityVisuals";
 import { createRadarViewport, loadRadarImageSize, type RadarViewport, worldToScreen } from "../maps/transform";
+import { resolvePlayerEquipmentState, type PlayerTokenMode, type WeaponClass } from "../replay/weapons";
 import { utilityMatchesFocus, type UtilityFocus } from "../replay/utilityFilter";
 import type { Replay, Round } from "../replay/types";
 
@@ -42,10 +43,11 @@ const DEFAULT_STAGE_WIDTH = 1180;
 const DEFAULT_STAGE_HEIGHT = 760;
 const MIN_STAGE_WIDTH = 680;
 const MIN_STAGE_HEIGHT = 420;
-const RECENT_HURT_WINDOW_TICKS = 40;
+const RECENT_HURT_WINDOW_TICKS = 34;
 const RECENT_KILL_WINDOW_TICKS = 64 * 6;
 const RECENT_BOMB_WINDOW_TICKS = 64 * 8;
-const HURT_BURST_GAP_TICKS = 6;
+const HURT_BURST_GAP_TICKS = 5;
+const RECENT_UTILITY_THROW_MODE_SECONDS = 0.18;
 export function ReplayStage({
   currentTick,
   replay,
@@ -457,7 +459,7 @@ function renderDynamicFrame(
   }
 
   const tickRate = replay.match.tickRate || replay.sourceDemo.tickRate || 64;
-  const fullRenderTick = Math.floor(currentTick);
+  const fullRenderTick = Math.round(currentTick);
   const needsFullRender =
     stage.lastFullRenderTick !== fullRenderTick ||
     stage.lastRoundNumber !== round.roundNumber ||
@@ -540,13 +542,26 @@ function renderDynamicFrame(
     const player = playerById.get(stream.playerId);
     const point = worldToScreen(replay, radarViewport, x, y);
     const selected = selectedPlayerId === stream.playerId;
+    const recentUtilityThrow = hasRecentUtilityThrow(round, stream.playerId, fullRenderTick, replay.match.tickRate);
 
     const marker = new Graphics();
     marker.eventMode = "static";
     marker.cursor = "pointer";
     marker.on("pointertap", () => onSelectPlayer(stream.playerId));
 
-    drawPlayerMarker(marker, point.x, point.y, stream.side, selected, sample.yaw);
+    drawPlayerMarker(
+      marker,
+      point.x,
+      point.y,
+      stream.side,
+      selected,
+      sample.yaw,
+      sample.health,
+      sample.activeWeapon,
+      sample.activeWeaponClass,
+      sample.mainWeapon,
+      recentUtilityThrow,
+    );
 
     if (hasBomb) {
       marker.roundRect(point.x + 9, point.y - 13, 9, 9, 2);
@@ -591,6 +606,10 @@ function interpolatePlayerSample(
   return {
     alive: stream.alive[baseIndex] ?? false,
     hasBomb: stream.hasBomb[baseIndex] ?? false,
+    health: stream.health[baseIndex] ?? null,
+    activeWeapon: stream.activeWeapon[baseIndex] ?? null,
+    activeWeaponClass: stream.activeWeaponClass[baseIndex] ?? null,
+    mainWeapon: stream.mainWeapon[baseIndex] ?? null,
     x: interpolateNullableNumber(stream.x[baseIndex], stream.x[nextIndex], mix),
     y: interpolateNullableNumber(stream.y[baseIndex], stream.y[nextIndex], mix),
     yaw: interpolateAngle(stream.yaw[baseIndex], stream.yaw[nextIndex], mix),
@@ -680,41 +699,168 @@ function drawPlayerMarker(
   side: "T" | "CT" | null,
   selected: boolean,
   yaw: number | null,
+  health: number | null,
+  activeWeapon: string | null,
+  activeWeaponClass: WeaponClass | null,
+  mainWeapon: string | null,
+  recentUtilityThrow: boolean,
 ) {
   const fillColor = side === "CT" ? 0x3fa8ff : 0xf3a448;
   const strokeColor = selected ? 0xf6fbff : 0x091116;
   const radius = selected ? 9 : 7;
-  const ringColor = selected ? 0xf6fbff : 0xe9f0f5;
+  const mode = resolvePlayerTokenMode(activeWeapon, activeWeaponClass, mainWeapon, recentUtilityThrow);
+  const healthRatio = health == null ? 1 : clamp(health / 100, 0, 1);
+  const innerRadius = Math.max(1.9, radius - 1.95);
+
   marker.circle(x, y, radius);
   marker.fill({ color: fillColor, alpha: selected ? 1 : 0.96 });
-  marker.stroke({ color: strokeColor, width: selected ? 2.4 : 2 });
-  marker.circle(x, y, selected ? 2.2 : 1.7);
-  marker.fill({ color: 0xf7fbff, alpha: 0.2 });
-  marker.circle(x, y, radius + (selected ? 1.2 : 0.8));
-  marker.stroke({ color: ringColor, width: selected ? 1.1 : 0.8, alpha: 0.18 });
+  marker.stroke({ color: strokeColor, width: selected ? 1.3 : 1.12, alpha: 0.96 });
 
-  if (yaw != null) {
-    const radians = (yaw * Math.PI) / 180;
-    const pointerBaseDistance = radius - 0.8;
-    const pointerTipDistance = radius + (selected ? 5.6 : 4.8);
-    const pointerHalfWidth = selected ? 3.2 : 2.8;
-    const baseX = x + Math.cos(radians) * pointerBaseDistance;
-    const baseY = y - Math.sin(radians) * pointerBaseDistance;
-    const tipX = x + Math.cos(radians) * pointerTipDistance;
-    const tipY = y - Math.sin(radians) * pointerTipDistance;
-    const normalX = Math.cos(radians + Math.PI / 2) * pointerHalfWidth;
-    const normalY = -Math.sin(radians + Math.PI / 2) * pointerHalfWidth;
+  const healthMask = new Graphics();
+  healthMask.circle(x, y, innerRadius);
+  healthMask.fill({ color: 0xffffff, alpha: 1 });
+  healthMask.alpha = 0;
+  marker.addChild(healthMask);
 
-    marker.moveTo(baseX + normalX, baseY + normalY);
-    marker.lineTo(baseX - normalX, baseY - normalY);
+  const healthLossHeight = innerRadius * 2 * (1 - healthRatio);
+  if (healthLossHeight > 0.01) {
+    const shade = new Graphics();
+    shade.rect(x - innerRadius - 1, y - innerRadius - 1, innerRadius * 2 + 2, healthLossHeight + 1);
+    shade.fill({ color: 0x081017, alpha: 0.8 });
+    shade.mask = healthMask;
+    marker.addChild(shade);
+  }
+
+  const innerOutline = new Graphics();
+  innerOutline.circle(x, y, innerRadius);
+  innerOutline.stroke({ color: 0x0a1117, width: selected ? 0.66 : 0.56, alpha: 0.24 });
+  marker.addChild(innerOutline);
+
+  drawPlayerTokenMode(marker, x, y, yaw, radius, fillColor, strokeColor, selected, mode);
+}
+
+function drawPlayerTokenMode(
+  marker: Graphics,
+  x: number,
+  y: number,
+  yaw: number | null,
+  radius: number,
+  fillColor: number,
+  strokeColor: number,
+  selected: boolean,
+  mode: PlayerTokenMode,
+) {
+  if (yaw == null) {
+    return;
+  }
+
+  const radians = (yaw * Math.PI) / 180;
+  const forwardX = Math.cos(radians);
+  const forwardY = -Math.sin(radians);
+  const normalX = Math.cos(radians + Math.PI / 2);
+  const normalY = -Math.sin(radians + Math.PI / 2);
+  const baseDistance = radius - 1.05;
+  const baseX = x + forwardX * baseDistance;
+  const baseY = y + forwardY * baseDistance;
+
+  if (mode === "utility") {
+    const dotRadius = selected ? 2.1 : 1.8;
+    const dotDistance = radius + dotRadius + 1.1;
+    const dotX = x + forwardX * dotDistance;
+    const dotY = y + forwardY * dotDistance;
+    marker.circle(dotX, dotY, dotRadius);
+    marker.fill({ color: fillColor, alpha: 0.98 });
+    marker.stroke({ color: strokeColor, width: selected ? 0.86 : 0.76, alpha: 0.94 });
+    return;
+  }
+
+  if (mode === "knife") {
+    const tipDistance = radius + (selected ? 6.1 : 5.25);
+    const halfWidth = selected ? 3.45 : 2.95;
+    const tipX = x + forwardX * tipDistance;
+    const tipY = y + forwardY * tipDistance;
+    marker.moveTo(baseX + normalX * halfWidth, baseY + normalY * halfWidth);
+    marker.lineTo(baseX - normalX * halfWidth, baseY - normalY * halfWidth);
     marker.lineTo(tipX, tipY);
     marker.closePath();
     marker.fill({ color: fillColor, alpha: 0.98 });
-    marker.stroke({ color: strokeColor, width: selected ? 1.4 : 1.1, alpha: 0.92 });
-
-    marker.circle(tipX, tipY, selected ? 1.8 : 1.5);
-    marker.fill({ color: 0xf6fbff, alpha: 0.9 });
+    marker.moveTo(baseX + normalX * halfWidth, baseY + normalY * halfWidth);
+    marker.lineTo(tipX, tipY);
+    marker.lineTo(baseX - normalX * halfWidth, baseY - normalY * halfWidth);
+    marker.stroke({ color: strokeColor, width: selected ? 0.88 : 0.78, alpha: 0.94, cap: "round", join: "round" });
+    return;
   }
+
+  const tailLength =
+    mode === "awp"
+      ? selected
+        ? 11.2
+        : 10
+      : mode === "rifle"
+        ? selected
+          ? 7.15
+          : 6.35
+        : selected
+          ? 2.95
+          : 2.45;
+  const tailHalfWidth =
+    mode === "awp"
+      ? selected
+        ? 2.05
+        : 1.85
+      : mode === "rifle"
+        ? selected
+          ? 1.82
+          : 1.65
+        : selected
+          ? 1.45
+          : 1.28;
+  const tailInset = mode === "awp" ? 0.72 : mode === "rifle" ? 0.52 : 0.36;
+  const tailEndX = x + forwardX * (radius + tailLength);
+  const tailEndY = y + forwardY * (radius + tailLength);
+  const topBaseX = baseX + normalX * tailHalfWidth;
+  const topBaseY = baseY + normalY * tailHalfWidth;
+  const bottomBaseX = baseX - normalX * tailHalfWidth;
+  const bottomBaseY = baseY - normalY * tailHalfWidth;
+  const topEndX = tailEndX + normalX * (tailHalfWidth - tailInset);
+  const topEndY = tailEndY + normalY * (tailHalfWidth - tailInset);
+  const bottomEndX = tailEndX - normalX * (tailHalfWidth - tailInset);
+  const bottomEndY = tailEndY - normalY * (tailHalfWidth - tailInset);
+  marker.moveTo(topBaseX, topBaseY);
+  marker.lineTo(bottomBaseX, bottomBaseY);
+  marker.lineTo(bottomEndX, bottomEndY);
+  marker.lineTo(topEndX, topEndY);
+  marker.closePath();
+  marker.fill({ color: fillColor, alpha: 0.98 });
+  marker.moveTo(topBaseX, topBaseY);
+  marker.lineTo(topEndX, topEndY);
+  marker.lineTo(bottomEndX, bottomEndY);
+  marker.lineTo(bottomBaseX, bottomBaseY);
+  marker.stroke({ color: strokeColor, width: selected ? 0.84 : 0.74, alpha: 0.94, cap: "round", join: "round" });
+}
+
+function resolvePlayerTokenMode(
+  activeWeapon: string | null,
+  activeWeaponClass: WeaponClass | null,
+  mainWeapon: string | null,
+  recentUtilityThrow: boolean,
+): PlayerTokenMode {
+  return resolvePlayerEquipmentState({
+    activeWeapon,
+    activeWeaponClass,
+    mainWeapon,
+    recentUtilityThrow,
+  }).tokenMode;
+}
+
+function hasRecentUtilityThrow(round: Round, playerId: string, currentTick: number, tickRate: number) {
+  const windowTicks = Math.max(4, Math.round(tickRate * RECENT_UTILITY_THROW_MODE_SECONDS));
+  return round.utilityEntities.some(
+    (utility) =>
+      utility.throwerPlayerId === playerId &&
+      currentTick >= utility.startTick &&
+      currentTick - utility.startTick <= windowTicks,
+  );
 }
 
 function compactPlayerLabel(name: string, maxLength: number) {
@@ -759,7 +905,6 @@ function drawBombStateOverlay(
   radarViewport: RadarViewport,
 ) {
   const point = worldToScreen(replay, radarViewport, state.x, state.y);
-  const pulse = 0.5 + 0.5 * Math.sin((currentTick - state.plantedTick) / 10);
   const bombTimeTotalSeconds =
     state.explodeTick != null ? Math.max(0.1, (state.explodeTick - state.plantedTick) / replay.match.tickRate) : null;
   const bombTimeRemainingSeconds =
@@ -777,27 +922,43 @@ function drawBombStateOverlay(
           ? 0xf3a54d
           : 0xff6a62;
   const marker = new Graphics();
-  const outerRadius = 18;
-  const baseRadius = 14;
-  marker.circle(point.x, point.y, outerRadius + pulse * 1.2);
-  marker.fill({ color: 0x04070b, alpha: 0.16 + pulse * 0.05 });
-  marker.circle(point.x, point.y, outerRadius);
-  marker.stroke({ color: 0x111a22, width: 5, alpha: 0.96 });
-  marker.circle(point.x, point.y, outerRadius - 1);
-  marker.stroke({ color: 0x243342, width: 3, alpha: 0.88 });
+  const outerRadius = 18.2;
+  const trackRadius = outerRadius - 1.35;
+  const trackWidth = 4.8;
+  const baseRadius = 12.5;
+  const ringStart = -Math.PI / 2;
+  const ringEnd = ringStart + Math.PI * 2 - 0.012;
+  marker.circle(point.x, point.y, outerRadius + 4.8);
+  marker.fill({ color: 0x03080d, alpha: 0.12 });
+  marker.circle(point.x, point.y, outerRadius + 1.2);
+  marker.fill({ color: 0x08111a, alpha: 0.82 });
+  marker.circle(point.x, point.y, outerRadius + 1.4);
+  marker.stroke({ color: 0x182632, width: 1.35, alpha: 0.78 });
+  drawArcStroke(marker, point.x, point.y, trackRadius, ringStart, ringEnd);
+  marker.stroke({ color: 0x203041, width: trackWidth, alpha: 0.96, cap: "round" });
+  drawArcStroke(marker, point.x, point.y, trackRadius, ringStart, ringEnd);
+  marker.stroke({ color: 0x0c151f, width: trackWidth - 1.8, alpha: 0.92, cap: "round" });
 
   if (bombProgress != null) {
-    drawArcStroke(marker, point.x, point.y, outerRadius - 1, -Math.PI / 2, -Math.PI / 2 + bombProgress * Math.PI * 2);
+    const progressEnd = ringStart + bombProgress * Math.PI * 2;
+    drawArcStroke(marker, point.x, point.y, trackRadius, ringStart, progressEnd);
     marker.stroke({
       color: countdownColor,
-      width: 3,
-      alpha: 0.94,
+      width: trackWidth + 1.1,
+      alpha: 0.14,
+      cap: "round",
+    });
+    drawArcStroke(marker, point.x, point.y, trackRadius, ringStart, progressEnd);
+    marker.stroke({
+      color: countdownColor,
+      width: trackWidth,
+      alpha: 0.95,
       cap: "round",
     });
   }
 
-  drawBombThresholdTick(marker, point.x, point.y, outerRadius - 1, bombTimeTotalSeconds, 10, bombTimeRemainingSeconds, 0xf0b55a);
-  drawBombThresholdTick(marker, point.x, point.y, outerRadius - 1, bombTimeTotalSeconds, 5, bombTimeRemainingSeconds, 0xff7b72);
+  drawBombThresholdMarker(marker, point.x, point.y, trackRadius, trackWidth, bombTimeTotalSeconds, 10, 0xf0b55a);
+  drawBombThresholdMarker(marker, point.x, point.y, trackRadius, trackWidth, bombTimeTotalSeconds, 5, 0xff6a62);
 
   if (state.defuseStartTick != null) {
     if (state.defuseCompletionTick != null && state.defuseCompletionTick > state.defuseStartTick) {
@@ -809,25 +970,37 @@ function drawBombStateOverlay(
       drawArcStroke(marker, point.x, point.y, outerRadius + 4, -Math.PI / 2, -Math.PI / 2 + progress * Math.PI * 2);
       marker.stroke({ color: 0x79c8ff, width: 3.6, alpha: 0.94, cap: "round" });
     } else {
-      const sweepStart = -Math.PI / 2 + pulse * 0.5;
+      const sweepPulse = 0.5 + 0.5 * Math.sin((currentTick - state.defuseStartTick) / 8);
+      const sweepStart = -Math.PI / 2 + sweepPulse * 0.5;
       drawArcStroke(marker, point.x, point.y, outerRadius + 4, sweepStart, sweepStart + Math.PI * 0.75);
       marker.stroke({ color: 0x79c8ff, width: 3.2, alpha: 0.9, cap: "round" });
     }
   }
 
   marker.circle(point.x, point.y, baseRadius);
-  marker.fill({ color: 0x0b1217, alpha: 0.96 });
-  marker.circle(point.x, point.y, baseRadius);
-  marker.stroke({ color: 0x263747, width: 1.4, alpha: 0.92 });
-  marker.roundRect(point.x - 5.5, point.y - 7, 11, 14, 2.5);
-  marker.fill({ color: 0x201a21, alpha: 0.98 });
-  marker.stroke({ color: 0xff7f8d, width: 1.5, alpha: 0.95 });
-  marker.rect(point.x - 3, point.y - 3.5, 6, 7);
-  marker.stroke({ color: 0xff7f8d, width: 1.2, alpha: 0.94 });
-  marker.moveTo(point.x - 2, point.y - 9.5);
-  marker.lineTo(point.x - 2, point.y - 12.5);
-  marker.lineTo(point.x + 3.5, point.y - 12.5);
-  marker.stroke({ color: 0xff7f8d, width: 1.2, alpha: 0.9 });
+  marker.fill({ color: 0x091015, alpha: 0.1 });
+  marker.circle(point.x, point.y, 8.2);
+  marker.fill({ color: 0x0e171f, alpha: 0.78 });
+  marker.circle(point.x, point.y, 8.2);
+  marker.stroke({ color: 0x344654, width: 0.8, alpha: 0.42 });
+  marker.roundRect(point.x - 4.35, point.y - 6.15, 8.7, 12.3, 1.2);
+  marker.fill({ color: 0xf16876, alpha: 0.98 });
+  marker.roundRect(point.x - 4.35, point.y - 6.15, 8.7, 12.3, 1.2);
+  marker.stroke({ color: 0x0b1217, width: 0.95, alpha: 0.98 });
+  marker.roundRect(point.x - 2.35, point.y - 3.55, 4.7, 1.45, 0.28);
+  marker.fill({ color: 0x0f171e, alpha: 0.98 });
+  marker.roundRect(point.x - 2.45, point.y - 1.0, 4.9, 4.95, 0.45);
+  marker.stroke({ color: 0x0f171e, width: 0.72, alpha: 0.98 });
+  for (const keypadX of [-1.08, 0, 1.08]) {
+    for (const keypadY of [0.12, 1.2, 2.28]) {
+      marker.rect(point.x + keypadX - 0.26, point.y + keypadY - 0.26, 0.52, 0.52);
+      marker.fill({ color: 0x0f171e, alpha: 0.98 });
+    }
+  }
+  marker.moveTo(point.x - 1.35, point.y - 7.65);
+  marker.lineTo(point.x - 1.35, point.y - 9.6);
+  marker.lineTo(point.x + 2.15, point.y - 9.6);
+  marker.stroke({ color: 0xffa2ae, width: 0.92, alpha: 0.96 });
   layer.addChild(marker);
 }
 
@@ -907,14 +1080,14 @@ function drawArcStroke(
   marker.arc(centerX, centerY, radius, startAngle, endAngle);
 }
 
-function drawBombThresholdTick(
+function drawBombThresholdMarker(
   marker: Graphics,
   centerX: number,
   centerY: number,
   radius: number,
+  width: number,
   totalBombSeconds: number | null,
   thresholdSeconds: number,
-  secondsRemaining: number | null,
   color: number,
 ) {
   if (totalBombSeconds == null || thresholdSeconds >= totalBombSeconds) {
@@ -923,16 +1096,18 @@ function drawBombThresholdTick(
 
   const progressAtThreshold = clamp(thresholdSeconds / totalBombSeconds, 0, 1);
   const angle = -Math.PI / 2 + progressAtThreshold * Math.PI * 2;
-  const innerRadius = radius - 3.5;
-  const outerRadius = radius + 2.5;
+  const innerRadius = radius - width * 0.28;
+  const outerRadius = radius + width * 0.48;
   const startX = centerX + Math.cos(angle) * innerRadius;
   const startY = centerY + Math.sin(angle) * innerRadius;
   const endX = centerX + Math.cos(angle) * outerRadius;
   const endY = centerY + Math.sin(angle) * outerRadius;
-  const active = secondsRemaining != null && secondsRemaining <= thresholdSeconds;
   marker.moveTo(startX, startY);
   marker.lineTo(endX, endY);
-  marker.stroke({ color, width: active ? 2.1 : 1.4, alpha: active ? 0.96 : 0.5, cap: "round" });
+  marker.stroke({ color: 0x091118, width: 2.7, alpha: 0.9, cap: "round" });
+  marker.moveTo(startX, startY);
+  marker.lineTo(endX, endY);
+  marker.stroke({ color, width: 1.35, alpha: 0.95, cap: "round" });
 }
 
 function drawBombEvent(
@@ -1065,9 +1240,9 @@ function drawHurtBurst(
   const startY = attackerPoint.y + ny * attackerRadius;
   const endX = victimPoint.x - nx * victimRadius;
   const endY = victimPoint.y - ny * victimRadius;
-  const glowAlpha = 0.04 + fade * 0.08;
-  const lineAlpha = 0.12 + fade * 0.22;
-  const coreAlpha = 0.18 + fade * 0.28;
+  const glowAlpha = 0.035 + fade * 0.075;
+  const lineAlpha = 0.1 + fade * 0.18;
+  const coreAlpha = 0.16 + fade * 0.24;
   const labelSpread = 10 + Math.min(2, event.labelOffsetIndex) * 12;
   const labelRise = 3 + event.labelOffsetIndex * 9 + fade * 5;
   const labelX = endX + nx * 4 + px * labelNormalSign * labelSpread;
@@ -1077,15 +1252,13 @@ function drawHurtBurst(
   const marker = new Graphics();
   marker.moveTo(startX, startY);
   marker.lineTo(endX, endY);
-  marker.stroke({ cap: "round", color: accentColor, join: "round", width: 2.5 * burstStrength, alpha: glowAlpha });
+  marker.stroke({ cap: "round", color: accentColor, join: "round", width: 2.2 * burstStrength, alpha: glowAlpha });
   marker.moveTo(startX, startY);
   marker.lineTo(endX, endY);
-  marker.stroke({ cap: "round", color: accentColor, join: "round", width: 1.45, alpha: lineAlpha });
+  marker.stroke({ cap: "round", color: accentColor, join: "round", width: 1.3, alpha: lineAlpha });
   marker.moveTo(startX, startY);
   marker.lineTo(endX, endY);
-  marker.stroke({ cap: "round", color: 0xfff1cf, join: "round", width: 0.75, alpha: coreAlpha });
-  marker.circle(startX, startY, 0.9 + fade * 0.45);
-  marker.fill({ color: accentColor, alpha: 0.12 + fade * 0.1 });
+  marker.stroke({ cap: "round", color: 0xfff1cf, join: "round", width: 0.65, alpha: coreAlpha });
   marker.circle(endX, endY, impactRadius);
   marker.stroke({ color: accentColor, width: 0.95, alpha: 0.12 + fade * 0.18 });
   marker.circle(endX, endY, 1.35 + fade * 0.45);
@@ -1098,7 +1271,7 @@ function drawHurtBurst(
       style: {
         fill: armorOnly ? 0xb8daff : 0xf3f5f8,
         fontFamily: "IBM Plex Sans, Segoe UI, sans-serif",
-        fontSize: event.count > 1 ? 12 : 11,
+        fontSize: event.count > 1 ? 13 : 12,
         fontWeight: "700",
         stroke: { color: 0x0a1218, width: 3, join: "round" },
       },
@@ -1107,7 +1280,7 @@ function drawHurtBurst(
     damageText.roundPixels = true;
     damageText.resolution = 2;
     damageText.position.set(labelX, labelY);
-    damageText.alpha = 0.42 + fade * 0.38;
+    damageText.alpha = 0.46 + fade * 0.32;
     layer.addChild(damageText);
   }
 }

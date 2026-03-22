@@ -14,8 +14,8 @@
 ## In Progress
 - Refine parser-backed hurt-line combat cues so the map read feels intentional and Skybox-like without inventing bullet-path truth
 - Tighten the right rail toward a denser scoreboard-style hierarchy so weapons, vitals, and held utility read closer to the Skybox reference
-- Collapse the dock further into one calmer operator panel so the round strip stays thin and the main timeline feels less like stacked custom controls
-- Improve bomb readability with parser-backed planted and defusing overlays, including defuse-abort truth so the viewer does not fake continuous defuse state
+- Collapse the dock further into one calmer operator panel so the round strip stays thin, the main timeline feels less like stacked custom controls, and small-type pockets are normalized
+- Improve bomb readability with parser-backed planted and defusing overlays, including a more Skybox-like segmented planted timer ring and defuse-abort truth so the viewer does not fake continuous defuse state
 - Strengthen repo-local agent workflow around explicit planning, bounded subagents, verification, and re-planning without introducing a second task-tracking system
 - Push the viewer shell, dock, rail, and utility presentation closer to the Skybox reference using only parser-backed replay truth
 - Replace debug-like right-rail utility pills with Skybox-style held-utility presentation and clearer active-vs-main-weapon hierarchy
@@ -103,6 +103,7 @@
 - Updated top-level `AGENTS.md` to reference specialist guides and the canonical replay boundary
 - Added `.github/agents/ui-ux-specialist.md` and tightened docs around the reference-locked shell rebuild
 - Added parser-backed live player equipment state to the canonical replay schema and parser streams
+- Added parser-owned `activeWeaponClass` and `activeUtilityKind` fields so viewer token and rail state no longer infer equipment semantics from weapon-name strings
 - Added parser-backed main-weapon and utility inventory state to canonical player streams and the viewer right rail
 - Added parser-backed weapon-fire events to canonical rounds and restrained viewer shot cues on the map and timeline
 - Added parser-backed hurt events so map combat cues can use attacker-victim truth and damage values

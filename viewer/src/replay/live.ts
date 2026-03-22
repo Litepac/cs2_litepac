@@ -2,6 +2,7 @@ import type { Replay, Round } from "./types";
 import { teamName } from "./derived";
 import { utilityMatchesFocus, type UtilityFocus } from "./utilityFilter";
 import { activeUtilityCount as countActiveUtilities, isUtilityVisibleAtTick } from "./utility";
+import type { WeaponClass } from "./weapons";
 
 export type LivePlayerState = {
   alive: boolean;
@@ -21,6 +22,7 @@ export type LivePlayerState = {
   smokes: number | null;
   teamId: string;
   activeWeapon: string | null;
+  activeWeaponClass: WeaponClass | null;
 };
 
 export type RoundLiveState = {
@@ -70,6 +72,8 @@ export function livePlayersAtTick(replay: Replay, round: Round, currentTick: num
       const money = sampleIndex >= 0 && sampleIndex < stream.money.length ? stream.money[sampleIndex] : null;
       const activeWeapon =
         sampleIndex >= 0 && sampleIndex < stream.activeWeapon.length ? stream.activeWeapon[sampleIndex] : null;
+      const activeWeaponClass =
+        sampleIndex >= 0 && sampleIndex < stream.activeWeaponClass.length ? stream.activeWeaponClass[sampleIndex] : null;
       const mainWeapon =
         sampleIndex >= 0 && sampleIndex < stream.mainWeapon.length ? stream.mainWeapon[sampleIndex] : null;
       const flashbangs =
@@ -100,6 +104,7 @@ export function livePlayersAtTick(replay: Replay, round: Round, currentTick: num
         smokes,
         teamId: player.teamId,
         activeWeapon,
+        activeWeaponClass,
       } satisfies LivePlayerState;
     })
     .filter((entry): entry is LivePlayerState => entry !== null)

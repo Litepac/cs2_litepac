@@ -218,6 +218,16 @@ Each utility object covers its lifecycle:
 
 This gives the viewer enough data to render grenade travel plus active smoke or fire windows without touching raw demo state.
 
+## Player Equipment Semantics
+
+Player streams also carry parser-owned active-equipment semantics so the viewer does not need to reverse-engineer token or rail state from human-readable weapon names:
+
+- `activeWeapon`: active equipment display name such as `AK-47`, `HE Grenade`, or `Knife`
+- `activeWeaponClass`: parser-owned coarse class such as `pistol`, `smg`, `heavy`, `rifle`, `sniper`, `knife`, `utility`, or `equipment`
+- `mainWeapon`: parser-owned primary combat weapon display name when one exists
+
+This keeps player token mode on the parser/canonical side of the boundary instead of letting map and roster UI reinterpret weapon strings independently. Exact held-grenade kind can still be derived in one shared viewer resolver from the already-canonical `activeWeapon` display name without duplicating another full per-tick semantic array.
+
 ## Explicit Non-Goals for V1 Schema
 
 The canonical artifact does not include:

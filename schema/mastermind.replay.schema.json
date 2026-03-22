@@ -365,6 +365,37 @@
         }
       }
     },
+    "blindEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tick",
+        "playerId",
+        "attackerPlayerId",
+        "durationTicks",
+        "endTick"
+      ],
+      "properties": {
+        "tick": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "playerId": {
+          "type": "string"
+        },
+        "attackerPlayerId": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "durationTicks": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "endTick": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
     "hurtEvent": {
       "type": "object",
       "additionalProperties": false,
@@ -773,6 +804,7 @@
         "winnerSide",
         "endReason",
         "playerStreams",
+        "blindEvents",
         "fireEvents",
         "hurtEvents",
         "killEvents",
@@ -814,6 +846,12 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/playerStream"
+          }
+        },
+        "blindEvents": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/blindEvent"
           }
         },
         "fireEvents": {

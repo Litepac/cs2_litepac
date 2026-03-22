@@ -1,9 +1,21 @@
 # plans.md
 
+Planning note:
+- `In Progress` means actively being worked now, not historically related.
+- Paused or later work stays in `Planned` under `On Hold / Later`.
+- `Done` should reflect what actually landed, not superseded intermediate versions.
+
 ## Planned
+### Next Up
+- Finish player-token polish now that token mode is parser-backed through `activeWeaponClass`
+- Tighten bomb overlay polish toward the Skybox reference, especially planted-ring/icon refinement
+- Keep flattening and simplifying the bottom dock so it reads closer to one calm Skybox-style operator panel
+- Tighten the right rail further toward a denser scoreboard-style hierarchy with cleaner weapon/vitals/utility balance
+- Continue live visual QA against staged fixtures at 1080p and 1440p/2K
+
+### On Hold / Later
 - Tighten parser edge cases found during visual replay checks
 - Add parser-side yaw validation before relying more heavily on facing semantics
-- Add canonical flash-effect truth if future UI needs more than detonation-point bloom
 - Add canonical inferno footprint truth if future UI needs more than soft center-based fire rendering
 - Add map calibration spot checks tied to known landmarks
 - Reduce viewer bundle size and split heavy Pixi code paths
@@ -13,59 +25,10 @@
 
 ## In Progress
 - Refine parser-backed hurt-line combat cues so the map read feels intentional and Skybox-like without inventing bullet-path truth
-- Tighten the right rail toward a denser scoreboard-style hierarchy so weapons, vitals, and held utility read closer to the Skybox reference
-- Collapse the dock further into one calmer operator panel so the round strip stays thin, the main timeline feels less like stacked custom controls, and small-type pockets are normalized
 - Improve bomb readability with parser-backed planted and defusing overlays, including a more Skybox-like segmented planted timer ring and defuse-abort truth so the viewer does not fake continuous defuse state
-- Strengthen repo-local agent workflow around explicit planning, bounded subagents, verification, and re-planning without introducing a second task-tracking system
 - Push the viewer shell, dock, rail, and utility presentation closer to the Skybox reference using only parser-backed replay truth
-- Replace debug-like right-rail utility pills with Skybox-style held-utility presentation and clearer active-vs-main-weapon hierarchy
 - Rebuild player token styling and utility visuals toward stronger operator readability without inventing live fire cues
 - Visual validation workflow using staged local replay fixtures
-- Improve viewer inspection fidelity for visual replay checks
-- Reassert parser-first ownership: parser/canonical replay define utility and facing truth, viewer only renders/interpolates
-- Move viewer toward a Skybox-like operator layout using only real replay data
-- Compress chrome and add in-map live HUD derived from replay state
-- Consolidate playback into a bottom operator dock to increase map dominance
-- Add round-phase context to the playback dock using real freeze/live/post-plant timing
-- Improve map readability with selected-player motion context and safer interaction polish
-- Improve utility readability with real lifecycle timers and clearer on-map visuals
-- Add utility motion context on the map and utility presence in the bottom dock
-- Refine utility presentation with calmer flash bursts and icon-style map badges
-- Render full utility throw trajectories and map phase markers without projection artifacts
-- Correct player facing vectors and keep implementation status documented in-repo
-- Keep full-round utility paths visible, reduce right-rail conflicts, and document viewer roadmap
-- Improve operator-dock readability and reduce on-map label/rail clutter
-- Maintain an explicit in-repo agent/debug runbook for continuation quality
-- Truth-check utility trajectory rendering against sparse parser samples and remove uncertain aim vectors
-- Shift utility validation workflow to one utility family at a time with viewer-side focus controls
-- Densify canonical grenade trajectories parser-side and reduce on-map trail linger after detonation
-- Refine smoke-only presentation: smoother path interpolation, faster post-bloom fade, and better smoke cloud readability
-- Replace generic smoke point selection with a smoke-specific projectile/active renderer built from raw trajectory samples plus detonation anchors
-- Rebuild the viewer shell bottom-up around a denser operator dock and cleaner map-first hierarchy
-- Remove or omit viewer-side visuals that are not yet trustworthy, especially facing indicators and noisy utility adornments
-- Incorporate prior-art findings from comparable CS2 2D replay projects without violating the canonical replay contract
-- Add repo-local specialist agent guides so future work stays parser-first and reference-locked
-- Update top-level `AGENTS.md` so it points to specialist guides and reinforces parser/viewer truth boundaries
-- Add a dedicated UI UX specialist guide so shell work stays reference-locked and map-first
-- Rebalance the map stage fit and restore compact always-on player labels without reintroducing noisy overlays
-- Hold utility trajectory lines temporarily while the map shell and player tokens are rebuilt toward the Skybox reference
-- Normalize parser-side smoke and fire lifetimes so viewer timers come from trustworthy canonical replay data
-- Land each round on the first meaningful player sample instead of an empty replay-start tick
-- Hard-disable on-map utility trajectory lines while utility tokens and shell layout are being rebuilt
-- Rebuild the right rail with parser-backed live weapon, health, armor, helmet, and money state
-- Replace active-weapon snapshots with parser-backed main-weapon and utility inventory state in the right rail
-- Keep fixture loading cache-safe and collapse schema validation failures into concise viewer errors
-- Add a simple in-repo overview of how agents and specialist guides fit together
-- Normalize shell density and map fit across 1080p and 1440p/2K so the viewer reads consistently across screens
-- Tighten the right rail and operator dock toward the Skybox reference using compact real-data hierarchy instead of extra badges or chrome
-- Simplify the bottom operator dock by subtraction so the timeline reads closer to the cleaner Skybox reference
-- Rebuild the timeline as one larger unified operator panel with internal lanes, larger readable text, and clearer bomb/utility marker language
-- Remove low-value phase and utility bars from the dock and make utility event markers reflect throw time, not detonation time
-- Continue compressing the left rail and expose clearer dock row labels so the shell reads more like an operator workspace on both 1080p and 2K
-- Rebuild the operator dock seek/ruler behavior with larger controls, 15-second markers, and a default-off freeze-time view
-- Remove the remaining inner map "box" feel by tightening radar crop detection and loosening stage fit around the actual map content
-- Move round and score context into the operator dock so the map no longer loses a dedicated top header row
-- Replace breakpoint-heavy viewer shell collapse with more fluid density scaling across 1080p and 1440p/2K
 
 ## Done
 - Proposed clean project structure and stack direction
@@ -103,7 +66,8 @@
 - Updated top-level `AGENTS.md` to reference specialist guides and the canonical replay boundary
 - Added `.github/agents/ui-ux-specialist.md` and tightened docs around the reference-locked shell rebuild
 - Added parser-backed live player equipment state to the canonical replay schema and parser streams
-- Added parser-owned `activeWeaponClass` and `activeUtilityKind` fields so viewer token and rail state no longer infer equipment semantics from weapon-name strings
+- Added parser-owned `activeWeaponClass` so viewer token mode no longer infers weapon class from weapon-name strings
+- Added canonical `blindEvents` so flashed-player rings can use real flash duration/end ticks instead of guessing from flash detonation blooms
 - Added parser-backed main-weapon and utility inventory state to canonical player streams and the viewer right rail
 - Added parser-backed weapon-fire events to canonical rounds and restrained viewer shot cues on the map and timeline
 - Added parser-backed hurt events so map combat cues can use attacker-victim truth and damage values
@@ -112,6 +76,7 @@
 - Defaulted utility focus back to `All` and added a larger seek bar, 15-second dock markers, and a freeze-time toggle to the replay dock
 - Normalized parser-side utility lifetime clamping to the real demo tick rate instead of a fixed `64`
 - Expired infernos from active fire state so canonical replay can reflect real smoke-extinguish shutdown behavior
+- Fixed large-fixture staging by streaming replay copies into `assets/fixtures` instead of buffering huge files in memory
 
 ## Blocked
 - Visual truth-checking still needs screenshots or side-by-side demo review

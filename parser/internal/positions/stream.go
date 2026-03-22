@@ -3,25 +3,25 @@ package positions
 import "mastermind/parser/internal/replay"
 
 type Sample struct {
-	Tick         int
-	X            *float64
-	Y            *float64
-	Z            *float64
-	Yaw          *float64
-	Alive        bool
-	HasBomb      bool
-	Health       *int
-	Armor        *int
-	Helmet       bool
-	Money        *int
-	Weapon       *string
-	WeaponClass  *string
-	MainWeapon   *string
-	Flashbangs   *int
-	Smokes       *int
-	HEGrenades   *int
-	FireGrenades *int
-	Decoys       *int
+	Tick                int
+	X                   *float64
+	Y                   *float64
+	Z                   *float64
+	Yaw                 *float64
+	Alive               bool
+	HasBomb             bool
+	Health              *int
+	Armor               *int
+	Helmet              bool
+	Money               *int
+	Weapon              *string
+	WeaponClass         *string
+	MainWeapon          *string
+	Flashbangs          *int
+	Smokes              *int
+	HEGrenades          *int
+	FireGrenades        *int
+	Decoys              *int
 }
 
 type Builder struct {
@@ -32,48 +32,48 @@ type Builder struct {
 	startTick int
 	lastTick  int
 
-	x       []*float64
-	y       []*float64
-	z       []*float64
-	yaw     []*float64
-	alive   []bool
-	hasBomb []bool
-	health  []*int
-	armor   []*int
-	helmet  []bool
-	money   []*int
-	weapon  []*string
-	class   []*string
-	main    []*string
-	flash   []*int
-	smoke   []*int
-	he      []*int
-	fire    []*int
-	decoy   []*int
+	x              []*float64
+	y              []*float64
+	z              []*float64
+	yaw            []*float64
+	alive          []bool
+	hasBomb        []bool
+	health         []*int
+	armor          []*int
+	helmet         []bool
+	money          []*int
+	weapon         []*string
+	class          []*string
+	main           []*string
+	flash          []*int
+	smoke          []*int
+	he             []*int
+	fire           []*int
+	decoy          []*int
 }
 
 func NewBuilder(playerID string, side *string) *Builder {
 	return &Builder{
-		playerID: playerID,
-		side:     side,
-		x:        []*float64{},
-		y:        []*float64{},
-		z:        []*float64{},
-		yaw:      []*float64{},
-		alive:    []bool{},
-		hasBomb:  []bool{},
-		health:   []*int{},
-		armor:    []*int{},
-		helmet:   []bool{},
-		money:    []*int{},
-		weapon:   []*string{},
-		class:    []*string{},
-		main:     []*string{},
-		flash:    []*int{},
-		smoke:    []*int{},
-		he:       []*int{},
-		fire:     []*int{},
-		decoy:    []*int{},
+		playerID:       playerID,
+		side:           side,
+		x:              []*float64{},
+		y:              []*float64{},
+		z:              []*float64{},
+		yaw:            []*float64{},
+		alive:          []bool{},
+		hasBomb:        []bool{},
+		health:         []*int{},
+		armor:          []*int{},
+		helmet:         []bool{},
+		money:          []*int{},
+		weapon:         []*string{},
+		class:          []*string{},
+		main:           []*string{},
+		flash:          []*int{},
+		smoke:          []*int{},
+		he:             []*int{},
+		fire:           []*int{},
+		decoy:          []*int{},
 	}
 }
 

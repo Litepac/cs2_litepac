@@ -48,6 +48,12 @@ const RECENT_KILL_WINDOW_TICKS = 64 * 6;
 const RECENT_BOMB_WINDOW_TICKS = 64 * 8;
 const HURT_BURST_GAP_TICKS = 5;
 const RECENT_UTILITY_THROW_MODE_SECONDS = 0.18;
+
+type BlindEffectState = {
+  progress: number;
+  severity: number;
+  remainingTicks: number;
+};
 export function ReplayStage({
   currentTick,
   replay,
@@ -501,6 +507,7 @@ function renderDynamicFrame(
   stage.lastFullRenderTick = fullRenderTick;
   stage.lastRoundNumber = round.roundNumber;
   stage.lastSelectedPlayerId = selectedPlayerId;
+  const blindEffects = buildActiveBlindEffects(round, fullRenderTick, tickRate);
   const livePlayers: Array<{
     hasBomb: boolean;
     player: Replay["players"][number] | undefined;
@@ -561,6 +568,7 @@ function renderDynamicFrame(
       sample.activeWeaponClass,
       sample.mainWeapon,
       recentUtilityThrow,
+      blindEffects.get(stream.playerId) ?? null,
     );
 
     if (hasBomb) {
@@ -704,17 +712,20 @@ function drawPlayerMarker(
   activeWeaponClass: WeaponClass | null,
   mainWeapon: string | null,
   recentUtilityThrow: boolean,
+  blindEffect: BlindEffectState | null,
 ) {
   const fillColor = side === "CT" ? 0x3fa8ff : 0xf3a448;
   const strokeColor = selected ? 0xf6fbff : 0x091116;
   const radius = selected ? 9 : 7;
   const mode = resolvePlayerTokenMode(activeWeapon, activeWeaponClass, mainWeapon, recentUtilityThrow);
   const healthRatio = health == null ? 1 : clamp(health / 100, 0, 1);
-  const innerRadius = Math.max(1.9, radius - 1.95);
+  const innerRadius = Math.max(1.9, radius - 1.7);
 
   marker.circle(x, y, radius);
   marker.fill({ color: fillColor, alpha: selected ? 1 : 0.96 });
-  marker.stroke({ color: strokeColor, width: selected ? 1.3 : 1.12, alpha: 0.96 });
+  marker.stroke({ color: strokeColor, width: selected ? 1.08 : 0.94, alpha: 0.97 });
+
+  drawBlindedRing(marker, x, y, radius, selected, blindEffect);
 
   const healthMask = new Graphics();
   healthMask.circle(x, y, innerRadius);
@@ -733,10 +744,52 @@ function drawPlayerMarker(
 
   const innerOutline = new Graphics();
   innerOutline.circle(x, y, innerRadius);
-  innerOutline.stroke({ color: 0x0a1117, width: selected ? 0.66 : 0.56, alpha: 0.24 });
+  innerOutline.stroke({ color: 0x0a1117, width: selected ? 0.52 : 0.44, alpha: 0.22 });
   marker.addChild(innerOutline);
 
   drawPlayerTokenMode(marker, x, y, yaw, radius, fillColor, strokeColor, selected, mode);
+}
+
+function drawBlindedRing(
+  marker: Graphics,
+  x: number,
+  y: number,
+  radius: number,
+  selected: boolean,
+  blindEffect: BlindEffectState | null,
+) {
+  if (blindEffect == null) {
+    return;
+  }
+
+  const remainingRatio = blindEffect.progress;
+  const severityRatio = blindEffect.severity;
+  const ringRadius = radius + (selected ? 3.15 : 2.85);
+  const ringWidth = selected ? 2.15 : 1.85;
+
+  marker.circle(x, y, ringRadius);
+  marker.stroke({
+    color: 0xf6fbff,
+    width: Math.max(0.8, ringWidth - 1.1),
+    alpha: 0.06 + severityRatio * 0.16,
+  });
+
+  drawArcStroke(marker, x, y, ringRadius, -Math.PI / 2, -Math.PI / 2 + remainingRatio * Math.PI * 2);
+  marker.stroke({
+    color: 0xffffff,
+    width: ringWidth,
+    alpha: 0.28 + severityRatio * 0.46,
+    cap: "round",
+  });
+
+  if (severityRatio > 0.42) {
+    marker.circle(x, y, ringRadius + 0.75);
+    marker.stroke({
+      color: 0xffffff,
+      width: 0.64,
+      alpha: 0.03 + severityRatio * 0.07,
+    });
+  }
 }
 
 function drawPlayerTokenMode(
@@ -759,24 +812,24 @@ function drawPlayerTokenMode(
   const forwardY = -Math.sin(radians);
   const normalX = Math.cos(radians + Math.PI / 2);
   const normalY = -Math.sin(radians + Math.PI / 2);
-  const baseDistance = radius - 1.05;
+  const baseDistance = radius - 1.15;
   const baseX = x + forwardX * baseDistance;
   const baseY = y + forwardY * baseDistance;
 
   if (mode === "utility") {
-    const dotRadius = selected ? 2.1 : 1.8;
-    const dotDistance = radius + dotRadius + 1.1;
+    const dotRadius = selected ? 1.95 : 1.68;
+    const dotDistance = radius + dotRadius + 0.95;
     const dotX = x + forwardX * dotDistance;
     const dotY = y + forwardY * dotDistance;
     marker.circle(dotX, dotY, dotRadius);
     marker.fill({ color: fillColor, alpha: 0.98 });
-    marker.stroke({ color: strokeColor, width: selected ? 0.86 : 0.76, alpha: 0.94 });
+    marker.stroke({ color: strokeColor, width: selected ? 0.72 : 0.62, alpha: 0.95 });
     return;
   }
 
   if (mode === "knife") {
-    const tipDistance = radius + (selected ? 6.1 : 5.25);
-    const halfWidth = selected ? 3.45 : 2.95;
+    const tipDistance = radius + (selected ? 5.6 : 4.9);
+    const halfWidth = selected ? 3.1 : 2.7;
     const tipX = x + forwardX * tipDistance;
     const tipY = y + forwardY * tipDistance;
     marker.moveTo(baseX + normalX * halfWidth, baseY + normalY * halfWidth);
@@ -787,56 +840,90 @@ function drawPlayerTokenMode(
     marker.moveTo(baseX + normalX * halfWidth, baseY + normalY * halfWidth);
     marker.lineTo(tipX, tipY);
     marker.lineTo(baseX - normalX * halfWidth, baseY - normalY * halfWidth);
-    marker.stroke({ color: strokeColor, width: selected ? 0.88 : 0.78, alpha: 0.94, cap: "round", join: "round" });
+    marker.stroke({ color: strokeColor, width: selected ? 0.74 : 0.64, alpha: 0.95, cap: "round", join: "round" });
     return;
   }
 
   const tailLength =
     mode === "awp"
       ? selected
-        ? 11.2
-        : 10
+        ? 10.9
+        : 9.8
       : mode === "rifle"
         ? selected
-          ? 7.15
-          : 6.35
+          ? 6.85
+          : 6.05
         : selected
-          ? 2.95
-          : 2.45;
+          ? 2.35
+          : 1.95;
   const tailHalfWidth =
     mode === "awp"
       ? selected
-        ? 2.05
-        : 1.85
+        ? 1.88
+        : 1.72
       : mode === "rifle"
         ? selected
-          ? 1.82
-          : 1.65
+          ? 1.56
+          : 1.42
         : selected
-          ? 1.45
-          : 1.28;
-  const tailInset = mode === "awp" ? 0.72 : mode === "rifle" ? 0.52 : 0.36;
-  const tailEndX = x + forwardX * (radius + tailLength);
-  const tailEndY = y + forwardY * (radius + tailLength);
-  const topBaseX = baseX + normalX * tailHalfWidth;
-  const topBaseY = baseY + normalY * tailHalfWidth;
-  const bottomBaseX = baseX - normalX * tailHalfWidth;
-  const bottomBaseY = baseY - normalY * tailHalfWidth;
-  const topEndX = tailEndX + normalX * (tailHalfWidth - tailInset);
-  const topEndY = tailEndY + normalY * (tailHalfWidth - tailInset);
-  const bottomEndX = tailEndX - normalX * (tailHalfWidth - tailInset);
-  const bottomEndY = tailEndY - normalY * (tailHalfWidth - tailInset);
+          ? 1.16
+          : 1.04;
+  const tailInset = mode === "awp" ? 0.46 : mode === "rifle" ? 0.34 : 0.24;
+  const neckWidth = mode === "awp" ? tailHalfWidth + 0.26 : mode === "rifle" ? tailHalfWidth + 0.18 : tailHalfWidth + 0.12;
+  drawPlayerTokenTail(
+    marker,
+    baseX,
+    baseY,
+    forwardX,
+    forwardY,
+    normalX,
+    normalY,
+    tailLength + 1.15,
+    neckWidth,
+    tailHalfWidth - tailInset,
+    fillColor,
+    strokeColor,
+    selected ? 0.74 : 0.64,
+  );
+}
+
+function drawPlayerTokenTail(
+  marker: Graphics,
+  baseX: number,
+  baseY: number,
+  forwardX: number,
+  forwardY: number,
+  normalX: number,
+  normalY: number,
+  tipDistance: number,
+  baseHalfWidth: number,
+  tipHalfWidth: number,
+  fillColor: number,
+  strokeColor: number,
+  strokeWidth: number,
+) {
+  const topBaseX = baseX + normalX * baseHalfWidth;
+  const topBaseY = baseY + normalY * baseHalfWidth;
+  const bottomBaseX = baseX - normalX * baseHalfWidth;
+  const bottomBaseY = baseY - normalY * baseHalfWidth;
+  const tipX = baseX + forwardX * tipDistance;
+  const tipY = baseY + forwardY * tipDistance;
+  const topTipX = tipX + normalX * tipHalfWidth;
+  const topTipY = tipY + normalY * tipHalfWidth;
+  const bottomTipX = tipX - normalX * tipHalfWidth;
+  const bottomTipY = tipY - normalY * tipHalfWidth;
+
   marker.moveTo(topBaseX, topBaseY);
   marker.lineTo(bottomBaseX, bottomBaseY);
-  marker.lineTo(bottomEndX, bottomEndY);
-  marker.lineTo(topEndX, topEndY);
+  marker.lineTo(bottomTipX, bottomTipY);
+  marker.lineTo(topTipX, topTipY);
   marker.closePath();
   marker.fill({ color: fillColor, alpha: 0.98 });
   marker.moveTo(topBaseX, topBaseY);
-  marker.lineTo(topEndX, topEndY);
-  marker.lineTo(bottomEndX, bottomEndY);
+  marker.lineTo(topTipX, topTipY);
+  marker.lineTo(bottomTipX, bottomTipY);
   marker.lineTo(bottomBaseX, bottomBaseY);
-  marker.stroke({ color: strokeColor, width: selected ? 0.84 : 0.74, alpha: 0.94, cap: "round", join: "round" });
+  marker.stroke({ color: strokeColor, width: strokeWidth, alpha: 0.95, cap: "round", join: "round" });
 }
 
 function resolvePlayerTokenMode(
@@ -861,6 +948,35 @@ function hasRecentUtilityThrow(round: Round, playerId: string, currentTick: numb
       currentTick >= utility.startTick &&
       currentTick - utility.startTick <= windowTicks,
   );
+}
+
+function buildActiveBlindEffects(round: Round, currentTick: number, tickRate: number) {
+  const effects = new Map<string, BlindEffectState>();
+
+  for (const event of round.blindEvents) {
+    if (event.tick > currentTick || event.endTick <= currentTick || event.durationTicks <= 0) {
+      continue;
+    }
+
+    const remainingTicks = event.endTick - currentTick;
+    const progress = clamp(remainingTicks / event.durationTicks, 0, 1);
+    const severity = clamp(event.durationTicks / Math.max(1, tickRate * 2.8), 0.18, 1);
+    const existing = effects.get(event.playerId);
+
+    if (
+      !existing ||
+      remainingTicks > existing.remainingTicks ||
+      (remainingTicks === existing.remainingTicks && severity > existing.severity)
+    ) {
+      effects.set(event.playerId, {
+        progress,
+        severity,
+        remainingTicks,
+      });
+    }
+  }
+
+  return effects;
 }
 
 function compactPlayerLabel(name: string, maxLength: number) {

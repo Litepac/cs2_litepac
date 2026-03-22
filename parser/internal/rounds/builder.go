@@ -30,6 +30,7 @@ func NewBuilder(roundNumber, startTick int, scoreBefore replay.Score) *Builder {
 			WinnerSide:      nil,
 			EndReason:       nil,
 			PlayerStreams:   []replay.PlayerStream{},
+			BlindEvents:     []replay.BlindEvent{},
 			FireEvents:      []replay.FireEvent{},
 			HurtEvents:      []replay.HurtEvent{},
 			KillEvents:      []replay.KillEvent{},
@@ -75,6 +76,10 @@ func (b *Builder) AppendKill(event replay.KillEvent) {
 
 func (b *Builder) AppendFire(event replay.FireEvent) {
 	b.round.FireEvents = append(b.round.FireEvents, event)
+}
+
+func (b *Builder) AppendBlind(event replay.BlindEvent) {
+	b.round.BlindEvents = append(b.round.BlindEvents, event)
 }
 
 func (b *Builder) AppendHurt(event replay.HurtEvent) {
@@ -125,25 +130,25 @@ func (b *Builder) SamplePlayer(
 	}
 
 	stream.Append(positions.Sample{
-		Tick:         tick,
-		X:            x,
-		Y:            y,
-		Z:            z,
-		Yaw:          yaw,
-		Alive:        alive,
-		HasBomb:      hasBomb,
-		Health:       health,
-		Armor:        armor,
-		Helmet:       hasHelmet,
-		Money:        money,
-		Weapon:       activeWeapon,
-		WeaponClass:  activeWeaponClass,
-		MainWeapon:   mainWeapon,
-		Flashbangs:   flashbangs,
-		Smokes:       smokes,
-		HEGrenades:   heGrenades,
-		FireGrenades: fireGrenades,
-		Decoys:       decoys,
+		Tick:                tick,
+		X:                   x,
+		Y:                   y,
+		Z:                   z,
+		Yaw:                 yaw,
+		Alive:               alive,
+		HasBomb:             hasBomb,
+		Health:              health,
+		Armor:               armor,
+		Helmet:              hasHelmet,
+		Money:               money,
+		Weapon:              activeWeapon,
+		WeaponClass:         activeWeaponClass,
+		MainWeapon:          mainWeapon,
+		Flashbangs:          flashbangs,
+		Smokes:              smokes,
+		HEGrenades:          heGrenades,
+		FireGrenades:        fireGrenades,
+		Decoys:              decoys,
 	})
 }
 
@@ -161,6 +166,9 @@ func (b *Builder) Build(tickRate float64) replay.Round {
 	})
 	sort.Slice(out.FireEvents, func(i, j int) bool {
 		return out.FireEvents[i].Tick < out.FireEvents[j].Tick
+	})
+	sort.Slice(out.BlindEvents, func(i, j int) bool {
+		return out.BlindEvents[i].Tick < out.BlindEvents[j].Tick
 	})
 	sort.Slice(out.HurtEvents, func(i, j int) bool {
 		return out.HurtEvents[i].Tick < out.HurtEvents[j].Tick

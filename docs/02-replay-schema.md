@@ -116,6 +116,7 @@ Each round contains:
 - round boundary ticks
 - winner side and end reason if confidently known
 - per-player side assignment and position stream
+- blinded-player events
 - fire events
 - hurt events
 - kill events
@@ -162,6 +163,18 @@ Weapon fire is stored as a discrete event stream:
 - shooter position if known
 
 This is intentionally narrower than a bullet or hit model. It tells the viewer that a player fired at a tick, without guessing bullet path, recoil, or impact semantics.
+
+### Blind
+
+Blinding from flashbangs is stored as a discrete player event stream:
+
+- tick
+- flashed player id
+- attacker id if known
+- duration in ticks
+- end tick
+
+This lets the viewer render blinded-player indicators from canonical replay truth without inventing per-player screen-space whiteness from flash detonation blooms alone.
 
 ### Hurt
 

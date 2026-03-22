@@ -81,6 +81,7 @@ type Round struct {
 	WinnerSide      *string         `json:"winnerSide"`
 	EndReason       *string         `json:"endReason"`
 	PlayerStreams   []PlayerStream  `json:"playerStreams"`
+	BlindEvents     []BlindEvent    `json:"blindEvents"`
 	FireEvents      []FireEvent     `json:"fireEvents"`
 	HurtEvents      []HurtEvent     `json:"hurtEvents"`
 	KillEvents      []KillEvent     `json:"killEvents"`
@@ -142,6 +143,14 @@ type FireEvent struct {
 	X          *float64 `json:"x"`
 	Y          *float64 `json:"y"`
 	Z          *float64 `json:"z"`
+}
+
+type BlindEvent struct {
+	Tick             int     `json:"tick"`
+	PlayerID         string  `json:"playerId"`
+	AttackerPlayerID *string `json:"attackerPlayerId"`
+	DurationTicks    int     `json:"durationTicks"`
+	EndTick          int     `json:"endTick"`
 }
 
 type HurtEvent struct {

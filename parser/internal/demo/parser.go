@@ -61,6 +61,21 @@ type samplePosition struct {
 	z *float64
 }
 
+type livePlayerState struct {
+	health              *int
+	armor               *int
+	hasHelmet           bool
+	money               *int
+	activeWeapon        *string
+	activeWeaponClass   *string
+	mainWeapon          *string
+	flashbangs          *int
+	smokes              *int
+	heGrenades          *int
+	fireGrenades        *int
+	decoys              *int
+}
+
 func Parse(opts Options) error {
 	if opts.DemoPath == "" {
 		return fmt.Errorf("demo path is required")
@@ -246,6 +261,32 @@ func (s *parseState) registerHandlers() {
 			X:          pos.x,
 			Y:          pos.y,
 			Z:          pos.z,
+		})
+	})
+
+	s.parser.RegisterEventHandler(func(e demoevents.PlayerFlashed) {
+		if s.currentRound == nil || s.currentRound.HasEnded() {
+			return
+		}
+
+		playerID := s.ensurePlayer(e.Player)
+		if playerID == "" {
+			return
+		}
+
+		durationTicks, ok := norm.FlashDurationTicks(e.FlashDuration(), s.parser.TickRate())
+		if !ok {
+			return
+		}
+
+		tick := s.parser.CurrentFrame()
+		attackerID := s.ensurePlayer(e.Attacker)
+		s.currentRound.AppendBlind(replay.BlindEvent{
+			Tick:             tick,
+			PlayerID:         playerID,
+			AttackerPlayerID: nilIfEmpty(attackerID),
+			DurationTicks:    durationTicks,
+			EndTick:          tick + durationTicks,
 		})
 	})
 
@@ -446,7 +487,7 @@ func (s *parseState) registerHandlers() {
 
 			side := norm.SideFromTeam(player.Team)
 			pos, hasPosition, yaw := livePosition(player)
-			health, armor, hasHelmet, money, activeWeapon, activeWeaponClass, mainWeapon, flashbangs, smokes, heGrenades, fireGrenades, decoys := liveEquipment(player)
+			playerState := livePlayerSnapshot(player)
 			s.currentRound.SamplePlayer(
 				s.parser.CurrentFrame(),
 				playerID,
@@ -456,18 +497,18 @@ func (s *parseState) registerHandlers() {
 				yaw,
 				player.IsAlive(),
 				playerID == bombCarrierID,
-				health,
-				armor,
-				hasHelmet,
-				money,
-				activeWeapon,
-				activeWeaponClass,
-				mainWeapon,
-				flashbangs,
-				smokes,
-				heGrenades,
-				fireGrenades,
-				decoys,
+				playerState.health,
+				playerState.armor,
+				playerState.hasHelmet,
+				playerState.money,
+				playerState.activeWeapon,
+				playerState.activeWeaponClass,
+				playerState.mainWeapon,
+				playerState.flashbangs,
+				playerState.smokes,
+				playerState.heGrenades,
+				playerState.fireGrenades,
+				playerState.decoys,
 			)
 		}
 	})
@@ -640,9 +681,9 @@ func livePosition(player *common.Player) (r3.Vector, bool, *float64) {
 	return pos, true, yaw
 }
 
-func liveEquipment(player *common.Player) (*int, *int, bool, *int, *string, *string, *string, *int, *int, *int, *int, *int) {
+func livePlayerSnapshot(player *common.Player) livePlayerState {
 	if player == nil {
-		return nil, nil, false, nil, nil, nil, nil, nil, nil, nil, nil, nil
+		return livePlayerState{}
 	}
 
 	health := replay.Int(player.Health())
@@ -663,7 +704,20 @@ func liveEquipment(player *common.Player) (*int, *int, bool, *int, *string, *str
 	mainWeapon := norm.MainWeaponName(weapons, player.ActiveWeapon())
 	flashbangs, smokes, heGrenades, fireGrenades, decoys := norm.UtilityInventoryCounts(weapons)
 
-	return health, armor, player.HasHelmet(), money, activeWeapon, activeWeaponClass, mainWeapon, flashbangs, smokes, heGrenades, fireGrenades, decoys
+	return livePlayerState{
+		health:              health,
+		armor:               armor,
+		hasHelmet:           player.HasHelmet(),
+		money:               money,
+		activeWeapon:        activeWeapon,
+		activeWeaponClass:   activeWeaponClass,
+		mainWeapon:          mainWeapon,
+		flashbangs:          flashbangs,
+		smokes:              smokes,
+		heGrenades:          heGrenades,
+		fireGrenades:        fireGrenades,
+		decoys:              decoys,
+	}
 }
 
 func infernoCenter(fires common.Fires) r3.Vector {

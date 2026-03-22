@@ -38,6 +38,25 @@ func ValidateReplay(data replay.Replay) error {
 			}
 		}
 
+		for _, blind := range round.BlindEvents {
+			endTick := round.EndTick
+			if round.OfficialEndTick != nil && *round.OfficialEndTick > endTick {
+				endTick = *round.OfficialEndTick
+			}
+
+			if blind.Tick < round.StartTick || blind.Tick > endTick {
+				return fmt.Errorf("round %d blind event at tick %d is outside round bounds", round.RoundNumber, blind.Tick)
+			}
+
+			if blind.DurationTicks <= 0 {
+				return fmt.Errorf("round %d blind event at tick %d has non-positive duration", round.RoundNumber, blind.Tick)
+			}
+
+			if blind.EndTick <= blind.Tick {
+				return fmt.Errorf("round %d blind event at tick %d ends before it starts", round.RoundNumber, blind.Tick)
+			}
+		}
+
 		for _, hurt := range round.HurtEvents {
 			endTick := round.EndTick
 			if round.OfficialEndTick != nil && *round.OfficialEndTick > endTick {

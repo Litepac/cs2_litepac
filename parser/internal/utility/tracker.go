@@ -2,6 +2,7 @@ package utility
 
 import (
 	"fmt"
+	"math"
 	"sort"
 	"strings"
 
@@ -20,6 +21,11 @@ type Tracker struct {
 	infernoEntityByUtility  map[string]int
 	lastInfernoPosByUtility map[string]r3.Vector
 }
+
+const (
+	smokeDisplacementRadiusUnits = 240.0
+	smokeDisplacementSeconds     = 2.6
+)
 
 func NewTracker() *Tracker {
 	return &Tracker{
@@ -110,6 +116,45 @@ func (t *Tracker) TrackExpireByEntity(entityID, tick int, pos r3.Vector) {
 	}
 
 	entry.PhaseEvents = append(entry.PhaseEvents, phaseEvent(tick, "expire", pos))
+}
+
+func (t *Tracker) TrackSmokeDisplacementFromHE(tick int, pos r3.Vector, tickRate float64) {
+	durationTicks := int(math.Round(smokeDisplacementSeconds * maxTickRate(tickRate)))
+	if durationTicks <= 0 {
+		return
+	}
+
+	for _, entry := range t.byID {
+		if entry.Kind != "smoke" {
+			continue
+		}
+
+		if entry.DetonateTick == nil || *entry.DetonateTick > tick {
+			continue
+		}
+
+		if entry.EndTick != nil && *entry.EndTick <= tick {
+			continue
+		}
+
+		center, ok := utilityPhaseCenter(entry, "detonate")
+		if !ok {
+			continue
+		}
+
+		if planarDistance(center, pos) > smokeDisplacementRadiusUnits {
+			continue
+		}
+
+		if hasRecentSmokeDisplacement(entry, tick, durationTicks) {
+			continue
+		}
+
+		entry.PhaseEvents = append(
+			entry.PhaseEvents,
+			phaseEventWithDuration(tick, "displaced", smokeDisplacementPoint(center, pos), durationTicks),
+		)
+	}
 }
 
 func (t *Tracker) TrackInfernoStart(tick int, inferno *common.Inferno, pos r3.Vector) {
@@ -280,10 +325,7 @@ func normalizeLifetime(entry *replay.UtilityEntity, tickRate float64) {
 }
 
 func expectedLifetimeTicks(kind string, tickRate float64) (int, bool) {
-	safeTickRate := tickRate
-	if safeTickRate <= 0 {
-		safeTickRate = 64
-	}
+	safeTickRate := maxTickRate(tickRate)
 
 	switch kind {
 	case "smoke":
@@ -293,6 +335,14 @@ func expectedLifetimeTicks(kind string, tickRate float64) (int, bool) {
 	default:
 		return 0, false
 	}
+}
+
+func maxTickRate(tickRate float64) float64 {
+	if tickRate <= 0 {
+		return 64
+	}
+
+	return tickRate
 }
 
 func (t *Tracker) expireInfernoEntry(entry *replay.UtilityEntity, tick int, pos r3.Vector) {
@@ -387,6 +437,56 @@ func phaseEvent(tick int, phaseType string, pos r3.Vector) replay.UtilityPhaseEv
 		Y:    replay.Float64(pos.Y),
 		Z:    replay.Float64(pos.Z),
 	}
+}
+
+func phaseEventWithDuration(tick int, phaseType string, pos r3.Vector, durationTicks int) replay.UtilityPhaseEvent {
+	event := phaseEvent(tick, phaseType, pos)
+	event.DurationTicks = replay.Int(durationTicks)
+	return event
+}
+
+func utilityPhaseCenter(entry *replay.UtilityEntity, phaseType string) (r3.Vector, bool) {
+	for index := len(entry.PhaseEvents) - 1; index >= 0; index -= 1 {
+		event := entry.PhaseEvents[index]
+		if event.Type != phaseType || event.X == nil || event.Y == nil || event.Z == nil {
+			continue
+		}
+
+		return r3.Vector{X: *event.X, Y: *event.Y, Z: *event.Z}, true
+	}
+
+	return r3.Vector{}, false
+}
+
+func planarDistance(left r3.Vector, right r3.Vector) float64 {
+	dx := left.X - right.X
+	dy := left.Y - right.Y
+	return math.Hypot(dx, dy)
+}
+
+func smokeDisplacementPoint(smokeCenter r3.Vector, hePos r3.Vector) r3.Vector {
+	return r3.Vector{
+		X: smokeCenter.X + (hePos.X-smokeCenter.X)*0.72,
+		Y: smokeCenter.Y + (hePos.Y-smokeCenter.Y)*0.72,
+		Z: smokeCenter.Z + (hePos.Z-smokeCenter.Z)*0.72,
+	}
+}
+
+func hasRecentSmokeDisplacement(entry *replay.UtilityEntity, tick int, durationTicks int) bool {
+	for index := len(entry.PhaseEvents) - 1; index >= 0; index -= 1 {
+		event := entry.PhaseEvents[index]
+		if event.Type != "displaced" {
+			continue
+		}
+
+		if event.DurationTicks == nil {
+			return event.Tick == tick
+		}
+
+		return tick < event.Tick+*event.DurationTicks || tick-event.Tick <= durationTicks/2
+	}
+
+	return false
 }
 
 func infernoActiveCenter(inferno *common.Inferno) (r3.Vector, int) {

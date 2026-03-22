@@ -372,6 +372,7 @@ func (s *parseState) registerHandlers() {
 		if s.currentRound != nil {
 			s.currentRound.UtilityTracker().TrackDetonateByEntity(e.GrenadeEntityID, s.parser.CurrentFrame(), e.Position)
 			s.currentRound.UtilityTracker().TrackExpireByEntity(e.GrenadeEntityID, s.parser.CurrentFrame(), e.Position)
+			s.currentRound.UtilityTracker().TrackSmokeDisplacementFromHE(s.parser.CurrentFrame(), e.Position, s.parser.TickRate())
 		}
 	})
 

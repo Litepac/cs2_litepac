@@ -170,5 +170,6 @@ export type UtilityEntity = {
     x: number | null;
     y: number | null;
     z: number | null;
+    durationTicks?: number | null;
   }>;
 };

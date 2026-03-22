@@ -3,7 +3,7 @@ import { Application, Assets, Container, Graphics, Rectangle, Sprite, Text, Text
 
 import { drawUtilityVisual } from "./utilityVisuals";
 import { createRadarViewport, loadRadarImageSize, type RadarViewport, worldToScreen } from "../maps/transform";
-import { resolvePlayerEquipmentState, type PlayerTokenMode, type WeaponClass } from "../replay/weapons";
+import { resolvePlayerEquipmentState, type PlayerTokenMode, type UtilityKind, type WeaponClass } from "../replay/weapons";
 import { utilityMatchesFocus, type UtilityFocus } from "../replay/utilityFilter";
 import type { Replay, Round } from "../replay/types";
 
@@ -499,6 +499,7 @@ function renderDynamicFrame(
       tickRate,
     );
   }
+  stage.utilityTrailLayer.visible = stage.utilityTrailLayer.children.length > 0;
 
   if (!needsFullRender) {
     return;
@@ -550,6 +551,12 @@ function renderDynamicFrame(
     const point = worldToScreen(replay, radarViewport, x, y);
     const selected = selectedPlayerId === stream.playerId;
     const recentUtilityThrow = hasRecentUtilityThrow(round, stream.playerId, fullRenderTick, replay.match.tickRate);
+    const equipment = resolvePlayerEquipmentState({
+      activeWeapon: sample.activeWeapon,
+      activeWeaponClass: sample.activeWeaponClass,
+      mainWeapon: sample.mainWeapon,
+      recentUtilityThrow,
+    });
 
     const marker = new Graphics();
     marker.eventMode = "static";
@@ -564,10 +571,8 @@ function renderDynamicFrame(
       selected,
       sample.yaw,
       sample.health,
-      sample.activeWeapon,
-      sample.activeWeaponClass,
-      sample.mainWeapon,
-      recentUtilityThrow,
+      equipment.tokenMode,
+      equipment.activeUtilityKind,
       blindEffects.get(stream.playerId) ?? null,
     );
 
@@ -708,16 +713,13 @@ function drawPlayerMarker(
   selected: boolean,
   yaw: number | null,
   health: number | null,
-  activeWeapon: string | null,
-  activeWeaponClass: WeaponClass | null,
-  mainWeapon: string | null,
-  recentUtilityThrow: boolean,
+  mode: PlayerTokenMode,
+  activeUtilityKind: UtilityKind | null,
   blindEffect: BlindEffectState | null,
 ) {
   const fillColor = side === "CT" ? 0x3fa8ff : 0xf3a448;
   const strokeColor = selected ? 0xf6fbff : 0x091116;
   const radius = selected ? 9 : 7;
-  const mode = resolvePlayerTokenMode(activeWeapon, activeWeaponClass, mainWeapon, recentUtilityThrow);
   const healthRatio = health == null ? 1 : clamp(health / 100, 0, 1);
   const innerRadius = Math.max(1.9, radius - 1.7);
 
@@ -747,7 +749,7 @@ function drawPlayerMarker(
   innerOutline.stroke({ color: 0x0a1117, width: selected ? 0.52 : 0.44, alpha: 0.22 });
   marker.addChild(innerOutline);
 
-  drawPlayerTokenMode(marker, x, y, yaw, radius, fillColor, strokeColor, selected, mode);
+  drawPlayerTokenMode(marker, x, y, yaw, radius, fillColor, strokeColor, selected, mode, activeUtilityKind);
 }
 
 function drawBlindedRing(
@@ -802,7 +804,30 @@ function drawPlayerTokenMode(
   strokeColor: number,
   selected: boolean,
   mode: PlayerTokenMode,
+  activeUtilityKind: UtilityKind | null,
 ) {
+  if (mode === "utility") {
+    const badgeX = x + radius * 0.84;
+    const badgeY = y + radius * 0.66;
+    drawHeldUtilityTokenMarker(marker, badgeX, badgeY, fillColor, strokeColor, selected, activeUtilityKind);
+
+    if (yaw == null) {
+      return;
+    }
+
+    const radians = (yaw * Math.PI) / 180;
+    const forwardX = Math.cos(radians);
+    const forwardY = -Math.sin(radians);
+    const dotRadius = selected ? 2.02 : 1.78;
+    const dotDistance = radius + dotRadius + 1.05;
+    const dotX = x + forwardX * dotDistance;
+    const dotY = y + forwardY * dotDistance;
+    marker.circle(dotX, dotY, dotRadius);
+    marker.fill({ color: fillColor, alpha: 0.98 });
+    marker.stroke({ color: strokeColor, width: selected ? 0.72 : 0.62, alpha: 0.95 });
+    return;
+  }
+
   if (yaw == null) {
     return;
   }
@@ -815,17 +840,6 @@ function drawPlayerTokenMode(
   const baseDistance = radius - 1.15;
   const baseX = x + forwardX * baseDistance;
   const baseY = y + forwardY * baseDistance;
-
-  if (mode === "utility") {
-    const dotRadius = selected ? 1.95 : 1.68;
-    const dotDistance = radius + dotRadius + 0.95;
-    const dotX = x + forwardX * dotDistance;
-    const dotY = y + forwardY * dotDistance;
-    marker.circle(dotX, dotY, dotRadius);
-    marker.fill({ color: fillColor, alpha: 0.98 });
-    marker.stroke({ color: strokeColor, width: selected ? 0.72 : 0.62, alpha: 0.95 });
-    return;
-  }
 
   if (mode === "knife") {
     const tipDistance = radius + (selected ? 5.6 : 4.9);
@@ -926,18 +940,230 @@ function drawPlayerTokenTail(
   marker.stroke({ color: strokeColor, width: strokeWidth, alpha: 0.95, cap: "round", join: "round" });
 }
 
-function resolvePlayerTokenMode(
-  activeWeapon: string | null,
-  activeWeaponClass: WeaponClass | null,
-  mainWeapon: string | null,
-  recentUtilityThrow: boolean,
-): PlayerTokenMode {
-  return resolvePlayerEquipmentState({
-    activeWeapon,
-    activeWeaponClass,
-    mainWeapon,
-    recentUtilityThrow,
-  }).tokenMode;
+function drawHeldUtilityTokenMarker(
+  marker: Graphics,
+  x: number,
+  y: number,
+  fillColor: number,
+  strokeColor: number,
+  selected: boolean,
+  utilityKind: UtilityKind | null,
+) {
+  const badge = new Graphics();
+  badge.x = x;
+  badge.y = y;
+  badge.scale.set(selected ? 0.76 : 0.7);
+  marker.addChild(badge);
+
+  if (!utilityKind) {
+    const fallbackRadius = selected ? 1.8 : 1.6;
+    badge.circle(0, 0, fallbackRadius);
+    badge.fill({ color: fillColor, alpha: 0.98 });
+    badge.stroke({ color: strokeColor, width: selected ? 0.72 : 0.62, alpha: 0.95 });
+    return;
+  }
+
+  switch (utilityKind) {
+    case "smoke":
+      drawSmokeTokenUtility(badge, 0, 0, fillColor, strokeColor, selected);
+      return;
+    case "flashbang":
+      drawFlashTokenUtility(badge, 0, 0, fillColor, strokeColor, selected);
+      return;
+    case "hegrenade":
+      drawHETokenUtility(badge, 0, 0, fillColor, strokeColor, selected);
+      return;
+    case "molotov":
+    case "incendiary":
+      drawFireTokenUtility(badge, 0, 0, fillColor, strokeColor, selected);
+      return;
+    case "decoy":
+      drawDecoyTokenUtility(badge, 0, 0, fillColor, strokeColor, selected);
+      return;
+    default:
+      badge.circle(0, 0, selected ? 1.8 : 1.6);
+      badge.fill({ color: fillColor, alpha: 0.98 });
+      badge.stroke({ color: strokeColor, width: selected ? 0.72 : 0.62, alpha: 0.95 });
+  }
+}
+
+function fillAndStrokeTokenShape(
+  marker: Graphics,
+  drawShape: () => void,
+  fillColor: number,
+  strokeColor: number,
+  strokeWidth: number,
+) {
+  drawShape();
+  marker.fill({ color: fillColor, alpha: 0.98 });
+  drawShape();
+  marker.stroke({ color: strokeColor, width: strokeWidth, alpha: 0.96, cap: "round", join: "round" });
+}
+
+function drawFlashTokenUtility(
+  marker: Graphics,
+  x: number,
+  y: number,
+  fillColor: number,
+  strokeColor: number,
+  selected: boolean,
+) {
+  const strokeWidth = selected ? 0.84 : 0.76;
+  fillAndStrokeTokenShape(
+    marker,
+    () => marker.roundRect(x - 1.85, y - 3.65, 3.7, 7.2, 0.88),
+    fillColor,
+    strokeColor,
+    strokeWidth,
+  );
+  fillAndStrokeTokenShape(
+    marker,
+    () => marker.rect(x - 0.95, y - 4.75, 1.9, 1.02),
+    fillColor,
+    strokeColor,
+    selected ? 0.7 : 0.64,
+  );
+  marker.moveTo(x + 0.95, y - 4.35);
+  marker.lineTo(x + 1.75, y - 4.35);
+  marker.lineTo(x + 1.75, y - 3.15);
+  marker.stroke({ color: strokeColor, width: selected ? 0.8 : 0.72, alpha: 0.95, cap: "round", join: "round" });
+  marker.circle(x + 2.85, y - 4.05, selected ? 1.02 : 0.92);
+  marker.stroke({ color: strokeColor, width: selected ? 0.84 : 0.76, alpha: 0.96 });
+  marker.moveTo(x, y - 2.15);
+  marker.lineTo(x, y + 2.0);
+  marker.stroke({ color: strokeColor, width: selected ? 0.84 : 0.76, alpha: 0.72, cap: "round" });
+}
+
+function drawSmokeTokenUtility(
+  marker: Graphics,
+  x: number,
+  y: number,
+  fillColor: number,
+  strokeColor: number,
+  selected: boolean,
+) {
+  const strokeWidth = selected ? 0.86 : 0.78;
+  fillAndStrokeTokenShape(
+    marker,
+    () => marker.roundRect(x - 2.2, y - 4.75, 4.4, 9.5, 0.96),
+    fillColor,
+    strokeColor,
+    strokeWidth,
+  );
+  fillAndStrokeTokenShape(
+    marker,
+    () => marker.rect(x - 1.25, y - 6, 2.5, 1.05),
+    fillColor,
+    strokeColor,
+    selected ? 0.72 : 0.66,
+  );
+  fillAndStrokeTokenShape(
+    marker,
+    () => marker.roundRect(x + 1.95, y - 2.65, 1.55, 5.2, 0.3),
+    fillColor,
+    strokeColor,
+    selected ? 0.78 : 0.72,
+  );
+  marker.moveTo(x - 1.15, y - 2.95);
+  marker.lineTo(x + 1.1, y - 2.95);
+  marker.moveTo(x - 1.15, y - 1.0);
+  marker.lineTo(x + 1.1, y - 1.0);
+  marker.moveTo(x - 1.15, y + 0.95);
+  marker.lineTo(x + 1.1, y + 0.95);
+  marker.moveTo(x - 1.15, y + 2.9);
+  marker.lineTo(x + 1.1, y + 2.9);
+  marker.stroke({ color: strokeColor, width: selected ? 0.84 : 0.76, alpha: 0.74, cap: "round" });
+}
+
+function drawHETokenUtility(
+  marker: Graphics,
+  x: number,
+  y: number,
+  fillColor: number,
+  strokeColor: number,
+  selected: boolean,
+) {
+  fillAndStrokeTokenShape(
+    marker,
+    () => marker.circle(x - 0.15, y + 0.45, selected ? 3.2 : 2.9),
+    fillColor,
+    strokeColor,
+    selected ? 0.88 : 0.8,
+  );
+  fillAndStrokeTokenShape(
+    marker,
+    () => marker.rect(x - 0.6, y - 3.95, 1.2, 1.2),
+    fillColor,
+    strokeColor,
+    selected ? 0.72 : 0.66,
+  );
+  marker.moveTo(x + 1.0, y - 2.0);
+  marker.lineTo(x + 2.65, y - 3.55);
+  marker.stroke({ color: strokeColor, width: selected ? 0.8 : 0.72, alpha: 0.92, cap: "round" });
+  marker.circle(x + 3.2, y - 3.8, selected ? 0.7 : 0.62);
+  marker.stroke({ color: strokeColor, width: selected ? 0.72 : 0.64, alpha: 0.9 });
+}
+
+function drawFireTokenUtility(
+  marker: Graphics,
+  x: number,
+  y: number,
+  fillColor: number,
+  strokeColor: number,
+  selected: boolean,
+) {
+  fillAndStrokeTokenShape(
+    marker,
+    () => marker.roundRect(x - 2.0, y - 2.85, 4, 6.45, 0.88),
+    fillColor,
+    strokeColor,
+    selected ? 0.84 : 0.76,
+  );
+  fillAndStrokeTokenShape(
+    marker,
+    () => marker.rect(x - 0.6, y - 4.95, 1.2, 2.05),
+    fillColor,
+    strokeColor,
+    selected ? 0.74 : 0.66,
+  );
+  fillAndStrokeTokenShape(
+    marker,
+    () => {
+      marker.moveTo(x - 1.3, y - 2.85);
+      marker.lineTo(x - 0.6, y - 4.05);
+      marker.lineTo(x + 0.6, y - 4.05);
+      marker.lineTo(x + 1.3, y - 2.85);
+      marker.closePath();
+    },
+    fillColor,
+    strokeColor,
+    selected ? 0.72 : 0.66,
+  );
+  marker.moveTo(x + 0.15, y - 5.2);
+  marker.lineTo(x + 1.25, y - 6.45);
+  marker.stroke({ color: strokeColor, width: selected ? 0.82 : 0.74, alpha: 0.92, cap: "round" });
+}
+
+function drawDecoyTokenUtility(
+  marker: Graphics,
+  x: number,
+  y: number,
+  fillColor: number,
+  strokeColor: number,
+  selected: boolean,
+) {
+  fillAndStrokeTokenShape(
+    marker,
+    () => marker.roundRect(x - 2.15, y - 2.15, 4.3, 4.3, 0.84),
+    fillColor,
+    strokeColor,
+    selected ? 0.82 : 0.74,
+  );
+  marker.moveTo(x - 1.35, y);
+  marker.lineTo(x + 1.35, y);
+  marker.moveTo(x, y - 1.35);
+  marker.lineTo(x, y + 1.35);
+  marker.stroke({ color: strokeColor, width: selected ? 0.8 : 0.72, alpha: 0.72, cap: "round" });
 }
 
 function hasRecentUtilityThrow(round: Round, playerId: string, currentTick: number, tickRate: number) {
@@ -1336,6 +1562,7 @@ function drawHurtBurst(
   const accentColor = side === "CT" ? 0x8ed1ff : side === "T" ? 0xffca78 : 0xffe2ad;
   const damageValue = event.healthDamageTaken > 0 ? event.healthDamageTaken : event.armorDamageTaken;
   const armorOnly = event.healthDamageTaken <= 0 && event.armorDamageTaken > 0;
+  const isHEBurst = event.weaponName === "HE Grenade";
   const burstDurationTicks = Math.max(1, event.lastTick - event.firstTick + 1);
   const dx = victimPoint.x - attackerPoint.x;
   const dy = victimPoint.y - attackerPoint.y;
@@ -1356,29 +1583,40 @@ function drawHurtBurst(
   const startY = attackerPoint.y + ny * attackerRadius;
   const endX = victimPoint.x - nx * victimRadius;
   const endY = victimPoint.y - ny * victimRadius;
-  const glowAlpha = 0.035 + fade * 0.075;
-  const lineAlpha = 0.1 + fade * 0.18;
-  const coreAlpha = 0.16 + fade * 0.24;
+  const glowAlpha = isHEBurst ? 0.012 + fade * 0.025 : 0.035 + fade * 0.075;
+  const lineAlpha = isHEBurst ? 0.024 + fade * 0.05 : 0.1 + fade * 0.18;
+  const coreAlpha = isHEBurst ? 0.04 + fade * 0.08 : 0.16 + fade * 0.24;
   const labelSpread = 10 + Math.min(2, event.labelOffsetIndex) * 12;
   const labelRise = 3 + event.labelOffsetIndex * 9 + fade * 5;
   const labelX = endX + nx * 4 + px * labelNormalSign * labelSpread;
   const labelY = endY + py * labelNormalSign * labelSpread - labelRise;
-  const impactRadius = 2.7 + burstStrength * 0.9 + fade * 0.9;
+  const impactRadius = isHEBurst
+    ? 1.75 + burstStrength * 0.38 + fade * 0.4
+    : 2.7 + burstStrength * 0.9 + fade * 0.9;
 
   const marker = new Graphics();
-  marker.moveTo(startX, startY);
-  marker.lineTo(endX, endY);
-  marker.stroke({ cap: "round", color: accentColor, join: "round", width: 2.2 * burstStrength, alpha: glowAlpha });
-  marker.moveTo(startX, startY);
-  marker.lineTo(endX, endY);
-  marker.stroke({ cap: "round", color: accentColor, join: "round", width: 1.3, alpha: lineAlpha });
-  marker.moveTo(startX, startY);
-  marker.lineTo(endX, endY);
-  marker.stroke({ cap: "round", color: 0xfff1cf, join: "round", width: 0.65, alpha: coreAlpha });
+  if (!isHEBurst) {
+    marker.moveTo(startX, startY);
+    marker.lineTo(endX, endY);
+    marker.stroke({ cap: "round", color: accentColor, join: "round", width: 2.2 * burstStrength, alpha: glowAlpha });
+    marker.moveTo(startX, startY);
+    marker.lineTo(endX, endY);
+    marker.stroke({ cap: "round", color: accentColor, join: "round", width: 1.3, alpha: lineAlpha });
+    marker.moveTo(startX, startY);
+    marker.lineTo(endX, endY);
+    marker.stroke({ cap: "round", color: 0xfff1cf, join: "round", width: 0.65, alpha: coreAlpha });
+  }
   marker.circle(endX, endY, impactRadius);
-  marker.stroke({ color: accentColor, width: 0.95, alpha: 0.12 + fade * 0.18 });
-  marker.circle(endX, endY, 1.35 + fade * 0.45);
-  marker.fill({ color: armorOnly ? 0xb8daff : 0xfff1cf, alpha: 0.18 + fade * 0.16 });
+  marker.stroke({
+    color: accentColor,
+    width: isHEBurst ? 0.8 : 0.95,
+    alpha: isHEBurst ? 0.08 + fade * 0.1 : 0.12 + fade * 0.18,
+  });
+  marker.circle(endX, endY, isHEBurst ? 1.05 + fade * 0.24 : 1.35 + fade * 0.45);
+  marker.fill({
+    color: armorOnly ? 0xb8daff : 0xfff1cf,
+    alpha: isHEBurst ? 0.12 + fade * 0.1 : 0.18 + fade * 0.16,
+  });
   layer.addChild(marker);
 
   if (damageValue > 0 && event.showDamageLabel) {

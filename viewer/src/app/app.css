@@ -1257,27 +1257,6 @@ h1 {
   clip-path: polygon(50% 0, 0 100%, 100% 100%);
 }
 
-.timeline-marker-utility-flashbang {
-  background: #fff1a3;
-}
-
-.timeline-marker-utility-hegrenade {
-  background: #ff7b72;
-}
-
-.timeline-marker-utility-smoke {
-  background: #d9e1ea;
-}
-
-.timeline-marker-utility-molotov,
-.timeline-marker-utility-incendiary {
-  background: #ffb25a;
-}
-
-.timeline-marker-utility-decoy {
-  background: #cdb8ff;
-}
-
 .timeline-current-line {
   position: absolute;
   top: -1px;
@@ -1467,8 +1446,57 @@ h1 {
 }
 
 .roster-utility-shape {
-  position: relative;
   display: block;
+  width: 11px;
+  height: 11px;
+  overflow: visible;
+}
+
+.roster-utility-shape .utility-icon-body {
+  fill: rgba(241, 245, 248, 0.98);
+  stroke: rgba(8, 17, 22, 0.76);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.roster-utility-shape .utility-icon-body-fill {
+  fill: rgba(241, 245, 248, 0.98);
+}
+
+.roster-utility-shape .utility-icon-cap {
+  fill: rgba(196, 210, 220, 0.98);
+}
+
+.roster-utility-shape .utility-icon-accent,
+.roster-utility-shape .utility-icon-detail,
+.roster-utility-shape .utility-icon-outline {
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+  vector-effect: non-scaling-stroke;
+}
+
+.roster-utility-shape .utility-icon-accent {
+  stroke-width: 1.35;
+}
+
+.roster-utility-shape .utility-icon-detail {
+  stroke: rgba(8, 17, 22, 0.62);
+  stroke-width: 0.9;
+}
+
+.roster-utility-shape .utility-icon-outline {
+  stroke-width: 0.95;
+  stroke: rgba(8, 17, 22, 0.76);
+}
+
+.roster-utility-shape .utility-icon-accent-fill {
+  fill: currentColor;
+}
+
+.roster-utility-shape .utility-icon-detail-fill {
+  fill: rgba(8, 17, 22, 0.74);
 }
 
 .roster-utility-count {
@@ -1476,114 +1504,6 @@ h1 {
   font-size: 9px;
   font-weight: 700;
   line-height: 1;
-}
-
-.roster-utility-item-flashbang { color: #fff1a3; }
-.roster-utility-item-smoke { color: #dde5ec; }
-.roster-utility-item-hegrenade { color: #ff8b82; }
-.roster-utility-item-fire { color: #ffb461; }
-.roster-utility-item-decoy { color: #cdb8ff; }
-.roster-utility-item-bomb { color: var(--accent); }
-
-.roster-utility-item-flashbang .roster-utility-shape {
-  width: 7px;
-  height: 7px;
-  border-radius: 999px;
-  border: 1.2px solid currentColor;
-}
-
-.roster-utility-item-flashbang .roster-utility-shape::before,
-.roster-utility-item-flashbang .roster-utility-shape::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 7px;
-  height: 1px;
-  background: currentColor;
-  transform: translate(-50%, -50%);
-}
-
-.roster-utility-item-flashbang .roster-utility-shape::after {
-  transform: translate(-50%, -50%) rotate(90deg);
-}
-
-.roster-utility-item-smoke .roster-utility-shape,
-.roster-utility-item-hegrenade .roster-utility-shape {
-  width: 6px;
-  height: 8px;
-  border-radius: 2px;
-  border: 1.2px solid currentColor;
-}
-
-.roster-utility-item-smoke .roster-utility-shape::before,
-.roster-utility-item-hegrenade .roster-utility-shape::before {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: -2px;
-  width: 3px;
-  height: 2px;
-  border-radius: 1px;
-  background: currentColor;
-  transform: translateX(-50%);
-}
-
-.roster-utility-item-hegrenade .roster-utility-shape::after {
-  content: "";
-  position: absolute;
-  right: -2px;
-  top: -1px;
-  width: 2px;
-  height: 3px;
-  border-top: 1.2px solid currentColor;
-  border-right: 1.2px solid currentColor;
-}
-
-.roster-utility-item-fire .roster-utility-shape {
-  width: 6px;
-  height: 8px;
-  border-radius: 2px 2px 3px 3px;
-  border: 1.2px solid currentColor;
-}
-
-.roster-utility-item-fire .roster-utility-shape::before {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: -3px;
-  width: 3px;
-  height: 4px;
-  background: currentColor;
-  clip-path: polygon(50% 0, 100% 100%, 0 100%);
-  transform: translateX(-50%);
-}
-
-.roster-utility-item-decoy .roster-utility-shape {
-  width: 7px;
-  height: 7px;
-  border-radius: 2px;
-  border: 1.2px solid currentColor;
-}
-
-.roster-utility-item-bomb .roster-utility-shape {
-  width: 7px;
-  height: 7px;
-  border-radius: 2px;
-  border: 1.2px solid currentColor;
-}
-
-.roster-utility-item-bomb .roster-utility-shape::before {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: -3px;
-  width: 3px;
-  height: 2px;
-  border-radius: 2px 2px 0 0;
-  border: 1.2px solid currentColor;
-  border-bottom: none;
-  transform: translateX(-50%);
 }
 
 .roster-health-track {

@@ -227,9 +227,13 @@ Each utility object covers its lifecycle:
 - detonate tick if applicable
 - end tick if applicable
 - sampled trajectory
-- phase events such as bounce, detonate, expire
+- phase events such as bounce, detonate, expire, and parser-derived smoke displacement windows
 
 This gives the viewer enough data to render grenade travel plus active smoke or fire windows without touching raw demo state.
+
+Utility phase events may also carry an optional duration when the parser can express a short-lived interaction window directly. Current use:
+
+- smoke `displaced` phases derived from overlapping HE detonation truth, so the viewer can open temporary holes in active smokes without inferring overlap from rendered pixels
 
 ## Player Equipment Semantics
 

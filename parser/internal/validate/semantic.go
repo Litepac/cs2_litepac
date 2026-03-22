@@ -90,6 +90,16 @@ func ValidateReplay(data replay.Replay) error {
 			if len(utility.Trajectory.X) != len(utility.Trajectory.Y) || len(utility.Trajectory.X) != len(utility.Trajectory.Z) {
 				return fmt.Errorf("round %d utility %s trajectory arrays differ in length", round.RoundNumber, utility.UtilityID)
 			}
+
+			for _, phase := range utility.PhaseEvents {
+				if phase.Tick < utility.StartTick {
+					return fmt.Errorf("round %d utility %s phase %s at tick %d is before utility start", round.RoundNumber, utility.UtilityID, phase.Type, phase.Tick)
+				}
+
+				if phase.DurationTicks != nil && *phase.DurationTicks <= 0 {
+					return fmt.Errorf("round %d utility %s phase %s at tick %d has non-positive duration", round.RoundNumber, utility.UtilityID, phase.Type, phase.Tick)
+				}
+			}
 		}
 
 		for _, stream := range round.PlayerStreams {

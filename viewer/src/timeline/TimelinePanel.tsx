@@ -1,6 +1,7 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type CSSProperties } from "react";
 
 import { scoreForSide, sideTeam } from "../replay/derived";
+import { normalizeUtilityVisualKind, utilityColorCss } from "../replay/utilityPresentation";
 import type { UtilityFocus } from "../replay/utilityFilter";
 import type { Replay, Round } from "../replay/types";
 import type { TimelineEventItem } from "../replay/timeline";
@@ -194,7 +195,7 @@ export function TimelinePanel({
                   <span
                     key={event.key}
                     className={timelineMarkerClassName(event)}
-                    style={{ left: `${((event.tick - displayStartTick) / range) * 100}%` }}
+                    style={timelineMarkerStyle(event, displayStartTick, range)}
                     title={event.label}
                   />
                 ))}
@@ -276,10 +277,31 @@ function timelineMarkerClassName(event: TimelineEventItem) {
   }
 
   if (event.kind === "utility") {
-    return `timeline-marker timeline-marker-utility timeline-marker-utility-${event.utilityKind ?? "generic"}`;
+    return "timeline-marker timeline-marker-utility";
   }
 
   return "timeline-marker timeline-marker-kill";
+}
+
+function timelineMarkerStyle(
+  event: TimelineEventItem,
+  displayStartTick: number,
+  range: number,
+): CSSProperties {
+  const left = `${((event.tick - displayStartTick) / range) * 100}%`;
+  if (event.kind !== "utility" || !event.utilityKind) {
+    return { left };
+  }
+
+  const utilityKind = normalizeUtilityVisualKind(event.utilityKind);
+  if (!utilityKind) {
+    return { left };
+  }
+
+  return {
+    left,
+    backgroundColor: utilityColorCss(utilityKind),
+  };
 }
 
 type RoundPhase = {

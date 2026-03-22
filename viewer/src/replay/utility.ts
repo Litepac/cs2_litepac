@@ -6,9 +6,11 @@ export type UtilitySceneState = {
   phase: "projectile" | "active" | "burst";
   burstAgeTicks: number | null;
   remainingSeconds: number | null;
+  presentationRemainingSeconds: number | null;
 };
 
-const DETONATION_BURST_TICKS = 10;
+const FLASH_DETONATION_BURST_TICKS = 14;
+const HE_DETONATION_BURST_TICKS = 10;
 
 export function activeUtilityCount(round: Round, currentTick: number) {
   return round.utilityEntities.filter((utility) => isUtilityVisibleAtTick(utility, currentTick)).length;
@@ -31,6 +33,25 @@ export function utilityEventTick(utility: UtilityEntity) {
   return utility.startTick;
 }
 
+export function utilityPresentationRemainingSeconds(
+  utility: UtilityEntity,
+  currentTick: number,
+  tickRate: number,
+) {
+  const activeStartTick = utilityActiveStartTick(utility);
+  if (activeStartTick == null || currentTick < activeStartTick) {
+    return null;
+  }
+
+  const safeTickRate = Math.max(1, tickRate);
+  const expectedActiveTicks = expectedActiveLifetimeTicks(utility, safeTickRate);
+  if (expectedActiveTicks == null) {
+    return Math.max(0, (utilityLifecycleEndTick(utility) - currentTick) / safeTickRate);
+  }
+
+  return Math.max(0, (activeStartTick + expectedActiveTicks - currentTick) / safeTickRate);
+}
+
 export function utilitySceneStateAtTick(
   utility: UtilityEntity,
   currentTick: number,
@@ -48,6 +69,7 @@ export function utilitySceneStateAtTick(
       endTick: utilityLifecycleEndTick(utility),
       phase: "burst",
       remainingSeconds: null,
+      presentationRemainingSeconds: null,
     };
   }
 
@@ -61,6 +83,7 @@ export function utilitySceneStateAtTick(
     endTick,
     phase: hasActiveWindow ? "active" : "projectile",
     remainingSeconds: hasActiveWindow ? Math.max(0, (endTick - currentTick) / Math.max(1, tickRate)) : null,
+    presentationRemainingSeconds: hasActiveWindow ? utilityPresentationRemainingSeconds(utility, currentTick, tickRate) : null,
   };
 }
 
@@ -91,6 +114,18 @@ function latestPhaseTick(utility: UtilityEntity, phaseType: string) {
   return ticks.length > 0 ? Math.max(...ticks) : null;
 }
 
+function expectedActiveLifetimeTicks(utility: UtilityEntity, tickRate: number) {
+  switch (utility.kind) {
+    case "smoke":
+      return tickRate * 20;
+    case "molotov":
+    case "incendiary":
+      return tickRate * 7;
+    default:
+      return null;
+  }
+}
+
 function utilityBurstAgeTicks(utility: UtilityEntity, currentTick: number) {
   if (utility.kind !== "flashbang" && utility.kind !== "hegrenade") {
     return null;
@@ -101,5 +136,6 @@ function utilityBurstAgeTicks(utility: UtilityEntity, currentTick: number) {
   }
 
   const ageTicks = currentTick - utility.detonateTick;
-  return ageTicks <= DETONATION_BURST_TICKS ? ageTicks : null;
+  const burstTicks = utility.kind === "flashbang" ? FLASH_DETONATION_BURST_TICKS : HE_DETONATION_BURST_TICKS;
+  return ageTicks <= burstTicks ? ageTicks : null;
 }

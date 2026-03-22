@@ -81,3 +81,68 @@ func TestSyncInfernosExpiresInfernoWithoutActiveFires(t *testing.T) {
 		t.Fatalf("expected inferno with zero active fires to expire at tick 181, got %v", entry.EndTick)
 	}
 }
+
+func TestTrackSmokeDisplacementFromHEAddsDisplacedPhaseToActiveSmoke(t *testing.T) {
+	tracker := NewTracker()
+	tracker.byID["smoke-1"] = &replay.UtilityEntity{
+		UtilityID:    "smoke-1",
+		Kind:         "smoke",
+		StartTick:    100,
+		DetonateTick: replay.Int(120),
+		EndTick:      replay.Int(400),
+		PhaseEvents: []replay.UtilityPhaseEvent{
+			phaseEvent(100, "thrown", r3.Vector{X: 0, Y: 0, Z: 0}),
+			phaseEvent(120, "detonate", r3.Vector{X: 300, Y: 400, Z: 0}),
+		},
+	}
+
+	tracker.TrackSmokeDisplacementFromHE(160, r3.Vector{X: 360, Y: 430, Z: 0}, 64)
+
+	entry := tracker.byID["smoke-1"]
+	if len(entry.PhaseEvents) != 3 {
+		t.Fatalf("expected displaced phase event to be added, got %d phase events", len(entry.PhaseEvents))
+	}
+
+	displaced := entry.PhaseEvents[2]
+	if displaced.Type != "displaced" || displaced.Tick != 160 {
+		t.Fatalf("expected displaced phase at tick 160, got %+v", displaced)
+	}
+
+	if displaced.DurationTicks == nil || *displaced.DurationTicks <= 0 {
+		t.Fatalf("expected displaced phase to carry a positive duration, got %+v", displaced.DurationTicks)
+	}
+}
+
+func TestTrackSmokeDisplacementFromHESkipsInactiveOrDistantSmokes(t *testing.T) {
+	tracker := NewTracker()
+	tracker.byID["smoke-active"] = &replay.UtilityEntity{
+		UtilityID:    "smoke-active",
+		Kind:         "smoke",
+		StartTick:    100,
+		DetonateTick: replay.Int(120),
+		EndTick:      replay.Int(200),
+		PhaseEvents: []replay.UtilityPhaseEvent{
+			phaseEvent(120, "detonate", r3.Vector{X: 0, Y: 0, Z: 0}),
+		},
+	}
+	tracker.byID["smoke-expired"] = &replay.UtilityEntity{
+		UtilityID:    "smoke-expired",
+		Kind:         "smoke",
+		StartTick:    100,
+		DetonateTick: replay.Int(120),
+		EndTick:      replay.Int(150),
+		PhaseEvents: []replay.UtilityPhaseEvent{
+			phaseEvent(120, "detonate", r3.Vector{X: 10, Y: 10, Z: 0}),
+		},
+	}
+
+	tracker.TrackSmokeDisplacementFromHE(160, r3.Vector{X: 500, Y: 500, Z: 0}, 64)
+
+	if len(tracker.byID["smoke-active"].PhaseEvents) != 1 {
+		t.Fatalf("expected distant active smoke to stay unchanged, got %+v", tracker.byID["smoke-active"].PhaseEvents)
+	}
+
+	if len(tracker.byID["smoke-expired"].PhaseEvents) != 1 {
+		t.Fatalf("expected expired smoke to stay unchanged, got %+v", tracker.byID["smoke-expired"].PhaseEvents)
+	}
+}

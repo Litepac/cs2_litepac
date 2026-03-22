@@ -1,7 +1,9 @@
 import { scoreForSide, sideTeam } from "../replay/derived";
 import { livePlayersAtTick, type LivePlayerState } from "../replay/live";
+import { normalizeUtilityVisualKind, utilityColorCss, type UtilityVisualKind } from "../replay/utilityPresentation";
 import type { Replay, Round } from "../replay/types";
 import { formatWeaponLabel, resolvePlayerEquipmentState, type UtilityKind } from "../replay/weapons";
+import { UtilityIcon } from "./UtilityIcon";
 
 type Props = {
   replay: Replay;
@@ -11,7 +13,7 @@ type Props = {
   onSelectPlayer: (playerId: string) => void;
 };
 
-type RailIconKind = UtilityKind | "bomb" | "fire";
+type RailIconKind = UtilityVisualKind;
 
 export function RosterPanel({ replay, round, currentTick, selectedPlayerId, onSelectPlayer }: Props) {
   const snapshots = livePlayersAtTick(replay, round, currentTick);
@@ -123,12 +125,12 @@ function RosterSection({
                           key={item.kind}
                           className={[
                             "roster-utility-item",
-                            `roster-utility-item-${item.kind}`,
                             item.active ? "roster-utility-item-active" : "",
                           ].filter(Boolean).join(" ")}
                           title={item.title}
+                          style={{ color: utilityColorCss(item.kind) }}
                         >
-                          <span className="roster-utility-shape" />
+                          <UtilityIcon className="roster-utility-shape" kind={item.kind} title={item.title} />
                           {item.count > 1 ? <span className="roster-utility-count">{item.count}</span> : null}
                         </span>
                       ))
@@ -197,7 +199,7 @@ function utilityInventory(player: LivePlayerState): RailIconItem[] {
           ? activeUtilityKind === "molotov" || activeUtilityKind === "incendiary"
           : activeUtilityKind === entry.kind) && (entry.count ?? 0) > 0,
       count: Math.min(entry.slots, Math.max(0, entry.count ?? 0)),
-      kind: (entry.kind === "molotov" ? "fire" : entry.kind) as RailIconKind,
+      kind: normalizeUtilityVisualKind(entry.kind) ?? "fire",
       title: `${entry.label}${(entry.count ?? 0) > 1 ? ` x${Math.min(entry.slots, Math.max(0, entry.count ?? 0))}` : ""}`,
     }))
     .filter((entry) => entry.count > 0)

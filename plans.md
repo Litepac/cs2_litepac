@@ -26,6 +26,14 @@ Planning note:
 - Refine parser-backed hurt-line combat cues so the map read feels intentional and Skybox-like without inventing bullet-path truth
 - Improve bomb readability with parser-backed planted and defusing overlays, including a more Skybox-like segmented planted timer ring and defuse-abort truth so the viewer does not fake continuous defuse state
 - Push the viewer shell, dock, rail, and utility presentation closer to the Skybox reference using only parser-backed replay truth
+- Make HE-smoke displacement read as a temporary smoke hole with slower refill, not as a large HE-style overlay effect
+- Align smoke closer to the Skybox-style canister-with-side-hardware reference and keep flash distinctly shorter/ringed so the shared icon family separates cleanly at map scale
+- Tighten flash specifically toward the compact Skybox-style ringed canister silhouette before further utility-family polish
+- Increase flash projectile render scale so the map icon reads closer to Skybox utility size instead of a tiny micro-glyph
+- Increase HE and molotov projectile size tiers and sharpen their silhouettes so they stay readable beside the larger smoke/flash family
+- Make held-utility player token markers utility-specific so the small attached marker shows which grenade is equipped instead of only signaling generic utility state
+- Tighten held-utility token attachment so the original dot stays visible and the micro-icon sits in a fixed lower-right anchored slot closer to the Skybox reference
+- Rebuild utility trajectory rendering so the line follows the live projectile path, disappears on pop, and uses parser-backed bounce events for the small impact circles
 - Tighten the right rail toward a denser scoreboard-style hierarchy with cleaner weapon/vitals/utility balance
 - Rebuild player token styling and utility visuals toward stronger operator readability without inventing live fire cues
 - Visual validation workflow using staged local replay fixtures
@@ -76,7 +84,14 @@ Planning note:
 - Defaulted utility focus back to `All` and added a larger seek bar, 15-second dock markers, and a freeze-time toggle to the replay dock
 - Normalized parser-side utility lifetime clamping to the real demo tick rate instead of a fixed `64`
 - Expired infernos from active fire state so canonical replay can reflect real smoke-extinguish shutdown behavior
+- Normalized inferno timer-ring presentation to full expected lifetime so smoke-extinguished fires still start full and only disappear early on canonical inferno expiry
+- Increased flash detonation bloom opacity and linger so the parser-backed pop lumen reads more clearly at normal playback speed without changing flashed-player ring semantics
+- Reworked smoke cloud rendering into a softer, more cohesive mass so parser-backed smokes read closer to the Skybox reference instead of stacked white puffs
+- Added parser-backed smoke displacement events from HE overlap and viewer-side temporary smoke openings so HE can pop smokes without map-layer guesswork
+- Slowed HE smoke-displacement recovery in parser duration and viewer easing so popped smoke openings refill gradually instead of snapping back after a brief cutout
 - Fixed large-fixture staging by streaming replay copies into `assets/fixtures` instead of buffering huge files in memory
+- Centralized utility presentation so rail, timeline, and map icons/colors use one shared kind-normalization and palette path
+- Corrected map projectile utility icons toward Skybox-style side-colored silhouettes instead of pale ring markers, while keeping held utility on player tokens as the small forward dot
 
 ## Blocked
 - Visual truth-checking still needs screenshots or side-by-side demo review

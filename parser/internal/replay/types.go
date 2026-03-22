@@ -198,11 +198,12 @@ type Trajectory struct {
 }
 
 type UtilityPhaseEvent struct {
-	Tick int      `json:"tick"`
-	Type string   `json:"type"`
-	X    *float64 `json:"x"`
-	Y    *float64 `json:"y"`
-	Z    *float64 `json:"z"`
+	Tick          int      `json:"tick"`
+	Type          string   `json:"type"`
+	X             *float64 `json:"x"`
+	Y             *float64 `json:"y"`
+	Z             *float64 `json:"z"`
+	DurationTicks *int     `json:"durationTicks,omitempty"`
 }
 
 func NewReplay() Replay {

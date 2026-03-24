@@ -46,6 +46,16 @@ These refine this file. They do not override it.
 - Do not copy architectures that violate this repo's canonical replay requirement
 - Keep `docs/10-prior-art-review.md` current when prior-art findings materially change direction
 
+## UI rules
+- Build premium, release-ready UI. Never default to a generic SaaS dashboard.
+- Prioritize visual hierarchy, spacing, and readability over adding more widgets.
+- Use a dark, tactical, premium look by default unless the task clearly calls for something else.
+- Every ship-facing page or flow must have loading, empty, error, and visible hover/focus states when relevant.
+- Keep the first viewport focused and deliberate.
+- Stats must support the replay experience, not dominate it.
+- Avoid placeholder-grade design.
+- Before finishing a UI task, self-review and improve the weakest area once.
+
 ## Delivery order
 1. Propose project structure
 2. Define canonical replay schema

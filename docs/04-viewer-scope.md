@@ -10,10 +10,11 @@ Allowed inputs:
 
 - `mastermind.replay.json`
 - static map assets from `assets/maps/`
+- a parser-backed demo upload endpoint that returns canonical `mastermind.replay.json`
 
 Disallowed inputs:
 
-- raw `.dem` files
+- raw `.dem` parsing inside the viewer runtime
 - mock match data
 - inferred stats not present in the canonical replay
 
@@ -22,6 +23,7 @@ Disallowed inputs:
 ### Replay Loading
 
 - load a canonical replay file
+- upload a `.dem` only through a parser-owned ingest surface that returns canonical replay JSON
 - validate the schema before render
 - show a clear error if the replay is invalid
 

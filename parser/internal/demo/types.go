@@ -12,6 +12,11 @@ type Options struct {
 	OutputPath string
 	SchemaPath string
 	AssetsRoot string
+	Progress   func(ParseProgress)
+}
+
+type ParseProgress struct {
+	RoundsParsed int
 }
 
 type playerRef struct {
@@ -36,6 +41,8 @@ type parseState struct {
 
 	players map[string]playerRef
 	teams   map[string]teamRef
+
+	progress func(ParseProgress)
 }
 
 type samplePosition struct {

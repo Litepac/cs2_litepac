@@ -1,0 +1,223 @@
+package server
+
+import (
+	"bufio"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"mastermind/parser/internal/demo"
+)
+
+const defaultMaxUploadBytes = 2 << 30
+
+type Options struct {
+	ListenAddr string
+	SchemaPath string
+	AssetsRoot string
+	TempDir    string
+}
+
+func Serve(opts Options) error {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/api/health", func(w http.ResponseWriter, r *http.Request) {
+		allowCORS(w)
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		if r.Method != http.MethodGet {
+			writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
+			return
+		}
+
+		writeJSON(w, http.StatusOK, map[string]any{
+			"ok":      true,
+			"service": "mastermind-parser-api",
+		})
+	})
+	mux.HandleFunc("/api/parse-demo", func(w http.ResponseWriter, r *http.Request) {
+		allowCORS(w)
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		if r.Method != http.MethodPost {
+			writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
+			return
+		}
+
+		if err := parseDemoUpload(w, r, opts); err != nil {
+			writeJSONError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+	})
+
+	addr := opts.ListenAddr
+	if strings.TrimSpace(addr) == "" {
+		addr = "127.0.0.1:4318"
+	}
+
+	return http.ListenAndServe(addr, mux)
+}
+
+func parseDemoUpload(w http.ResponseWriter, r *http.Request, opts Options) error {
+	r.Body = http.MaxBytesReader(w, r.Body, defaultMaxUploadBytes)
+	if err := r.ParseMultipartForm(32 << 20); err != nil {
+		return fmt.Errorf("parse multipart form: %w", err)
+	}
+
+	file, header, err := r.FormFile("demo")
+	if err != nil {
+		return fmt.Errorf("read uploaded demo: %w", err)
+	}
+	defer file.Close()
+
+	tempDir := opts.TempDir
+	if strings.TrimSpace(tempDir) == "" {
+		tempDir = os.TempDir()
+	}
+	if err := os.MkdirAll(tempDir, 0o755); err != nil {
+		return fmt.Errorf("create temp directory: %w", err)
+	}
+
+	baseName := sanitizedBaseName(header.Filename)
+	if baseName == "" {
+		baseName = "uploaded-demo.dem"
+	}
+
+	demoFile, err := os.CreateTemp(tempDir, "mastermind-upload-*.dem")
+	if err != nil {
+		return fmt.Errorf("create temp demo file: %w", err)
+	}
+	demoPath := demoFile.Name()
+	defer os.Remove(demoPath)
+	defer demoFile.Close()
+
+	if _, err := io.Copy(demoFile, file); err != nil {
+		return fmt.Errorf("write temp demo file: %w", err)
+	}
+	if err := demoFile.Close(); err != nil {
+		return fmt.Errorf("finalize temp demo file: %w", err)
+	}
+
+	replayFile, err := os.CreateTemp(tempDir, "mastermind-replay-*.json")
+	if err != nil {
+		return fmt.Errorf("create temp replay file: %w", err)
+	}
+	replayPath := replayFile.Name()
+	defer os.Remove(replayPath)
+	replayFile.Close()
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		return fmt.Errorf("streaming not supported by response writer")
+	}
+
+	w.Header().Set("Content-Type", "application/x-ndjson")
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("X-Accel-Buffering", "no")
+
+	streamEvent := func(payload any) error {
+		if err := writeJSONLine(w, payload); err != nil {
+			return err
+		}
+		flusher.Flush()
+		return nil
+	}
+
+	if err := demo.Parse(demo.Options{
+		DemoPath:   demoPath,
+		OutputPath: replayPath,
+		SchemaPath: opts.SchemaPath,
+		AssetsRoot: opts.AssetsRoot,
+		Progress: func(progress demo.ParseProgress) {
+			_ = streamEvent(map[string]any{
+				"type":         "progress",
+				"roundsParsed": progress.RoundsParsed,
+			})
+		},
+	}); err != nil {
+		_ = streamEvent(map[string]any{
+			"type":  "error",
+			"error": fmt.Sprintf("parse demo %s: %v", baseName, err),
+		})
+		return nil
+	}
+
+	replayInput, err := os.Open(replayPath)
+	if err != nil {
+		_ = streamEvent(map[string]any{
+			"type":  "error",
+			"error": fmt.Sprintf("open generated replay: %v", err),
+		})
+		return nil
+	}
+	defer replayInput.Close()
+
+	replayRaw, err := io.ReadAll(replayInput)
+	if err != nil {
+		_ = streamEvent(map[string]any{
+			"type":  "error",
+			"error": fmt.Sprintf("read generated replay: %v", err),
+		})
+		return nil
+	}
+
+	if !json.Valid(replayRaw) {
+		_ = streamEvent(map[string]any{
+			"type":  "error",
+			"error": "generated replay is not valid JSON",
+		})
+		return nil
+	}
+
+	if _, err := w.Write([]byte(`{"type":"result","replay":`)); err != nil {
+		return fmt.Errorf("stream replay envelope prefix: %w", err)
+	}
+	if _, err := w.Write(replayRaw); err != nil {
+		return fmt.Errorf("stream generated replay body: %w", err)
+	}
+	if _, err := w.Write([]byte("}\n")); err != nil {
+		return fmt.Errorf("stream replay envelope suffix: %w", err)
+	}
+	flusher.Flush()
+
+	return nil
+}
+
+func allowCORS(w http.ResponseWriter) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+}
+
+func writeJSON(w http.ResponseWriter, status int, payload any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(payload)
+}
+
+func writeJSONError(w http.ResponseWriter, status int, message string) {
+	writeJSON(w, status, map[string]string{
+		"error": message,
+	})
+}
+
+func writeJSONLine(w io.Writer, payload any) error {
+	buffered := bufio.NewWriter(w)
+	if err := json.NewEncoder(buffered).Encode(payload); err != nil {
+		return err
+	}
+	return buffered.Flush()
+}
+
+func sanitizedBaseName(name string) string {
+	base := filepath.Base(strings.TrimSpace(name))
+	base = strings.ReplaceAll(base, string(filepath.Separator), "_")
+	return base
+}

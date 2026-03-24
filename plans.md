@@ -11,6 +11,7 @@ Planning note:
 - Keep flattening and simplifying the bottom dock so it reads closer to one calm Skybox-style operator panel
 - Continue live visual QA against staged fixtures at 1080p and 1440p/2K
 - Reconcile intentional post-round sampling through `officialEndTick` with round/stream validation so the parser truth stays internally consistent
+- Tighten ingest failure handling and empty-state guidance now that parser-backed round progress and the demo-only local match flow are in place
 
 ### On Hold / Later
 - Tighten parser edge cases found during visual replay checks
@@ -19,6 +20,7 @@ Planning note:
 - Reduce viewer bundle size and split heavy Pixi code paths
 - Improve utility lifecycle fidelity after visual validation
 - Tighten canonical replay fields where UI quality is blocked by missing trustworthy render data
+- Consider a later Figma refinement loop for Home, Matches, shell consistency, and state polish once the product structure is stable enough for design refinement instead of active workflow churn
 
 ## In Progress
 - Refine parser-backed hurt-line combat cues so the map read feels intentional and Skybox-like without inventing bullet-path truth
@@ -104,6 +106,14 @@ Planning note:
 - Continued player sampling and viewer rendering through official round end so post-defuse/post-explode movement no longer freezes while the timeline advances, and normalized the displayed round index to start at 1 for the first loaded round
 - Switched canonical replay emission from pretty-printed to compact JSON so large staged fixtures stay below browser JS string limits and `test1-3` can load again without schema changes
 - Reconciled the `officialEndTick` post-round render window with parser validation and schema docs, and backfilled observed official-end tails when demos omit an explicit official-end event so player-stream bounds stay canonical
+- Added a local parser HTTP ingest surface for `.dem` upload plus a stronger viewer entry state, so raw demos can be uploaded from the page while canonical replay generation still stays outside the browser runtime
+- Turned parser-backed `.dem` and replay upload into a local matches page that lists uploads by map, added date, teams, and score instead of exposing raw demo filenames before opening the replay workspace
+- Split the no-replay shell into a welcoming Home surface and a dedicated Matches page in the left rail, so navigation, upload, library browsing, and replay viewing now live on clearer product surfaces
+- Narrowed the public ingest path to `.dem` uploads, added a truthful demo ingest tracker with round indexing, and persisted local uploaded matches across reloads using browser-side storage
+- Streamed parser-backed round-finalized progress through the local ingest API so the matches-page demo tracker can light up real rounds during parsing instead of only animating at the end
+- Tightened the repo-local UI and frontend specialist guides with a stronger premium-product-shell bar, required state handling, and an explicit anti-dashboard stance without weakening parser-first truth rules
+- Added repo-local `skills/frontend-ship/SKILL.md` so future product-shell UI work can reuse a concise ship-ready frontend workflow without weakening parser-first truth rules
+- Added a compact UI quality bar to root `AGENTS.md` so premium, non-dashboard, state-complete frontend expectations apply repo-wide before specialist guides are loaded
 
 ## Blocked
 - Visual truth-checking still needs screenshots or side-by-side demo review

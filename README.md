@@ -42,6 +42,20 @@ cd viewer
 npm.cmd run build
 ```
 
+### Run the local parser upload API
+
+```powershell
+cd parser
+go run .\cmd\mastermind-api
+```
+
+This starts a local HTTP parser bridge on `http://127.0.0.1:4318`.
+
+- `GET /api/health` confirms the bridge is available
+- `POST /api/parse-demo` accepts multipart `.dem` upload and returns canonical `mastermind.replay.json`
+
+The viewer can then offer `.dem` upload from the page while still keeping raw demo parsing outside the browser runtime.
+
 ### Run the viewer locally
 
 ```powershell
@@ -52,6 +66,7 @@ npm.cmd run dev
 You can then either:
 
 - load a generated `mastermind.replay.json` file manually through the UI, or
+- upload a `.dem` directly in the UI if the local parser API is running, or
 - click a staged fixture from the left panel if `go run .\cmd\fixturestage` has been run
 
 ## Visual Review Loop

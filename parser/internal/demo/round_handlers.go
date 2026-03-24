@@ -75,6 +75,11 @@ func (s *parseState) finalizeOpenRound(endTick int) {
 	}
 
 	s.roundList = append(s.roundList, s.currentRound.Build(s.parser.TickRate()))
+	if s.progress != nil {
+		s.progress(ParseProgress{
+			RoundsParsed: len(s.roundList),
+		})
+	}
 	s.currentRound = nil
 }
 

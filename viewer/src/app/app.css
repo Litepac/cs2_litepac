@@ -741,15 +741,15 @@ h1 {
 }
 
 .timeline-score-chip {
-  min-width: 76px;
+  min-width: 74px;
   display: grid;
   grid-template-columns: auto auto;
-  gap: 1px 8px;
+  gap: 1px 7px;
   align-items: center;
-  padding: 3px 6px;
-  border-radius: 4px;
-  border: 1px solid rgba(36, 51, 63, 0.94);
-  background: rgba(10, 16, 22, 0.94);
+  padding: 2px 5px;
+  border-radius: 3px;
+  border: 1px solid rgba(33, 48, 60, 0.84);
+  background: rgba(9, 15, 21, 0.9);
 }
 
 .timeline-score-chip span,
@@ -784,24 +784,24 @@ h1 {
 .timeline-main-dock {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: clamp(10px, 0.9vw, 14px);
+  gap: clamp(8px, 0.7vw, 12px);
   align-items: center;
-  padding: 8px 10px 9px;
-  border-radius: 9px;
-  border: 1px solid rgba(31, 46, 58, 0.88);
+  padding: 6px 8px 7px;
+  border-radius: 6px;
+  border: 1px solid rgba(28, 42, 52, 0.82);
   background:
-    linear-gradient(180deg, rgba(11, 17, 23, 0.98), rgba(8, 12, 18, 0.99)),
-    rgba(10, 16, 22, 0.96);
+    linear-gradient(180deg, rgba(10, 15, 21, 0.98), rgba(8, 12, 18, 0.98)),
+    rgba(10, 16, 22, 0.94);
 }
 
 .timeline-left-controls {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   min-width: 0;
   align-self: stretch;
-  padding-right: 12px;
-  border-right: 1px solid rgba(29, 43, 54, 0.72);
+  padding-right: 10px;
+  border-right: 1px solid rgba(27, 40, 50, 0.56);
 }
 
 .timeline-play-button {
@@ -841,7 +841,7 @@ h1 {
 .timeline-center-dock {
   min-width: 0;
   display: grid;
-  gap: 6px;
+  gap: 4px;
 }
 
 .timeline-readout-row {
@@ -1092,9 +1092,9 @@ h1 {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 10px;
-  padding-top: 7px;
-  border-top: 1px solid rgba(28, 42, 52, 0.72);
+  gap: 8px;
+  padding-top: 5px;
+  border-top: 1px solid rgba(26, 39, 48, 0.56);
   flex-wrap: wrap;
 }
 
@@ -1110,15 +1110,15 @@ h1 {
   display: inline-flex;
   align-items: center;
   gap: 0;
-  border-radius: 6px;
+  border-radius: 4px;
   overflow: hidden;
-  border: 1px solid rgba(35, 49, 61, 0.82);
-  background: rgba(11, 17, 23, 0.94);
+  border: 1px solid rgba(31, 45, 56, 0.7);
+  background: rgba(10, 16, 22, 0.86);
 }
 
 .timeline-segmented-row .control-button {
   border: none;
-  border-right: 1px solid rgba(35, 49, 61, 0.82);
+  border-right: 1px solid rgba(31, 45, 56, 0.68);
   background: transparent;
 }
 
@@ -1127,7 +1127,7 @@ h1 {
 }
 
 .timeline-segmented-row .control-button:hover {
-  background: rgba(20, 29, 38, 0.96);
+  background: rgba(18, 27, 35, 0.92);
 }
 
 .timeline-segmented-row .control-button-active {
@@ -1185,11 +1185,12 @@ h1 {
 }
 
 .timeline-marker-bomb {
-  width: 9px;
-  height: 9px;
+  width: 10px;
+  height: 10px;
   border-radius: 2px;
   background: rgba(10, 16, 22, 0.96);
-  border: 1px solid #ffd06d;
+  border: 1px solid rgba(243, 174, 82, 0.82);
+  box-shadow: 0 0 0 1px rgba(6, 11, 16, 0.75);
 }
 
 .timeline-marker-bomb::before,
@@ -1214,9 +1215,14 @@ h1 {
   transform: translate(-50%, -50%);
 }
 
+.timeline-marker-bomb-plant_start {
+  opacity: 0.86;
+}
+
 .timeline-marker-bomb-defuse_start,
 .timeline-marker-bomb-defused {
   border-color: #8ed1ff;
+  background: rgba(9, 18, 25, 0.98);
 }
 
 .timeline-marker-bomb-defuse_start::before,
@@ -1242,11 +1248,12 @@ h1 {
 }
 
 .timeline-marker-bomb-exploded {
-  width: 8px;
-  height: 8px;
+  width: 9px;
+  height: 9px;
   border-radius: 1px;
   background: linear-gradient(180deg, #ffd06d, #f37b52);
   border: none;
+  box-shadow: 0 0 0 1px rgba(6, 11, 16, 0.72);
   transform: translate(-50%, -50%) rotate(45deg);
 }
 

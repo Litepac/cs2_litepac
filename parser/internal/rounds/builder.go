@@ -70,6 +70,8 @@ func (b *Builder) SetOfficialEnd(tick int) {
 	b.round.OfficialEndTick = replay.Int(tick)
 }
 
+func (b *Builder) OfficialEndTick() *int { return b.round.OfficialEndTick }
+
 func (b *Builder) AppendKill(event replay.KillEvent) {
 	b.round.KillEvents = append(b.round.KillEvents, event)
 }

@@ -150,16 +150,16 @@ function interpolateNullableNumber(left: number | null, right: number | null, mi
 }
 
 function interpolateAngle(left: number | null, right: number | null, mix: number) {
-  if (left == null && right == null) {
+  if (mix <= 0) {
+    return left ?? right;
+  }
+
+  if (mix >= 1) {
+    return right ?? left;
+  }
+
+  if (left == null || right == null) {
     return null;
-  }
-
-  if (left == null) {
-    return right;
-  }
-
-  if (right == null) {
-    return left;
   }
 
   const delta = ((((right - left) % 360) + 540) % 360) - 180;
@@ -222,14 +222,14 @@ function drawPlayerMarker(
   blindEffect: BlindEffectState | null,
 ) {
   const fillColor = side === "CT" ? 0x3fa8ff : 0xf3a448;
-  const strokeColor = selected ? 0xf6fbff : 0x091116;
+  const strokeColor = selected ? 0xf6fbff : 0x0a131a;
   const radius = selected ? 9 : 7;
   const healthRatio = health == null ? 1 : clamp(health / 100, 0, 1);
   const innerRadius = Math.max(1.9, radius - 1.7);
 
   marker.circle(x, y, radius);
-  marker.fill({ color: fillColor, alpha: selected ? 1 : 0.96 });
-  marker.stroke({ color: strokeColor, width: selected ? 1.08 : 0.94, alpha: 0.97 });
+  marker.fill({ color: fillColor, alpha: selected ? 1 : 0.94 });
+  marker.stroke({ color: strokeColor, width: selected ? 1.12 : 0.86, alpha: selected ? 0.98 : 0.9 });
 
   drawBlindedRing(marker, x, y, radius, selected, blindEffect);
 
@@ -250,7 +250,7 @@ function drawPlayerMarker(
 
   const innerOutline = new Graphics();
   innerOutline.circle(x, y, innerRadius);
-  innerOutline.stroke({ color: 0x0a1117, width: selected ? 0.52 : 0.44, alpha: 0.22 });
+  innerOutline.stroke({ color: 0x0a1117, width: selected ? 0.52 : 0.4, alpha: selected ? 0.22 : 0.16 });
   marker.addChild(innerOutline);
 
   drawPlayerTokenMode(marker, x, y, yaw, radius, fillColor, strokeColor, selected, mode, activeUtilityKind);
@@ -311,8 +311,8 @@ function drawPlayerTokenMode(
   activeUtilityKind: UtilityKind | null,
 ) {
   if (mode === "utility") {
-    const badgeX = x + radius * 0.84;
-    const badgeY = y + radius * 0.66;
+    const badgeX = x + radius * 0.72;
+    const badgeY = y + radius * 0.58;
     drawHeldUtilityTokenMarker(marker, badgeX, badgeY, fillColor, strokeColor, selected, activeUtilityKind);
 
     if (yaw == null) {
@@ -323,12 +323,12 @@ function drawPlayerTokenMode(
     const forwardX = Math.cos(radians);
     const forwardY = -Math.sin(radians);
     const dotRadius = selected ? 2.02 : 1.78;
-    const dotDistance = radius + dotRadius + 1.05;
+    const dotDistance = radius + dotRadius + 0.88;
     const dotX = x + forwardX * dotDistance;
     const dotY = y + forwardY * dotDistance;
     marker.circle(dotX, dotY, dotRadius);
     marker.fill({ color: fillColor, alpha: 0.98 });
-    marker.stroke({ color: strokeColor, width: selected ? 0.72 : 0.62, alpha: 0.95 });
+    marker.stroke({ color: strokeColor, width: selected ? 0.72 : 0.58, alpha: selected ? 0.95 : 0.88 });
     return;
   }
 
@@ -346,8 +346,8 @@ function drawPlayerTokenMode(
   const baseY = y + forwardY * baseDistance;
 
   if (mode === "knife") {
-    const tipDistance = radius + (selected ? 5.6 : 4.9);
-    const halfWidth = selected ? 3.1 : 2.7;
+    const tipDistance = radius + (selected ? 5.45 : 4.3);
+    const halfWidth = selected ? 2.95 : 2.38;
     const tipX = x + forwardX * tipDistance;
     const tipY = y + forwardY * tipDistance;
     marker.moveTo(baseX + normalX * halfWidth, baseY + normalY * halfWidth);
@@ -358,37 +358,37 @@ function drawPlayerTokenMode(
     marker.moveTo(baseX + normalX * halfWidth, baseY + normalY * halfWidth);
     marker.lineTo(tipX, tipY);
     marker.lineTo(baseX - normalX * halfWidth, baseY - normalY * halfWidth);
-    marker.stroke({ color: strokeColor, width: selected ? 0.74 : 0.64, alpha: 0.95, cap: "round", join: "round" });
+    marker.stroke({ color: strokeColor, width: selected ? 0.74 : 0.58, alpha: selected ? 0.95 : 0.88, cap: "round", join: "round" });
     return;
   }
 
   const tailLength =
     mode === "awp"
       ? selected
-        ? 10.9
-        : 9.8
+        ? 10.5
+        : 8.7
       : mode === "rifle"
         ? selected
-          ? 6.85
-          : 6.05
+          ? 6.55
+          : 5.15
         : selected
-          ? 2.35
-          : 1.95;
+          ? 2.2
+          : 1.5;
   const tailHalfWidth =
     mode === "awp"
       ? selected
-        ? 1.88
-        : 1.72
+        ? 1.8
+        : 1.5
       : mode === "rifle"
         ? selected
-          ? 1.56
-          : 1.42
+          ? 1.5
+          : 1.22
         : selected
-          ? 1.16
-          : 1.04;
-  const tailInset = mode === "awp" ? 0.46 : mode === "rifle" ? 0.34 : 0.24;
+          ? 1.12
+          : 0.92;
+  const tailInset = mode === "awp" ? 0.42 : mode === "rifle" ? 0.3 : 0.18;
   const neckWidth =
-    mode === "awp" ? tailHalfWidth + 0.26 : mode === "rifle" ? tailHalfWidth + 0.18 : tailHalfWidth + 0.12;
+    mode === "awp" ? tailHalfWidth + 0.22 : mode === "rifle" ? tailHalfWidth + 0.14 : tailHalfWidth + 0.08;
   drawPlayerTokenTail(
     marker,
     baseX,
@@ -437,12 +437,12 @@ function drawPlayerTokenTail(
   marker.lineTo(bottomTipX, bottomTipY);
   marker.lineTo(topTipX, topTipY);
   marker.closePath();
-  marker.fill({ color: fillColor, alpha: 0.98 });
+  marker.fill({ color: fillColor, alpha: 0.96 });
   marker.moveTo(topBaseX, topBaseY);
   marker.lineTo(topTipX, topTipY);
   marker.lineTo(bottomTipX, bottomTipY);
   marker.lineTo(bottomBaseX, bottomBaseY);
-  marker.stroke({ color: strokeColor, width: strokeWidth, alpha: 0.95, cap: "round", join: "round" });
+  marker.stroke({ color: strokeColor, width: strokeWidth, alpha: strokeWidth > 0.7 ? 0.95 : 0.88, cap: "round", join: "round" });
 }
 
 function drawHeldUtilityTokenMarker(
@@ -457,7 +457,7 @@ function drawHeldUtilityTokenMarker(
   const badge = new Graphics();
   badge.x = x;
   badge.y = y;
-  badge.scale.set(selected ? 0.76 : 0.7);
+  badge.scale.set(selected ? 0.72 : 0.66);
   marker.addChild(badge);
 
   if (!utilityKind) {

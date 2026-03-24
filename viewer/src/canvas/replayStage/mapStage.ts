@@ -29,12 +29,12 @@ export async function createStageState(hostElement: HTMLDivElement) {
   sceneRoot.addChild(
     mapLayer,
     utilityTrailLayer,
-    bombLayer,
     killLayer,
     trailLayer,
     eventLayer,
     playerLayer,
     utilityOverlayLayer,
+    bombLayer,
   );
   app.stage.addChild(sceneRoot);
   hostElement.appendChild(app.canvas);

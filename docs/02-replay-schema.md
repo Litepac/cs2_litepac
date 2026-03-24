@@ -32,6 +32,8 @@ The artifact contains replay facts, not rendering commands. The viewer decides h
 
 Rounds are explicit objects with start, freeze end, and end ticks. Side swaps are represented per round, not guessed in the viewer.
 
+`endTick` is the gameplay/result boundary for the round. `officialEndTick`, when present and later than `endTick`, marks the parser-backed post-result window where the round is effectively over but canonical player movement may still continue until the official transition. When demos do not surface an explicit official-end event, the parser may use the observed post-result tail it actually sampled before finalizing the round. That tail is a render/lifecycle window, not a replacement for round ordering, so it may extend beyond the next round's `startTick` in real fixtures.
+
 ### 4. Use stable identifiers
 
 - `teamId` identifies the real team
@@ -149,6 +151,7 @@ Invariants:
 - all arrays have the same length
 - samples are sorted by tick
 - `sampleIntervalTicks` is `1` in V1
+- streams must stay within the round window, extending through `officialEndTick` when that later post-result boundary is present
 - values may be `null` when the parser cannot trust them
 
 ## Event Model

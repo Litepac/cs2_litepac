@@ -18,7 +18,7 @@ export function useReplayPlayback(
 
   const initialRoundTick = round ? resolveInitialRoundTick(round) : 0;
   const effectiveRoundEndTick = round ? resolveVisibleRoundEndTick(round) : 0;
-  const renderTick = round ? clampTick(displayTick, round.startTick, round.endTick) : 0;
+  const renderTick = round ? clampTick(displayTick, round.startTick, effectiveRoundEndTick) : 0;
   const clockStartTick = round
     ? showFreezeTime
       ? round.startTick

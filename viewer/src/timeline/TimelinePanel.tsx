@@ -61,6 +61,7 @@ export function TimelinePanel({
   onTickChange,
   onUtilityFocusChange,
 }: Props) {
+  const displayedRoundNumber = activeRoundIndex + 1;
   const displayStartTick = showFreezeTime ? round.startTick : clamp(round.freezeEndTick ?? round.startTick, round.startTick, round.endTick);
   const displayEndTick =
     round.officialEndTick != null && round.officialEndTick > round.endTick ? round.officialEndTick : round.endTick;
@@ -116,7 +117,7 @@ export function TimelinePanel({
               ].filter(Boolean).join(" ")}
               onClick={() => onSelectRound(index)}
             >
-              {entry.roundNumber}
+              {index + 1}
             </button>
           ))}
         </div>
@@ -143,7 +144,7 @@ export function TimelinePanel({
         <div className="timeline-center-dock">
           <div className="timeline-readout-row">
             <span className="timeline-map-label">{replay.map.displayName}</span>
-            <span className="timeline-readout-round">Round {round.roundNumber}</span>
+            <span className="timeline-readout-round">Round {displayedRoundNumber}</span>
             <span className="timeline-readout-tick">Tick {tick}</span>
             <span className={`timeline-readout-chip timeline-readout-chip-${currentPhase.kind}`}>{currentPhase.label}</span>
             {utilityFocus !== "all" ? (

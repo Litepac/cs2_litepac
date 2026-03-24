@@ -8,18 +8,16 @@ Planning note:
 ## Planned
 ### Next Up
 - Finish player-token polish now that token mode is parser-backed through `activeWeaponClass`
-- Tighten bomb overlay polish toward the Skybox reference, especially planted-ring/icon refinement
 - Keep flattening and simplifying the bottom dock so it reads closer to one calm Skybox-style operator panel
 - Continue live visual QA against staged fixtures at 1080p and 1440p/2K
+- Reconcile intentional post-round sampling through `officialEndTick` with round/stream validation so the parser truth stays internally consistent
 
 ### On Hold / Later
 - Tighten parser edge cases found during visual replay checks
-- Add parser-side yaw validation before relying more heavily on facing semantics
 - Add canonical inferno footprint truth if future UI needs more than soft center-based fire rendering
 - Add map calibration spot checks tied to known landmarks
 - Reduce viewer bundle size and split heavy Pixi code paths
 - Improve utility lifecycle fidelity after visual validation
-- Add explicit parser-side spot checks for bomb and kill event positional completeness
 - Tighten canonical replay fields where UI quality is blocked by missing trustworthy render data
 
 ## In Progress
@@ -94,6 +92,18 @@ Planning note:
 - Corrected map projectile utility icons toward Skybox-style side-colored silhouettes instead of pale ring markers, while keeping held utility on player tokens as the small forward dot
 - Refactored `viewer/src/canvas/ReplayStage.tsx` into smaller stage bootstrap, camera, map, frame, player, bomb, and combat helper modules without changing the replay contract
 - Refactored `viewer/src/app/App.tsx` into smaller replay-loading, playback, fixture, and timeline helper modules without changing runtime behavior
+- Re-prioritized parser-side yaw validation as the next replay-truth follow-up after the current bomb/CI/parser-structure pass, based on bounded parser exploration
+- Tightened parser-backed bomb overlays toward a calmer segmented planted/defuse read without changing bomb semantics
+- Added minimal GitHub Actions CI for parser tests and viewer build, and ignored the local `parser/fixtureparse.exe` helper binary
+- Split `parser/internal/demo/parser.go` into smaller metadata, round, combat, bomb, utility, frame-sampling, entity, and output modules without changing the canonical replay contract
+- Added parser-side yaw sanitization, semantic validation, and fixture-backed yaw coverage checks so facing cues can omit untrusted direction instead of guessing
+- Tightened viewer yaw interpolation so null parser yaw no longer bleeds across neighboring frames, and softened the bomb-core fill toward the Skybox reference
+- Corrected yaw validation to omit invalid/out-of-range parser yaw instead of normalizing it, replaced brittle coverage thresholds with invariant and synthetic validation tests, and moved bomb overlays above smoke/utility cover
+- Tightened player-token readability with cleaner non-selected facing marks and a more tucked utility badge, and flattened the bottom dock styling toward a calmer single-panel read
+- Added parser-side bomb/kill/hurt positional completeness checks and bomb-site shape validation, plus fixture-backed tripwires for current replay outputs
+- Continued player sampling and viewer rendering through official round end so post-defuse/post-explode movement no longer freezes while the timeline advances, and normalized the displayed round index to start at 1 for the first loaded round
+- Switched canonical replay emission from pretty-printed to compact JSON so large staged fixtures stay below browser JS string limits and `test1-3` can load again without schema changes
+- Reconciled the `officialEndTick` post-round render window with parser validation and schema docs, and backfilled observed official-end tails when demos omit an explicit official-end event so player-stream bounds stay canonical
 
 ## Blocked
 - Visual truth-checking still needs screenshots or side-by-side demo review

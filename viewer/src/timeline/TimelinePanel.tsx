@@ -130,44 +130,23 @@ export function TimelinePanel({
         </button>
       </div>
 
-      <div className="timeline-main-dock">
-        <div className="timeline-left-controls">
-          <button className="timeline-play-button" onClick={onPlayToggle}>
-            {playing ? "Pause" : "Play"}
-          </button>
-          <div className="timeline-clock-block">
-            <span>speed {speed}x</span>
-            <strong>{roundClock ?? "--:--"}</strong>
-          </div>
-        </div>
-
-        <div className="timeline-center-dock">
-          <div className="timeline-readout-row">
-            <span className="timeline-map-label">{replay.map.displayName}</span>
-            <span className="timeline-readout-round">Round {displayedRoundNumber}</span>
-            <span className="timeline-readout-tick">Tick {tick}</span>
-            <span className={`timeline-readout-chip timeline-readout-chip-${currentPhase.kind}`}>{currentPhase.label}</span>
-            {utilityFocus !== "all" ? (
-              <span className="timeline-readout-chip timeline-readout-chip-muted">{utilityFocusLabel(utilityFocus)}</span>
-            ) : null}
-            {round.winnerSide ? <span className={`timeline-readout-side timeline-readout-side-${round.winnerSide.toLowerCase()}`}>{round.winnerSide}</span> : null}
-            {round.endReason ? <span className="timeline-readout-meta">{round.endReason}</span> : null}
-            {officialOffsetTicks != null ? <span className="timeline-readout-meta">official +{officialOffsetTicks}</span> : null}
-            <div className="timeline-readout-scoreboard">
-              <CompactScore side="CT" score={scoreForSide(round, "CT", "before")} label={ctTeam?.displayName ?? "CT Side"} />
-              <CompactScore side="T" score={scoreForSide(round, "T", "before")} label={tTeam?.displayName ?? "T Side"} />
+        <div className="timeline-main-dock">
+          <div className="timeline-left-controls">
+            <button className="timeline-play-button" onClick={onPlayToggle}>
+              {playing ? "Pause" : "Play"}
+            </button>
+            <div className="timeline-clock-block">
+              <span>
+                Round {displayedRoundNumber} · Tick {tick}
+              </span>
+              <strong>{roundClock ?? "--:--"}</strong>
             </div>
           </div>
 
-          <div className="timeline-bands-layout">
-            <div className="timeline-label-column">
-              <span className="timeline-row-label">TIME</span>
-              <span className="timeline-row-label">EVENTS</span>
-              <span className="timeline-row-label">SEEK</span>
-            </div>
-
-            <div className="timeline-track-shell">
-              <div className="timeline-guide-layer" aria-hidden="true">
+          <div className="timeline-center-dock">
+            <div className="timeline-transport-row">
+              <div className="timeline-track-shell">
+                <div className="timeline-guide-layer" aria-hidden="true">
                 {secondMarkers.map((marker) => (
                   <span
                     key={`guide-${marker.tick}`}
@@ -178,17 +157,17 @@ export function TimelinePanel({
               </div>
 
               <div className="timeline-ruler-row timeline-track-lane">
-              {secondMarkers.map((marker) => (
-                <span
-                  key={marker.tick}
-                  className="timeline-ruler-marker"
-                  style={{ left: `${((marker.tick - displayStartTick) / range) * 100}%` }}
-                >
-                  <span className="timeline-ruler-line" />
-                  <span className="timeline-ruler-label">{marker.label}</span>
-                </span>
-              ))}
-              <span className="timeline-current-line" style={{ left: currentPercent }} />
+                {secondMarkers.map((marker) => (
+                  <span
+                    key={marker.tick}
+                    className="timeline-ruler-marker"
+                    style={{ left: `${((marker.tick - displayStartTick) / range) * 100}%` }}
+                  >
+                    <span className="timeline-ruler-line" />
+                    <span className="timeline-ruler-label">{marker.label}</span>
+                  </span>
+                ))}
+                <span className="timeline-current-line" style={{ left: currentPercent }} />
               </div>
 
               <div className="timeline-marker-row timeline-track-lane">
@@ -213,9 +192,42 @@ export function TimelinePanel({
                 />
               </div>
             </div>
+
+            <div className="timeline-controls-inline">
+              <div className="timeline-readout-scoreboard">
+                <CompactScore side="CT" score={scoreForSide(round, "CT", "before")} label={ctTeam?.displayName ?? "CT Side"} />
+                <CompactScore side="T" score={scoreForSide(round, "T", "before")} label={tTeam?.displayName ?? "T Side"} />
+              </div>
+
+              <div className="timeline-segmented-row timeline-segmented-row-speed">
+                {SPEEDS.map((entry) => (
+                  <button
+                    key={entry}
+                    className={entry === speed ? "control-button control-button-active" : "control-button"}
+                    onClick={() => onSpeedChange(entry)}
+                  >
+                    {entry}x
+                  </button>
+                ))}
+              </div>
+              <button className="control-button timeline-reset-button" onClick={onReset}>
+                Reset
+              </button>
+            </div>
           </div>
 
           <div className="timeline-controls-panel">
+            <div className="timeline-context-strip">
+              <span className="timeline-map-label">{replay.map.displayName}</span>
+              <span className={`timeline-readout-chip timeline-readout-chip-${currentPhase.kind}`}>{currentPhase.label}</span>
+              {round.winnerSide ? (
+                <span className={`timeline-readout-side timeline-readout-side-${round.winnerSide.toLowerCase()}`}>
+                  {round.winnerSide}
+                </span>
+              ) : null}
+              {round.endReason ? <span className="timeline-readout-meta">{round.endReason}</span> : null}
+              {officialOffsetTicks != null ? <span className="timeline-readout-meta">official +{officialOffsetTicks}</span> : null}
+            </div>
             <div className="timeline-segmented-row timeline-utility-toggle-row">
               <button
                 className={showFreezeTime ? "control-button control-button-active" : "control-button"}
@@ -231,23 +243,7 @@ export function TimelinePanel({
                 >
                   {option.label}
                 </button>
-              ))}
-            </div>
-            <div className="timeline-controls-secondary">
-              <div className="timeline-segmented-row timeline-segmented-row-speed">
-                {SPEEDS.map((entry) => (
-                  <button
-                    key={entry}
-                    className={entry === speed ? "control-button control-button-active" : "control-button"}
-                    onClick={() => onSpeedChange(entry)}
-                  >
-                    {entry}x
-                  </button>
                 ))}
-              </div>
-              <button className="control-button timeline-reset-button" onClick={onReset}>
-                Reset
-              </button>
             </div>
           </div>
         </div>
@@ -375,15 +371,4 @@ function buildSecondMarkers(displayStartTick: number, displayEndTick: number, ti
 function resolveCurrentPhase(phases: RoundPhase[], tick: number) {
   const phase = phases.find((entry) => tick >= entry.startTick && tick <= entry.endTick) ?? phases[phases.length - 1];
   return phase ?? { kind: "live", label: "Live", startTick: tick, endTick: tick };
-}
-
-function utilityFocusLabel(focus: UtilityFocus) {
-  switch (focus) {
-    case "flashbang":
-      return "flash";
-    case "hegrenade":
-      return "he";
-    default:
-      return focus;
-  }
 }

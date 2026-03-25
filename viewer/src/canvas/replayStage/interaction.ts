@@ -9,7 +9,7 @@ export function attachStageInteractions(hostElement: HTMLDivElement, stage: Stag
   function onWheel(event: WheelEvent) {
     event.preventDefault();
     const direction = event.deltaY > 0 ? -1 : 1;
-    const nextScale = clamp(stage.cameraScale + direction * 0.12, 1, 2.6);
+    const nextScale = clamp(stage.cameraScale + direction * 0.12, 0.72, 2.8);
     if (nextScale === stage.cameraScale) {
       return;
     }

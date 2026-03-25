@@ -5,6 +5,7 @@ import { HomePage } from "../controls/HomePage";
 import { KillFeed } from "../controls/KillFeed";
 import { MatchesPage } from "../controls/MatchesPage";
 import { RosterPanel } from "../controls/RosterPanel";
+import { ShellTopNav } from "../controls/ShellTopNav";
 import { Sidebar } from "../controls/Sidebar";
 import type { UtilityFocus } from "../replay/utilityFilter";
 import { TimelinePanel } from "../timeline/TimelinePanel";
@@ -16,7 +17,6 @@ import { useTimelineMarkers } from "./useTimelineMarkers";
 export function App() {
   const fixtures = useFixtureCatalog();
   const {
-    activeReplayId,
     closeReplay,
     demoIngestState,
     error,
@@ -51,24 +51,18 @@ export function App() {
     setShellPage("matches");
   }
 
-  function handleCloseReplay() {
-    closeReplay();
-    setShellPage("matches");
-  }
+  const showSidebar = replay != null;
 
   return (
-    <div className="sky-shell">
-      <Sidebar
-        activeReplayId={activeReplayId}
-        matches={libraryEntries}
-        shellPage={shellPage}
-        onCloseReplay={handleCloseReplay}
-        onOpenMatch={handleOpenMatch}
-        onSelectShellPage={setShellPage}
-        error={error}
-        loadingSource={loadingSource}
-        replay={replay}
-      />
+    <div className={`sky-shell ${!replay ? `sky-shell-${shellPage}` : "sky-shell-replay"}`}>
+      {showSidebar ? (
+        <Sidebar
+          onSelectShellPage={(page) => {
+            closeReplay();
+            setShellPage(page);
+          }}
+        />
+      ) : null}
 
       <main className={`viewer-shell ${replay ? "viewer-shell-replay" : `viewer-shell-${shellPage}`}`}>
         {replay && round ? (
@@ -122,19 +116,44 @@ export function App() {
           </>
         ) : (
           shellPage === "home" ? (
-            <HomePage onOpenMatches={() => setShellPage("matches")} parserBridgeAvailable={parserBridgeAvailable} />
+            <section className="home-surface">
+              <ShellTopNav
+                actionLabel={libraryEntries.length > 0 ? "Open Matches" : "Start Local Review"}
+                localMatchCount={libraryEntries.length}
+                onAction={() => setShellPage("matches")}
+                onOpenHome={() => setShellPage("home")}
+                onOpenMatches={() => setShellPage("matches")}
+                parserBridgeAvailable={parserBridgeAvailable}
+                shellPage={shellPage}
+              />
+              <HomePage
+                latestMatch={libraryEntries[0] ?? null}
+                localMatchCount={libraryEntries.length}
+                onOpenMatches={() => setShellPage("matches")}
+                parserBridgeAvailable={parserBridgeAvailable}
+              />
+            </section>
           ) : (
-            <MatchesPage
-              demoIngestState={demoIngestState}
-              fixtures={fixtures}
-              libraryHydrated={libraryHydrated}
-              matches={libraryEntries}
-              loadingSource={loadingSource}
-              parserBridgeAvailable={parserBridgeAvailable}
-              onDemoFileChange={handleDemoFileChange}
-              onFixtureLoad={onFixtureLoad}
-              onOpenMatch={handleOpenMatch}
-            />
+            <section className="matches-surface">
+              <ShellTopNav
+                localMatchCount={libraryEntries.length}
+                onOpenHome={() => setShellPage("home")}
+                onOpenMatches={() => setShellPage("matches")}
+                parserBridgeAvailable={parserBridgeAvailable}
+                shellPage={shellPage}
+              />
+              <MatchesPage
+                demoIngestState={demoIngestState}
+                fixtures={fixtures}
+                libraryHydrated={libraryHydrated}
+                matches={libraryEntries}
+                loadingSource={loadingSource}
+                parserBridgeAvailable={parserBridgeAvailable}
+                onDemoFileChange={handleDemoFileChange}
+                onFixtureLoad={onFixtureLoad}
+                onOpenMatch={handleOpenMatch}
+              />
+            </section>
           )
         )}
       </main>

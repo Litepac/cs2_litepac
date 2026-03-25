@@ -51,7 +51,7 @@ export function createRadarViewport(
   const fitWidth = Math.max(1, viewportWidth - leftPadding - rightPadding);
   const fitHeight = Math.max(1, viewportHeight - topPadding - bottomPadding);
   const fitScale = Math.min(fitWidth / safeCropWidth, fitHeight / safeCropHeight);
-  const scale = fitScale * 1.08;
+  const scale = fitScale * 1.01;
   const scaledWidth = safeCropWidth * scale;
   const scaledHeight = safeCropHeight * scale;
 

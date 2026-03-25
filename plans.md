@@ -23,6 +23,7 @@ Planning note:
 - Consider a later Figma refinement loop for Home, Matches, shell consistency, and state polish once the product structure is stable enough for design refinement instead of active workflow churn
 
 ## In Progress
+- Turn the replay left side into a true workspace menu/tool rail: remove metadata-heavy blocks, demote recent matches out of the visible rail, and reclaim more width for the map without changing replay controls or right-side team semantics
 - Refine parser-backed hurt-line combat cues so the map read feels intentional and Skybox-like without inventing bullet-path truth
 - Improve bomb readability with parser-backed planted and defusing overlays, including a more Skybox-like segmented planted timer ring and defuse-abort truth so the viewer does not fake continuous defuse state
 - Push the viewer shell, dock, rail, and utility presentation closer to the Skybox reference using only parser-backed replay truth
@@ -114,6 +115,22 @@ Planning note:
 - Tightened the repo-local UI and frontend specialist guides with a stronger premium-product-shell bar, required state handling, and an explicit anti-dashboard stance without weakening parser-first truth rules
 - Added repo-local `skills/frontend-ship/SKILL.md` so future product-shell UI work can reuse a concise ship-ready frontend workflow without weakening parser-first truth rules
 - Added a compact UI quality bar to root `AGENTS.md` so premium, non-dashboard, state-complete frontend expectations apply repo-wide before specialist guides are loaded
+- Applied the repo-local `frontend-ship` workflow to Home and Matches so the first viewport is more deliberate: welcome on Home, ingest desk plus library hierarchy on Matches, fixtures demoted, and focus states made explicit
+- Reworked Home and Matches again toward a stronger left-anchored composition with fewer repeated cards: Home now uses one hero plus one product-flow frame, and Matches uses a clearer ingest desk, helper band, and library-first hierarchy
+- Redesigned Home and Matches toward a more sellable product shell: narrower rail, stronger hero/product-frame composition on Home, upload integrated directly into the Matches header, cleaner match-row scan rhythm, and less boxy dashboard drift overall
+- Pushed Home and Matches into a materially stronger second-pass shell redesign: real two-column Home hero with live local-state anchoring, Matches rebuilt as an ingest-to-library workspace with the library dominating and fixtures demoted to a secondary rail, and the sidebar visually reduced so the product surface owns the viewport
+- Rebuilt Home into a bolder cyberpunk-inspired in-app landing shell with a text-led hero, integrated product-preview frame, reduced rail dominance, and a more sellable first viewport without changing the parser-first local workflow
+- Shifted Home to a slim top-navigation shell instead of the left rail so branded landing surfaces can breathe, while Matches/replay keep denser navigation patterns where the operational value is higher
+- Tightened Home with a final art-direction pass: integrated the grid/background more naturally across the full hero scene, gave the “THE ROUND” line a subtler premium internal treatment, and tuned larger-screen scale without changing the page concept
+
+- Rebuilt Matches into a top-nav, library-first product surface so the match library dominates immediately, upload reads as a compact page action instead of a workflow block, and fixtures/dev validation are pushed into a clearly secondary collapsible section
+- Rebuilt the replay workspace into a denser operator console with a slimmer replay-specific tool rail, stronger map dominance, tighter right-rail and bottom-dock treatment, and a more purpose-built review-shell hierarchy without changing team color semantics, round navigation, or replay-control purpose
+- Compressed the replay workspace again into a tighter analyst console with a materially narrower left tool rail, lighter recent-match treatment, and a more unified bottom replay dock so the map regains more width without changing the replay information model
+- Fixed replay-workspace nav regression by making Home and Matches exit the replay shell correctly, rebuilt the left side into a slim global rail plus compact replay-context module, and loosened map fit/zoom-out so tactical overview is easier without changing the right-side team panel model
+- Rebalanced the replay left side into a compact but readable two-part tool rail with a slim global nav strip, a clearer replay-context panel, larger click targets, and more comfortable type so it reads like a premium workspace menu instead of a tiny debug rail
+- Stripped the replay left side down to a pure navigation rail with only brand plus Home/Matches/Stats navigation, so the workspace menu no longer competes with the map or behaves like a metadata sidebar
+- Rebuilt the replay bottom area into a materially flatter transport bar by removing the separate readout band, flattening right-side controls into the main timeline row, and shrinking the round strip, seek stack, and utility row so the map regains clear vertical space without sacrificing replay controls or readable labels
 
 ## Blocked
 - Visual truth-checking still needs screenshots or side-by-side demo review
+- Automated headless measurement of the replay dock's rendered height is blocked locally by browser permission failures, so exact before/after pixel verification still needs a working browser automation path or a live browser measurement hook

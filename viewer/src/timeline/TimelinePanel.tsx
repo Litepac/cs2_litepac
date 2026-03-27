@@ -137,7 +137,7 @@ export function TimelinePanel({
             </button>
             <div className="timeline-clock-block">
               <span>
-                Round {displayedRoundNumber} · Tick {tick}
+                Round {displayedRoundNumber} - Tick {tick}
               </span>
               <strong>{roundClock ?? "--:--"}</strong>
             </div>

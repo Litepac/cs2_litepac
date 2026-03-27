@@ -7,26 +7,32 @@ import { IngestTracker } from "./IngestTracker";
 
 type Props = {
   demoIngestState: DemoIngestState | null;
+  error: string | null;
   fixtures: FixtureIndex["files"];
   libraryHydrated: boolean;
   matches: MatchLibraryEntry[];
   loadingSource: "demo" | "fixture" | "replay" | null;
   parserBridgeAvailable: boolean;
   onDemoFileChange: (event: ChangeEvent<HTMLInputElement>) => void | Promise<void>;
+  onDeleteMatch: (id: string) => void | Promise<void>;
   onFixtureLoad: (fileName: string) => void | Promise<void>;
   onOpenMatch: (id: string) => void;
+  onOpenStats: (id: string) => void;
 };
 
 export function MatchesPage({
   demoIngestState,
+  error,
   fixtures,
   libraryHydrated,
   matches,
   loadingSource,
   parserBridgeAvailable,
   onDemoFileChange,
+  onDeleteMatch,
   onFixtureLoad,
   onOpenMatch,
+  onOpenStats,
 }: Props) {
   const [query, setQuery] = useState("");
   const [mapFilter, setMapFilter] = useState("all");
@@ -124,6 +130,7 @@ export function MatchesPage({
       </div>
 
       {demoIngestState ? <IngestTracker state={demoIngestState} /> : null}
+      {error ? <div className="error-box matches-error-box">{error}</div> : null}
 
       <section className="match-library match-library-primary">
         <div className="match-library-header">
@@ -148,7 +155,7 @@ export function MatchesPage({
             </div>
 
             {filteredMatches.map((entry) => (
-              <button key={entry.id} className="match-row" onClick={() => onOpenMatch(entry.id)} disabled={loadingSource != null}>
+              <div key={entry.id} className="match-row">
                 <span className="match-cell match-map-cell">
                   <span
                     className="match-map-preview"
@@ -179,9 +186,32 @@ export function MatchesPage({
                 <span className="match-cell match-source-cell">{entry.summary.sourceLabel}</span>
 
                 <span className="match-cell match-action-cell">
-                  <strong>Open</strong>
+                  <button
+                    type="button"
+                    className="match-action-button"
+                    onClick={() => onOpenStats(entry.id)}
+                    disabled={loadingSource != null}
+                  >
+                    Stats
+                  </button>
+                  <button
+                    type="button"
+                    className="match-action-button match-action-button-open"
+                    onClick={() => onOpenMatch(entry.id)}
+                    disabled={loadingSource != null}
+                  >
+                    Open
+                  </button>
+                  <button
+                    type="button"
+                    className="match-action-button match-action-button-delete"
+                    onClick={() => void onDeleteMatch(entry.id)}
+                    disabled={loadingSource != null}
+                  >
+                    Delete
+                  </button>
                 </span>
-              </button>
+              </div>
             ))}
           </div>
         ) : (

@@ -23,6 +23,8 @@ Planning note:
 - Consider a later Figma refinement loop for Home, Matches, shell consistency, and state polish once the product structure is stable enough for design refinement instead of active workflow churn
 
 ## In Progress
+- Build a real match stats destination from canonical replay truth, with table-first player stats and a compact round breakdown instead of widget-style dashboards
+- Restore the post-reset demo-upload path by fixing the parser API NDJSON result envelope again and stopping Matches rows from collapsing onto a single SHA-only entry
 - Turn the replay left side into a true workspace menu/tool rail: remove metadata-heavy blocks, demote recent matches out of the visible rail, and reclaim more width for the map without changing replay controls or right-side team semantics
 - Refine parser-backed hurt-line combat cues so the map read feels intentional and Skybox-like without inventing bullet-path truth
 - Improve bomb readability with parser-backed planted and defusing overlays, including a more Skybox-like segmented planted timer ring and defuse-abort truth so the viewer does not fake continuous defuse state
@@ -130,6 +132,9 @@ Planning note:
 - Rebalanced the replay left side into a compact but readable two-part tool rail with a slim global nav strip, a clearer replay-context panel, larger click targets, and more comfortable type so it reads like a premium workspace menu instead of a tiny debug rail
 - Stripped the replay left side down to a pure navigation rail with only brand plus Home/Matches/Stats navigation, so the workspace menu no longer competes with the map or behaves like a metadata sidebar
 - Rebuilt the replay bottom area into a materially flatter transport bar by removing the separate readout band, flattening right-side controls into the main timeline row, and shrinking the round strip, seek stack, and utility row so the map regains clear vertical space without sacrificing replay controls or readable labels
+- Restored the post-reset upload fixes: trimmed streamed replay results back to valid NDJSON and stopped local Matches rows from collapsing onto a single SHA-only library entry
+- Added a compact delete action to the Matches library and wired it through local browser storage so uploaded demos can be removed cleanly from the library
+- Restored replay-dock readability by increasing round/text/control legibility without returning to the old tall panel layout
 
 ## Blocked
 - Visual truth-checking still needs screenshots or side-by-side demo review

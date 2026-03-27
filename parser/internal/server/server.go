@@ -176,6 +176,8 @@ func parseDemoUpload(w http.ResponseWriter, r *http.Request, opts Options) error
 		return nil
 	}
 
+	replayRaw = []byte(strings.TrimSpace(string(replayRaw)))
+
 	if _, err := w.Write([]byte(`{"type":"result","replay":`)); err != nil {
 		return fmt.Errorf("stream replay envelope prefix: %w", err)
 	}

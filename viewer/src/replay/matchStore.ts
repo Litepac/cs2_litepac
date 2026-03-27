@@ -52,6 +52,22 @@ export async function saveStoredMatch(entry: MatchLibraryEntry): Promise<void> {
   }
 }
 
+export async function deleteStoredMatch(id: string): Promise<void> {
+  const database = await openMatchDatabase();
+  if (database == null) {
+    return;
+  }
+
+  try {
+    const transaction = database.transaction(STORE_NAME, "readwrite");
+    const store = transaction.objectStore(STORE_NAME);
+    store.delete(id);
+    await transactionComplete(transaction);
+  } finally {
+    database.close();
+  }
+}
+
 function openMatchDatabase(): Promise<IDBDatabase | null> {
   if (typeof window === "undefined" || !("indexedDB" in window)) {
     return Promise.resolve(null);

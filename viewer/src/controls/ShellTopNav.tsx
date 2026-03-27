@@ -2,7 +2,7 @@ type Props = {
   actionLabel?: string;
   localMatchCount: number;
   parserBridgeAvailable: boolean;
-  shellPage: "home" | "matches";
+  shellPage: "home" | "matches" | "stats";
   onAction?: () => void;
   onOpenHome: () => void;
   onOpenMatches: () => void;
@@ -34,7 +34,7 @@ export function ShellTopNav({
           Home
         </button>
         <button
-          className={`home-top-nav-link ${shellPage === "matches" ? "home-top-nav-link-active" : ""}`}
+          className={`home-top-nav-link ${shellPage !== "home" ? "home-top-nav-link-active" : ""}`}
           onClick={onOpenMatches}
         >
           Matches

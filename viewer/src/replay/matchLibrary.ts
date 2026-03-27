@@ -23,13 +23,19 @@ export type MatchSummary = {
 };
 
 export function createMatchLibraryEntry(replay: Replay, source: MatchLibrarySource, addedAt = new Date().toISOString()): MatchLibraryEntry {
+  const entryId = createMatchLibraryEntryId(replay, source, addedAt);
+
   return {
-    id: replay.sourceDemo.sha256,
+    id: entryId,
     addedAt,
     replay,
     source,
     summary: deriveMatchSummary(replay, source, addedAt),
   };
+}
+
+function createMatchLibraryEntryId(replay: Replay, source: MatchLibrarySource, addedAt: string) {
+  return `${source}:${replay.sourceDemo.sha256}:${addedAt}`;
 }
 
 export function deriveMatchSummary(replay: Replay, source: MatchLibrarySource, addedAt: string): MatchSummary {

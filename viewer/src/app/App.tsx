@@ -7,6 +7,7 @@ import { MatchesPage } from "../controls/MatchesPage";
 import { RosterPanel } from "../controls/RosterPanel";
 import { ShellTopNav } from "../controls/ShellTopNav";
 import { Sidebar } from "../controls/Sidebar";
+import { StatsPage } from "../controls/StatsPage";
 import type { UtilityFocus } from "../replay/utilityFilter";
 import { TimelinePanel } from "../timeline/TimelinePanel";
 import { useFixtureCatalog } from "./useFixtureCatalog";
@@ -19,6 +20,7 @@ export function App() {
   const {
     closeReplay,
     demoIngestState,
+    deleteReplay,
     error,
     libraryHydrated,
     libraryEntries,
@@ -35,11 +37,13 @@ export function App() {
   } = useReplayLoader();
   const [utilityFocus, setUtilityFocus] = useState<UtilityFocus>("all");
   const [showFreezeTime, setShowFreezeTime] = useState(false);
-  const [shellPage, setShellPage] = useState<"home" | "matches">("home");
+  const [shellPage, setShellPage] = useState<"home" | "matches" | "stats">("home");
+  const [statsMatchId, setStatsMatchId] = useState<string | null>(null);
 
   const round = replay?.rounds[roundIndex] ?? null;
   const playback = useReplayPlayback(replay, round, roundIndex, showFreezeTime);
   const timelineMarkers = useTimelineMarkers(replay, round, utilityFocus);
+  const statsEntry = statsMatchId ? libraryEntries.find((entry) => entry.id === statsMatchId) ?? null : null;
 
   async function handleDemoFileChange(event: Parameters<typeof onDemoFileChange>[0]) {
     await onDemoFileChange(event);
@@ -49,6 +53,11 @@ export function App() {
   function handleOpenMatch(id: string) {
     openReplay(id);
     setShellPage("matches");
+  }
+
+  function handleOpenStats(id: string) {
+    setStatsMatchId(id);
+    setShellPage("stats");
   }
 
   const showSidebar = replay != null;
@@ -114,8 +123,7 @@ export function App() {
               onUtilityFocusChange={setUtilityFocus}
             />
           </>
-        ) : (
-          shellPage === "home" ? (
+        ) : shellPage === "home" ? (
             <section className="home-surface">
               <ShellTopNav
                 actionLabel={libraryEntries.length > 0 ? "Open Matches" : "Start Local Review"}
@@ -133,7 +141,7 @@ export function App() {
                 parserBridgeAvailable={parserBridgeAvailable}
               />
             </section>
-          ) : (
+          ) : shellPage === "matches" ? (
             <section className="matches-surface">
               <ShellTopNav
                 localMatchCount={libraryEntries.length}
@@ -144,18 +152,45 @@ export function App() {
               />
               <MatchesPage
                 demoIngestState={demoIngestState}
+                error={error}
                 fixtures={fixtures}
                 libraryHydrated={libraryHydrated}
                 matches={libraryEntries}
                 loadingSource={loadingSource}
                 parserBridgeAvailable={parserBridgeAvailable}
                 onDemoFileChange={handleDemoFileChange}
+                onDeleteMatch={deleteReplay}
                 onFixtureLoad={onFixtureLoad}
                 onOpenMatch={handleOpenMatch}
+                onOpenStats={handleOpenStats}
               />
             </section>
+          ) : (
+            <section className="matches-surface stats-surface">
+              <ShellTopNav
+                localMatchCount={libraryEntries.length}
+                onOpenHome={() => setShellPage("home")}
+                onOpenMatches={() => setShellPage("matches")}
+                parserBridgeAvailable={parserBridgeAvailable}
+                shellPage={shellPage}
+              />
+              {statsEntry ? (
+                <StatsPage
+                  entry={statsEntry}
+                  onBackToMatches={() => setShellPage("matches")}
+                  onOpenReplay={(id) => {
+                    openReplay(id);
+                    setShellPage("stats");
+                  }}
+                />
+              ) : (
+                <section className="matches-page stats-page">
+                  <div className="match-library-empty">This match is no longer available in your local library.</div>
+                </section>
+              )}
+            </section>
           )
-        )}
+        }
       </main>
     </div>
   );

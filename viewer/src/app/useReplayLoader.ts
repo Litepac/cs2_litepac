@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { loadReplayURL } from "../replay/loader";
 import type { DemoIngestState } from "../replay/ingestState";
 import { createMatchLibraryEntry, type MatchLibraryEntry, type MatchLibrarySource } from "../replay/matchLibrary";
-import { listStoredMatches, saveStoredMatch } from "../replay/matchStore";
+import { deleteStoredMatch, listStoredMatches, saveStoredMatch } from "../replay/matchStore";
 import { checkParserBridge, parseDemoFile } from "../replay/parserBridge";
 import type { Replay } from "../replay/types";
 
@@ -181,6 +181,27 @@ export function useReplayLoader() {
     setSelectedPlayerId(null);
   }
 
+  async function deleteReplay(id: string) {
+    const previousEntries = libraryEntries;
+    const deletingActiveReplay = activeReplayId === id;
+
+    setLibraryEntries((previous) => previous.filter((entry) => entry.id !== id));
+    if (deletingActiveReplay) {
+      closeReplay();
+    }
+
+    try {
+      await deleteStoredMatch(id);
+      setError(null);
+    } catch (deleteError) {
+      setLibraryEntries(previousEntries);
+      if (deletingActiveReplay) {
+        setActiveReplayId(id);
+      }
+      setError(deleteError instanceof Error ? deleteError.message : String(deleteError));
+    }
+  }
+
   async function ingestReplay(loaded: Replay, source: MatchLibrarySource, options: { openViewer: boolean; persist: boolean }) {
     const entry = createMatchLibraryEntry(loaded, source);
 
@@ -220,6 +241,7 @@ export function useReplayLoader() {
   return {
     activeReplayId,
     demoIngestState,
+    deleteReplay,
     error,
     closeReplay,
     libraryHydrated,

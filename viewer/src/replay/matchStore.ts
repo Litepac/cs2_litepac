@@ -24,7 +24,10 @@ export async function listStoredMatches(): Promise<MatchLibraryEntry[]> {
     const records = await requestToPromise<StoredMatchRecord[]>(store.getAll());
     await transactionComplete(transaction);
     return records
-      .map((record) => createMatchLibraryEntry(record.replay, record.source, record.addedAt))
+      .map((record) => {
+        const hydrated = createMatchLibraryEntry(record.replay, record.source, record.addedAt);
+        return { ...hydrated, id: record.id };
+      })
       .sort((left, right) => right.addedAt.localeCompare(left.addedAt));
   } finally {
     database.close();

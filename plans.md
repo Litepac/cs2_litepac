@@ -7,11 +7,9 @@ Planning note:
 
 ## Planned
 ### Next Up
-- Finish player-token polish now that token mode is parser-backed through `activeWeaponClass`
-- Keep flattening and simplifying the bottom dock so it reads closer to one calm Skybox-style operator panel
-- Continue live visual QA against staged fixtures at 1080p and 1440p/2K
-- Reconcile intentional post-round sampling through `officialEndTick` with round/stream validation so the parser truth stays internally consistent
 - Tighten ingest failure handling and empty-state guidance now that parser-backed round progress and the demo-only local match flow are in place
+- Continue live visual QA against staged fixtures at 1080p and 1440p/2K
+- Add fixture/integration coverage around parser-to-viewer ingest flow once the current product surfaces settle
 
 ### On Hold / Later
 - Tighten parser edge cases found during visual replay checks
@@ -21,25 +19,13 @@ Planning note:
 - Improve utility lifecycle fidelity after visual validation
 - Tighten canonical replay fields where UI quality is blocked by missing trustworthy render data
 - Consider a later Figma refinement loop for Home, Matches, shell consistency, and state polish once the product structure is stable enough for design refinement instead of active workflow churn
+- Revisit a separate internal AI runtime surface only if direct VSCode/Codex integration becomes valuable enough to justify a true runtime-first sidecar instead of another staged prototype
 
 ## In Progress
-- Build a real match stats destination from canonical replay truth, with table-first player stats and a compact round breakdown instead of widget-style dashboards
-- Restore the post-reset demo-upload path by fixing the parser API NDJSON result envelope again and stopping Matches rows from collapsing onto a single SHA-only entry
-- Turn the replay left side into a true workspace menu/tool rail: remove metadata-heavy blocks, demote recent matches out of the visible rail, and reclaim more width for the map without changing replay controls or right-side team semantics
-- Refine parser-backed hurt-line combat cues so the map read feels intentional and Skybox-like without inventing bullet-path truth
-- Improve bomb readability with parser-backed planted and defusing overlays, including a more Skybox-like segmented planted timer ring and defuse-abort truth so the viewer does not fake continuous defuse state
-- Push the viewer shell, dock, rail, and utility presentation closer to the Skybox reference using only parser-backed replay truth
-- Make HE-smoke displacement read as a temporary smoke hole with slower refill, not as a large HE-style overlay effect
-- Align smoke closer to the Skybox-style canister-with-side-hardware reference and keep flash distinctly shorter/ringed so the shared icon family separates cleanly at map scale
-- Tighten flash specifically toward the compact Skybox-style ringed canister silhouette before further utility-family polish
-- Increase flash projectile render scale so the map icon reads closer to Skybox utility size instead of a tiny micro-glyph
-- Increase HE and molotov projectile size tiers and sharpen their silhouettes so they stay readable beside the larger smoke/flash family
-- Make held-utility player token markers utility-specific so the small attached marker shows which grenade is equipped instead of only signaling generic utility state
-- Tighten held-utility token attachment so the original dot stays visible and the micro-icon sits in a fixed lower-right anchored slot closer to the Skybox reference
-- Rebuild utility trajectory rendering so the line follows the live projectile path, disappears on pop, and uses parser-backed bounce events for the small impact circles
-- Tighten the right rail toward a denser scoreboard-style hierarchy with cleaner weapon/vitals/utility balance
-- Rebuild player token styling and utility visuals toward stronger operator readability without inventing live fire cues
-- Visual validation workflow using staged local replay fixtures
+- Finish the replay bottom area with one tightly scoped geometry/readability pass so the dock feels unified, compact, and clearly separated from the round strip without regressing map space
+- Polish the new match stats destination into a stronger premium analytical surface while keeping it table-first and limited to trustworthy parser-backed stats
+- Reconcile intentional post-round sampling through `officialEndTick` with round/stream validation so parser truth stays internally consistent
+- Make bomb timer/state fully parser-owned and event-backed so planted countdown truth no longer depends on fragile parse-end state or inference
 
 ## Done
 - Proposed clean project structure and stack direction
@@ -135,6 +121,14 @@ Planning note:
 - Restored the post-reset upload fixes: trimmed streamed replay results back to valid NDJSON and stopped local Matches rows from collapsing onto a single SHA-only library entry
 - Added a compact delete action to the Matches library and wired it through local browser storage so uploaded demos can be removed cleanly from the library
 - Restored replay-dock readability by increasing round/text/control legibility without returning to the old tall panel layout
+- Added a real match stats destination with parser-backed sortable team tables and a compact rounds breakdown, wired from the Matches library without inventing role or HLTV rating data
+- Ran a repo sanity sweep, pruned stale active-work items in `plans.md`, and folded root temp-log cleanup into normal repo hygiene
+- Removed the experimental internal AI operations surface from the active repo path after multiple prototypes proved too distracting and too weakly connected to real VSCode/Codex work for the project's current stage
+- Preserved stored match row IDs during IndexedDB hydration so deleting older persisted library rows no longer risks leaving orphaned records that reappear after reload
+- Added a first parser performance scaffold under `parser/internal/validate/performance_bench_test.go` and `docs/perf/README.md` so future regression checks can use replay validation benchmarks, profiles, and viewer trace baselines instead of opinion, and verified that the benchmark package runs locally
+- Captured and committed the first parser validation benchmark baseline under `docs/perf/benchmarks/2026-03-28-parser-validate-benchmark.txt`, and added a fixed viewer trace runbook under `docs/perf/traces/README.md`
+- Captured the first viewer replay trace baseline under `docs/perf/traces/2026-03-28-replay-trace-baseline.json` so replay/timeline changes can be compared against a real Chrome performance trace instead of visual feel alone
+- Tightened the replay dock geometry again by moving score/speed/reset out of the main transport row and into the support strip so the timeline lane owns more horizontal width without changing the replay information model
 
 ## Blocked
 - Visual truth-checking still needs screenshots or side-by-side demo review

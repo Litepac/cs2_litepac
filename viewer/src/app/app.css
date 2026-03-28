@@ -615,6 +615,7 @@ button {
     linear-gradient(180deg, rgba(8, 13, 18, 0.1), transparent 18%);
 }
 
+
 .brand-card,
 .sidebar-card,
 .placeholder-card,
@@ -1279,7 +1280,7 @@ h1 {
 
 .timeline-round-nav {
   min-width: 0;
-  padding-bottom: 4px;
+  padding-bottom: 10px;
   border-bottom: 1px solid rgba(24, 37, 47, 0.4);
 }
 
@@ -1477,7 +1478,7 @@ h1 {
 .timeline-center-dock {
   min-width: 0;
   display: grid;
-  gap: 3px;
+  gap: 4px;
 }
 
 .timeline-readout-chip {
@@ -1545,8 +1546,8 @@ h1 {
 
 .timeline-transport-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
   align-items: center;
 }
 
@@ -1554,8 +1555,9 @@ h1 {
   position: relative;
   min-width: 0;
   display: grid;
-  grid-template-rows: 24px 12px 20px;
+  grid-template-rows: 22px 12px 20px;
   gap: 6px;
+  margin-top: 2px;
   padding: 0;
   border-radius: 0;
   border: none;
@@ -1595,13 +1597,14 @@ h1 {
 
 .timeline-ruler-row {
   position: relative;
-  height: 24px;
+  height: 22px;
+  overflow: hidden;
 }
 
 .timeline-ruler-marker {
   position: absolute;
-  top: -2px;
-  bottom: 3px;
+  top: 2px;
+  bottom: 2px;
   margin-left: -1px;
   display: grid;
   justify-items: center;
@@ -1693,13 +1696,12 @@ h1 {
 
 .timeline-controls-panel {
   min-width: 0;
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 8px;
-  padding-top: 0;
+  gap: 10px;
+  padding-top: 1px;
   border-top: 1px solid rgba(24, 38, 48, 0.2);
-  flex-wrap: wrap;
 }
 
 .timeline-context-strip {
@@ -1708,6 +1710,15 @@ h1 {
   align-items: center;
   gap: 6px;
   color: var(--muted);
+  flex-wrap: wrap;
+}
+
+.timeline-controls-secondary {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
@@ -1885,8 +1896,8 @@ h1 {
 }
 
 .timeline-ruler-row .timeline-current-line {
-  top: 11px;
-  bottom: 0;
+  top: 15px;
+  bottom: 1px;
 }
 
 .timeline-marker-row .timeline-current-line {
@@ -4324,8 +4335,23 @@ h1 {
     padding: 0;
   }
 
+  .timeline-controls-panel {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .timeline-controls-secondary {
+    justify-content: space-between;
+  }
+
   .timeline-top-meta {
     justify-content: space-between;
+  }
+}
+
+@media (max-width: 1180px) {
+  .timeline-controls-secondary {
+    justify-content: flex-start;
   }
 }
 

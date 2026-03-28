@@ -12,3 +12,5 @@ parser/.cache/
 testdata/demos/*.dem
 testdata/replays/*.json
 assets/fixtures/*.json
+tmp-*.log
+docs/perf/traces/*.json

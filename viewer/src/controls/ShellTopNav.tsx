@@ -18,6 +18,7 @@ export function ShellTopNav({
   onOpenMatches,
 }: Props) {
   const fallbackActionLabel = localMatchCount > 0 ? "Open Matches" : "Start Local Review";
+  const matchesActive = shellPage === "matches" || shellPage === "stats";
 
   return (
     <header className="home-top-nav">
@@ -34,7 +35,7 @@ export function ShellTopNav({
           Home
         </button>
         <button
-          className={`home-top-nav-link ${shellPage !== "home" ? "home-top-nav-link-active" : ""}`}
+          className={`home-top-nav-link ${matchesActive ? "home-top-nav-link-active" : ""}`}
           onClick={onOpenMatches}
         >
           Matches

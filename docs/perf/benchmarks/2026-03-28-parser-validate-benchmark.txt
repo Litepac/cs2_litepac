@@ -1,0 +1,16 @@
+goos: windows
+goarch: amd64
+pkg: mastermind/parser/internal/validate
+cpu: 11th Gen Intel(R) Core(TM) i5-11600K @ 3.90GHz
+BenchmarkReplaySemanticValidation-12               1        3818458200 ns/op    935894184 B/op    23620370 allocs/op
+BenchmarkReplaySemanticValidation-12               1        3547983600 ns/op    935780688 B/op    23618964 allocs/op
+BenchmarkReplaySemanticValidation-12               1        3422262000 ns/op    935775496 B/op    23618954 allocs/op
+BenchmarkReplaySemanticValidation-12               1        3351692800 ns/op    935775480 B/op    23618954 allocs/op
+BenchmarkReplaySemanticValidation-12               1        3340245300 ns/op    935775560 B/op    23618955 allocs/op
+BenchmarkReplaySchemaValidation-12                 1       17348683200 ns/op  14308910944 B/op   272332290 allocs/op
+BenchmarkReplaySchemaValidation-12                 1       19277000200 ns/op  14308908832 B/op   272332257 allocs/op
+BenchmarkReplaySchemaValidation-12                 1       17523711500 ns/op  14308910712 B/op   272332276 allocs/op
+BenchmarkReplaySchemaValidation-12                 1       17447146700 ns/op  14308911472 B/op   272332293 allocs/op
+BenchmarkReplaySchemaValidation-12                 1       17196076400 ns/op  14308911752 B/op   272332295 allocs/op
+PASS
+ok      mastermind/parser/internal/validate        107.520s

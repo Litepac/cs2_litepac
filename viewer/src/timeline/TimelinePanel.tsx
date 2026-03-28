@@ -130,23 +130,23 @@ export function TimelinePanel({
         </button>
       </div>
 
-        <div className="timeline-main-dock">
-          <div className="timeline-left-controls">
-            <button className="timeline-play-button" onClick={onPlayToggle}>
-              {playing ? "Pause" : "Play"}
-            </button>
-            <div className="timeline-clock-block">
-              <span>
-                Round {displayedRoundNumber} - Tick {tick}
-              </span>
-              <strong>{roundClock ?? "--:--"}</strong>
-            </div>
+      <div className="timeline-main-dock">
+        <div className="timeline-left-controls">
+          <button className="timeline-play-button" onClick={onPlayToggle}>
+            {playing ? "Pause" : "Play"}
+          </button>
+          <div className="timeline-clock-block">
+            <span>
+              Round {displayedRoundNumber} - Tick {tick}
+            </span>
+            <strong>{roundClock ?? "--:--"}</strong>
           </div>
+        </div>
 
-          <div className="timeline-center-dock">
-            <div className="timeline-transport-row">
-              <div className="timeline-track-shell">
-                <div className="timeline-guide-layer" aria-hidden="true">
+        <div className="timeline-center-dock">
+          <div className="timeline-transport-row">
+            <div className="timeline-track-shell">
+              <div className="timeline-guide-layer" aria-hidden="true">
                 {secondMarkers.map((marker) => (
                   <span
                     key={`guide-${marker.tick}`}
@@ -192,28 +192,6 @@ export function TimelinePanel({
                 />
               </div>
             </div>
-
-            <div className="timeline-controls-inline">
-              <div className="timeline-readout-scoreboard">
-                <CompactScore side="CT" score={scoreForSide(round, "CT", "before")} label={ctTeam?.displayName ?? "CT Side"} />
-                <CompactScore side="T" score={scoreForSide(round, "T", "before")} label={tTeam?.displayName ?? "T Side"} />
-              </div>
-
-              <div className="timeline-segmented-row timeline-segmented-row-speed">
-                {SPEEDS.map((entry) => (
-                  <button
-                    key={entry}
-                    className={entry === speed ? "control-button control-button-active" : "control-button"}
-                    onClick={() => onSpeedChange(entry)}
-                  >
-                    {entry}x
-                  </button>
-                ))}
-              </div>
-              <button className="control-button timeline-reset-button" onClick={onReset}>
-                Reset
-              </button>
-            </div>
           </div>
 
           <div className="timeline-controls-panel">
@@ -228,22 +206,46 @@ export function TimelinePanel({
               {round.endReason ? <span className="timeline-readout-meta">{round.endReason}</span> : null}
               {officialOffsetTicks != null ? <span className="timeline-readout-meta">official +{officialOffsetTicks}</span> : null}
             </div>
-            <div className="timeline-segmented-row timeline-utility-toggle-row">
-              <button
-                className={showFreezeTime ? "control-button control-button-active" : "control-button"}
-                onClick={() => onShowFreezeTimeChange(!showFreezeTime)}
-              >
-                Freeze
-              </button>
-              {UTILITY_OPTIONS.map((option) => (
+            <div className="timeline-controls-secondary">
+              <div className="timeline-segmented-row timeline-utility-toggle-row">
                 <button
-                  key={option.value}
-                  className={option.value === utilityFocus ? "control-button control-button-active" : "control-button"}
-                  onClick={() => onUtilityFocusChange(option.value)}
+                  className={showFreezeTime ? "control-button control-button-active" : "control-button"}
+                  onClick={() => onShowFreezeTimeChange(!showFreezeTime)}
                 >
-                  {option.label}
+                  Freeze
                 </button>
+                {UTILITY_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    className={option.value === utilityFocus ? "control-button control-button-active" : "control-button"}
+                    onClick={() => onUtilityFocusChange(option.value)}
+                  >
+                    {option.label}
+                  </button>
                 ))}
+              </div>
+
+              <div className="timeline-controls-inline">
+                <div className="timeline-readout-scoreboard">
+                  <CompactScore side="CT" score={scoreForSide(round, "CT", "before")} label={ctTeam?.displayName ?? "CT Side"} />
+                  <CompactScore side="T" score={scoreForSide(round, "T", "before")} label={tTeam?.displayName ?? "T Side"} />
+                </div>
+
+                <div className="timeline-segmented-row timeline-segmented-row-speed">
+                  {SPEEDS.map((entry) => (
+                    <button
+                      key={entry}
+                      className={entry === speed ? "control-button control-button-active" : "control-button"}
+                      onClick={() => onSpeedChange(entry)}
+                    >
+                      {entry}x
+                    </button>
+                  ))}
+                </div>
+                <button className="control-button timeline-reset-button" onClick={onReset}>
+                  Reset
+                </button>
+              </div>
             </div>
           </div>
         </div>

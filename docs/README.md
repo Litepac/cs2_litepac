@@ -13,6 +13,8 @@ Read the planning and design documents in this order:
 9. `docs/09-ui-ux-direction.md`
 10. `docs/10-prior-art-review.md`
 11. `docs/11-agents-overview.md`
+12. `docs/12-product-surface-principles.md`
+13. `docs/13-advanced-stats-v1.md`
 
 Machine-readable schema draft:
 

@@ -4015,59 +4015,187 @@ h1 {
   position: relative;
   z-index: 1;
   display: grid;
-  gap: 18px;
-  padding: 28px 26px 36px;
+  gap: 6px;
+  width: min(1660px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 2px 0 12px;
 }
 
 .stats-header {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 20px;
-  align-items: end;
-  padding-bottom: 14px;
-  border-bottom: 1px solid rgba(25, 56, 53, 0.54);
+  gap: 8px 16px;
+  align-items: center;
+  padding: 11px 16px 9px;
+  border: 1px solid rgba(42, 52, 63, 0.88);
+  background:
+    linear-gradient(180deg, rgba(16, 22, 28, 0.96), rgba(12, 18, 24, 0.98)),
+    rgba(13, 18, 24, 0.98);
+  overflow: hidden;
+}
+
+.stats-header-backdrop {
+  position: absolute;
+  inset: 0;
+  background-position: center;
+  background-size: cover;
+  opacity: 0.46;
+  filter: saturate(0.86);
+}
+
+.stats-header::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(8, 12, 16, 0.4), rgba(8, 12, 16, 0.84)),
+    linear-gradient(90deg, rgba(8, 12, 16, 0.86), rgba(8, 12, 16, 0.48) 32%, rgba(8, 12, 16, 0.86));
+  pointer-events: none;
+}
+
+.stats-header-main {
+  min-width: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.stats-header-controls {
+  display: grid;
+  justify-items: end;
+  gap: 5px;
+  position: relative;
+  z-index: 1;
+}
+
+.stats-view-shell {
+  display: grid;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.stats-view-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  width: fit-content;
+  border: 1px solid rgba(49, 59, 69, 0.92);
+  background: rgba(10, 14, 18, 0.92);
+}
+
+.stats-view-tab {
+  min-height: 30px;
+  padding: 0 12px;
+  border: none;
+  border-right: 1px solid rgba(60, 71, 81, 0.9);
+  background: transparent;
+  color: #aab6bf;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.stats-view-tab:last-child {
+  border-right: none;
+}
+
+.stats-view-tab-active {
+  background: rgba(29, 36, 43, 0.96);
+  color: #fbfdff;
+}
+
+.stats-view-description {
+  margin: 0;
+  color: #a5b6c0;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .stats-heading {
   display: grid;
-  gap: 8px;
+  gap: 4px;
 }
 
-.stats-heading h1 {
+.stats-match-band {
+  display: grid;
+  grid-template-columns: minmax(200px, auto) minmax(0, 1fr);
+  align-items: center;
+  gap: 18px;
+}
+
+.stats-map-block {
+  display: grid;
+  gap: 3px;
+}
+
+.stats-map-block h1 {
   margin: 0;
-  font-size: clamp(30px, 2.5vw, 40px);
-  line-height: 0.96;
+  font-size: clamp(24px, 1.85vw, 31px);
+  line-height: 0.92;
   letter-spacing: -0.04em;
 }
 
-.stats-matchline,
 .stats-context-line {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
-.stats-matchline {
-  font-size: 18px;
+.stats-score-band {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+}
+
+.stats-team-mark {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.stats-team-mark-right {
+  justify-items: end;
+  text-align: right;
+}
+
+.stats-score-band strong {
+  font-size: clamp(19px, 1.35vw, 24px);
+  font-weight: 760;
+  letter-spacing: -0.03em;
+  color: #f7fbff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stats-team-mark small {
+  color: #d4dde4;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.9;
+}
+
+.stats-score-value {
+  font-size: clamp(32px, 2.2vw, 40px);
   font-weight: 700;
-  letter-spacing: -0.02em;
-}
-
-.stats-matchline span {
-  font-size: 28px;
-  font-weight: 700;
-}
-
-.stats-matchline small {
-  color: var(--muted);
-  font-size: 18px;
+  letter-spacing: -0.05em;
+  color: #e9fbf2;
+  text-shadow: 0 0 22px rgba(0, 255, 136, 0.1);
 }
 
 .stats-context-line {
-  color: #8ea0ae;
+  color: #a9bac5;
   font-family: "JetBrains Mono", "Fira Code", monospace;
-  font-size: 11px;
+  font-size: 10px;
+  font-weight: 760;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -4075,18 +4203,18 @@ h1 {
 .stats-header-actions {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 5px;
 }
 
 .stats-header-button {
-  min-height: 38px;
-  padding: 0 14px;
+  min-height: 30px;
+  padding: 0 10px;
   border: 1px solid rgba(37, 58, 74, 0.9);
   background: rgba(12, 19, 26, 0.82);
   color: var(--text);
   font-family: "JetBrains Mono", "Fira Code", monospace;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -4106,29 +4234,24 @@ h1 {
   color: #c5d5df;
 }
 
-.stats-toolbar {
-  display: flex;
-  justify-content: flex-start;
-}
-
 .stats-side-filter {
   display: inline-flex;
   align-items: center;
   gap: 0;
   border: 1px solid rgba(26, 59, 55, 0.58);
-  background: rgba(10, 16, 22, 0.94);
+  background: rgba(18, 24, 30, 0.92);
 }
 
 .stats-side-filter-button {
-  min-height: 38px;
-  padding: 0 14px;
+  min-height: 28px;
+  padding: 0 10px;
   border: none;
   border-right: 1px solid rgba(26, 59, 55, 0.52);
   background: transparent;
   color: #9ab2c0;
   font-family: "JetBrains Mono", "Fira Code", monospace;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -4144,128 +4267,245 @@ h1 {
 
 .stats-team-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
 }
 
 .stats-team-card,
 .stats-rounds-card {
   display: grid;
-  gap: 14px;
-  padding: 18px 20px;
-  border: 1px solid rgba(24, 64, 60, 0.7);
-  background:
-    linear-gradient(180deg, rgba(11, 18, 24, 0.98), rgba(8, 13, 18, 0.98)),
-    var(--panel);
+  gap: 5px;
+  padding: 8px 12px 9px;
+  border: 1px solid rgba(58, 67, 76, 0.96);
+  background: rgba(8, 12, 16, 0.96);
 }
 
-.stats-team-card-ct {
-  box-shadow: inset 0 2px 0 rgba(79, 179, 255, 0.55);
+.stats-team-card {
+  backdrop-filter: none;
 }
 
-.stats-team-card-t {
-  box-shadow: inset 0 2px 0 rgba(255, 177, 79, 0.55);
+.stats-team-card-winner {
+  box-shadow: inset 0 2px 0 rgba(0, 255, 136, 0.52);
+}
+
+.stats-team-card-trailing {
+  box-shadow: inset 0 2px 0 rgba(121, 137, 149, 0.44);
 }
 
 .stats-team-card-header,
 .stats-rounds-header {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
-  gap: 12px;
+  align-items: end;
+  gap: 8px;
 }
 
 .stats-team-card-header strong,
 .stats-rounds-header strong {
   display: block;
-  margin-top: 4px;
-  font-size: 22px;
+  margin-top: 1px;
+  font-size: 20px;
   line-height: 1.05;
+  color: #fbfeff;
 }
 
 .stats-team-card-header span,
 .stats-rounds-header span {
-  color: #8ea0ae;
+  color: #c0ccd4;
   font-size: 12px;
+  font-weight: 600;
   text-align: right;
+}
+
+.stats-team-card-header .card-title {
+  color: #d5dee5;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+.stats-team-card-winner .card-title {
+  color: #8dffca;
+}
+
+.stats-team-card-trailing .card-title {
+  color: #e0e7ec;
 }
 
 .stats-table {
   display: grid;
-  gap: 8px;
+  gap: 0;
+}
+
+.stats-table-scroll {
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(55, 90, 104, 0.78) transparent;
 }
 
 .stats-table-head,
 .stats-table-row {
   display: grid;
-  grid-template-columns: minmax(150px, 1.35fr) minmax(104px, 0.9fr) 84px 72px 76px 76px 76px 88px 68px;
-  gap: 10px;
+  column-gap: 0;
   align-items: center;
 }
 
 .stats-table-head {
-  color: #89a6b7;
+  padding: 8px 10px 7px;
+  background: rgba(34, 39, 44, 0.985);
+  color: #fcfeff;
+  border-bottom: 1px solid rgba(154, 163, 171, 0.92);
 }
 
 .stats-sort-head {
-  padding: 0;
+  min-height: 24px;
+  padding: 0 10px;
   border: none;
   background: transparent;
   color: inherit;
-  text-align: left;
   font-family: "JetBrains Mono", "Fira Code", monospace;
-  font-size: 10px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 980;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
 .stats-sort-head-active {
-  color: #dff1fb;
+  color: #ffffff;
+}
+
+.stats-sort-head-metric {
+  color: #edf7ff;
+}
+
+.stats-table-head > *,
+.stats-table-row > * {
+  min-width: 0;
+}
+
+.stats-table-head > *:not(:first-child),
+.stats-table-row > *:not(:first-child) {
+  border-left: 1px solid rgba(116, 127, 137, 0.22);
+}
+
+.stats-table-head > :first-child,
+.stats-table-row > :first-child {
+  padding-left: 4px;
+  border-left: none;
+}
+
+.stats-table-align-left {
+  justify-self: stretch;
+  text-align: left;
+}
+
+.stats-table-align-right {
+  justify-self: end;
+  text-align: right;
+}
+
+.stats-table-align-center {
+  justify-self: stretch;
+  text-align: center;
+}
+
+.stats-table-group-start {
+  border-left-color: rgba(170, 180, 190, 0.36) !important;
 }
 
 .stats-table-body {
   display: grid;
-  gap: 8px;
+  gap: 0;
+}
+
+.stats-table-body > .stats-table-row:nth-child(even) {
+  background: rgba(8, 12, 16, 0.94);
 }
 
 .stats-table-row {
-  padding: 12px 0;
-  border-top: 1px solid rgba(28, 46, 58, 0.72);
+  padding: 7px 10px;
+  border-top: 1px solid rgba(103, 113, 123, 0.56);
+  background: rgba(4, 7, 10, 0.95);
+}
+
+.stats-table-row:hover {
+  background: rgba(9, 13, 17, 0.99);
 }
 
 .stats-player-cell {
   display: grid;
-  gap: 3px;
+  gap: 2px;
+  padding-right: 10px;
 }
 
 .stats-player-cell strong {
-  font-size: 15px;
+  font-size: 19px;
+  font-weight: 900;
+  color: #ffffff;
 }
 
 .stats-player-cell small {
-  color: #8ea0ae;
+  color: #afbec8;
   font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
-.stats-stat-cell {
-  font-size: 14px;
-  font-weight: 700;
+.stats-table-cell {
+  padding-left: 10px;
 }
 
-.stats-stat-cell-kad {
-  display: inline-flex;
+.stats-table-cell-primary {
+  padding-right: 8px;
+}
+
+.stats-table-cell-metric {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.stats-stat-text,
+.stats-rating-cell,
+.stats-rival-cell strong,
+.stats-role-cell strong {
+  font-size: 15px;
+  font-weight: 860;
+  color: #fbfdff;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.stats-rating-cell {
+  padding: 0 10px;
+  font-weight: 900;
+}
+
+.stats-rival-cell,
+.stats-role-cell {
+  display: grid;
+  gap: 2px;
+}
+
+.stats-role-note {
+  display: grid;
   align-items: center;
-  gap: 7px;
+  min-height: 100%;
+  padding-right: 10px;
 }
 
-.stats-stat-cell-kad small {
-  color: #8ea0ae;
-  font-size: 12px;
+.stats-role-note span {
+  color: #dbe4ea;
+  font-size: 13px;
+  font-weight: 640;
+  line-height: 1.35;
 }
 
-.stats-stat-cell-highlight {
-  color: #dff1fb;
+.stats-rival-cell small,
+.stats-role-cell small,
+.stats-muted {
+  color: #b4c2cb;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
 }
 
 .stats-stat-positive {
@@ -4276,50 +4516,153 @@ h1 {
   color: #f2b4af;
 }
 
-.stats-round-grid {
+.stats-round-matrix {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(74px, 1fr));
+  gap: 3px;
 }
 
-.stats-round-chip {
+.stats-round-cell {
+  position: relative;
   display: grid;
-  gap: 4px;
-  padding: 10px 10px 11px;
-  border: 1px solid rgba(31, 50, 63, 0.8);
-  background: rgba(10, 16, 22, 0.94);
+  gap: 3px;
+  min-height: 64px;
+  padding: 7px 8px 6px;
+  border: 1px solid rgba(58, 67, 77, 0.92);
+  background:
+    linear-gradient(180deg, rgba(24, 29, 34, 0.98), rgba(14, 19, 24, 0.985)),
+    rgba(14, 19, 24, 0.985);
+  align-content: start;
+  transition: border-color 150ms ease, background 150ms ease;
+  overflow: hidden;
 }
 
-.stats-round-chip-ct {
-  box-shadow: inset 0 -2px 0 rgba(79, 179, 255, 0.76);
+.stats-round-cell:hover {
+  border-color: rgba(110, 133, 150, 0.7);
+  background: rgba(24, 31, 38, 0.98);
 }
 
-.stats-round-chip-t {
-  box-shadow: inset 0 -2px 0 rgba(255, 177, 79, 0.76);
+.stats-round-cell-ct {
+  background:
+    linear-gradient(180deg, rgba(70, 120, 155, 0.54), rgba(18, 24, 30, 0.96)),
+    rgba(18, 24, 30, 0.98);
+  box-shadow: inset 0 -3px 0 rgba(79, 179, 255, 0.88);
 }
 
-.stats-round-number {
-  color: #89a6b7;
+.stats-round-cell-t {
+  background:
+    linear-gradient(180deg, rgba(143, 101, 38, 0.52), rgba(18, 24, 30, 0.96)),
+    rgba(18, 24, 30, 0.98);
+  box-shadow: inset 0 -3px 0 rgba(255, 177, 79, 0.9);
+}
+
+.stats-round-cell-topline {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 6px;
+}
+
+.stats-round-cell-number {
+  color: #b3c1cc;
   font-family: "JetBrains Mono", "Fira Code", monospace;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
-.stats-round-chip strong {
+.stats-round-cell-score {
   font-size: 16px;
-  line-height: 1;
+  line-height: 1.05;
+  font-weight: 800;
+  color: #fbfeff;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.18);
 }
 
-.stats-round-chip small {
-  color: #8ea0ae;
-  font-size: 11px;
+.stats-round-cell-content {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 3px;
+}
+
+.stats-round-cell-outcome-watermark {
+  position: absolute;
+  inset: 8px 8px 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(240, 246, 251, 0.1);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.stats-round-cell-ct .stats-round-cell-outcome-watermark {
+  color: rgba(201, 231, 255, 0.18);
+}
+
+.stats-round-cell-t .stats-round-cell-outcome-watermark {
+  color: rgba(255, 226, 182, 0.18);
+}
+
+.stats-round-cell-outcome-watermark svg {
+  width: 100%;
+  height: 100%;
+}
+
+.stats-round-cell-outcome-watermark-elimination {
+  inset: 9px 8px 10px 18px;
+}
+
+.stats-round-cell-outcome-watermark-bomb {
+  inset: 7px 6px 7px 10px;
+}
+
+.stats-round-cell-outcome-watermark-defuse {
+  inset: 8px 7px 8px 15px;
+}
+
+.stats-round-cell-survivors {
+  display: grid;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.stats-round-survivor-row {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 3px;
+}
+
+.stats-round-survivor-dot {
+  min-height: 4px;
+  border-radius: 999px;
+  background: rgba(132, 144, 155, 0.4);
+}
+
+.stats-round-survivor-row-ct .stats-round-survivor-dot-active {
+  background: rgba(92, 191, 255, 0.98);
+  box-shadow: 0 0 0 1px rgba(8, 13, 17, 0.35);
+}
+
+.stats-round-survivor-row-t .stats-round-survivor-dot-active {
+  background: rgba(255, 188, 96, 0.98);
+  box-shadow: 0 0 0 1px rgba(8, 13, 17, 0.35);
 }
 
 @media (max-width: 1500px) {
   .sky-shell {
     grid-template-columns: 186px minmax(0, 1fr);
+  }
+
+  .stats-page {
+    width: min(100%, calc(100% - 28px));
+    padding-top: 6px;
+  }
+
+  .stats-round-matrix {
+    grid-template-columns: repeat(auto-fit, minmax(68px, 1fr));
   }
 
   .sky-shell-replay {
@@ -4350,6 +4693,34 @@ h1 {
 }
 
 @media (max-width: 1180px) {
+  .stats-header {
+    grid-template-columns: 1fr;
+  }
+
+  .stats-header-controls {
+    justify-items: start;
+  }
+
+  .stats-match-band {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .stats-score-band {
+    grid-template-columns: 1fr;
+    justify-items: start;
+    gap: 6px;
+  }
+
+  .stats-team-mark-right {
+    justify-items: start;
+    text-align: left;
+  }
+
+  .stats-round-matrix {
+    grid-template-columns: repeat(auto-fit, minmax(62px, 1fr));
+  }
+
   .timeline-controls-secondary {
     justify-content: flex-start;
   }

@@ -1,5 +1,6 @@
 parser/mastermind
 parser/mastermind.exe
+parser/mastermind-api.exe
 parser/fixtureparse.exe
 parser/fixturestage.exe
 parser/replayinspect.exe

@@ -4070,8 +4070,8 @@ h1 {
 
 .stats-view-shell {
   display: grid;
-  gap: 4px;
-  margin-top: 2px;
+  gap: 2px;
+  margin-top: 0;
 }
 
 .stats-view-tabs {
@@ -4079,8 +4079,8 @@ h1 {
   align-items: center;
   gap: 0;
   width: fit-content;
-  border: 1px solid rgba(49, 59, 69, 0.92);
-  background: rgba(10, 14, 18, 0.92);
+  border: 1px solid rgba(42, 51, 60, 0.74);
+  background: rgba(8, 11, 15, 0.82);
 }
 
 .stats-view-tab {
@@ -4104,13 +4104,6 @@ h1 {
 .stats-view-tab-active {
   background: rgba(29, 36, 43, 0.96);
   color: #fbfdff;
-}
-
-.stats-view-description {
-  margin: 0;
-  color: #a5b6c0;
-  font-size: 12px;
-  font-weight: 600;
 }
 
 .stats-heading {
@@ -4268,16 +4261,16 @@ h1 {
 .stats-team-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 6px;
+  gap: 4px;
 }
 
 .stats-team-card,
 .stats-rounds-card {
   display: grid;
-  gap: 5px;
-  padding: 8px 12px 9px;
-  border: 1px solid rgba(58, 67, 76, 0.96);
-  background: rgba(8, 12, 16, 0.96);
+  gap: 4px;
+  padding: 7px 11px 8px;
+  border: 1px solid rgba(45, 53, 61, 0.76);
+  background: rgba(7, 10, 13, 0.92);
 }
 
 .stats-team-card {
@@ -4285,11 +4278,11 @@ h1 {
 }
 
 .stats-team-card-winner {
-  box-shadow: inset 0 2px 0 rgba(0, 255, 136, 0.52);
+  box-shadow: inset 0 1px 0 rgba(0, 255, 136, 0.44);
 }
 
 .stats-team-card-trailing {
-  box-shadow: inset 0 2px 0 rgba(121, 137, 149, 0.44);
+  box-shadow: inset 0 1px 0 rgba(121, 137, 149, 0.34);
 }
 
 .stats-team-card-header,
@@ -4304,7 +4297,7 @@ h1 {
 .stats-rounds-header strong {
   display: block;
   margin-top: 1px;
-  font-size: 20px;
+  font-size: 19px;
   line-height: 1.05;
   color: #fbfeff;
 }
@@ -4312,8 +4305,8 @@ h1 {
 .stats-team-card-header span,
 .stats-rounds-header span {
   color: #c0ccd4;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 650;
   text-align: right;
 }
 
@@ -4351,9 +4344,9 @@ h1 {
 }
 
 .stats-table-head {
-  padding: 8px 10px 7px;
-  background: rgba(34, 39, 44, 0.985);
-  color: #fcfeff;
+  padding: 7px 10px 6px;
+  background: rgba(30, 35, 40, 0.988);
+  color: #eef4f8;
   border-bottom: 1px solid rgba(154, 163, 171, 0.92);
 }
 
@@ -4364,18 +4357,18 @@ h1 {
   background: transparent;
   color: inherit;
   font-family: "JetBrains Mono", "Fira Code", monospace;
-  font-size: 13px;
-  font-weight: 980;
-  letter-spacing: 0.12em;
+  font-size: 12px;
+  font-weight: 860;
+  letter-spacing: 0.11em;
   text-transform: uppercase;
 }
 
 .stats-sort-head-active {
-  color: #ffffff;
+  color: #f8fbfd;
 }
 
 .stats-sort-head-metric {
-  color: #edf7ff;
+  color: #f2f7fb;
 }
 
 .stats-table-head > *,
@@ -4385,7 +4378,7 @@ h1 {
 
 .stats-table-head > *:not(:first-child),
 .stats-table-row > *:not(:first-child) {
-  border-left: 1px solid rgba(116, 127, 137, 0.22);
+  border-left: 1px solid rgba(116, 127, 137, 0.14);
 }
 
 .stats-table-head > :first-child,
@@ -4410,7 +4403,7 @@ h1 {
 }
 
 .stats-table-group-start {
-  border-left-color: rgba(170, 180, 190, 0.36) !important;
+  border-left-color: rgba(170, 180, 190, 0.24) !important;
 }
 
 .stats-table-body {
@@ -4423,8 +4416,8 @@ h1 {
 }
 
 .stats-table-row {
-  padding: 7px 10px;
-  border-top: 1px solid rgba(103, 113, 123, 0.56);
+  padding: 5px 10px;
+  border-top: 1px solid rgba(92, 101, 110, 0.34);
   background: rgba(4, 7, 10, 0.95);
 }
 
@@ -4439,15 +4432,15 @@ h1 {
 }
 
 .stats-player-cell strong {
-  font-size: 19px;
-  font-weight: 900;
-  color: #ffffff;
+  font-size: 18px;
+  font-weight: 820;
+  color: #f7fafc;
 }
 
 .stats-player-cell small {
   color: #afbec8;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 560;
   letter-spacing: 0.02em;
 }
 
@@ -4460,23 +4453,31 @@ h1 {
 }
 
 .stats-table-cell-metric {
-  background: rgba(255, 255, 255, 0.025);
+  background: rgba(255, 255, 255, 0.012);
 }
 
 .stats-stat-text,
+.stats-kad-cell strong,
 .stats-rating-cell,
 .stats-rival-cell strong,
 .stats-role-cell strong {
   font-size: 15px;
-  font-weight: 860;
-  color: #fbfdff;
+  font-weight: 690;
+  color: #dbe5eb;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
 .stats-rating-cell {
   padding: 0 10px;
-  font-weight: 900;
+  font-weight: 760;
+  color: #eef4f8;
+}
+
+.stats-kad-cell {
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .stats-rival-cell,
@@ -4493,18 +4494,18 @@ h1 {
 }
 
 .stats-role-note span {
-  color: #dbe4ea;
-  font-size: 13px;
-  font-weight: 640;
-  line-height: 1.35;
+  color: #c6d4dc;
+  font-size: 12px;
+  font-weight: 620;
+  line-height: 1.3;
 }
 
 .stats-rival-cell small,
 .stats-role-cell small,
 .stats-muted {
-  color: #b4c2cb;
+  color: #9fb0bb;
   font-size: 11px;
-  font-weight: 650;
+  font-weight: 600;
   letter-spacing: 0.01em;
 }
 
@@ -4528,7 +4529,7 @@ h1 {
   gap: 3px;
   min-height: 64px;
   padding: 7px 8px 6px;
-  border: 1px solid rgba(58, 67, 77, 0.92);
+  border: 1px solid rgba(49, 57, 65, 0.76);
   background:
     linear-gradient(180deg, rgba(24, 29, 34, 0.98), rgba(14, 19, 24, 0.985)),
     rgba(14, 19, 24, 0.985);

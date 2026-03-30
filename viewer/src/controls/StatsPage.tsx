@@ -29,7 +29,6 @@ type StatsColumn = {
 type StatsView = {
   id: StatsViewId;
   label: string;
-  description: string;
   defaultSortKey: string;
   defaultSortDirection: SortDirection;
   gridTemplateColumns: string;
@@ -47,16 +46,15 @@ const STATS_VIEWS: StatsView[] = [
   {
     id: "summary",
     label: "Summary",
-    description: "Core match scoreboard metrics with rating, fragging, efficiency, and utility totals.",
     defaultSortKey: "rating",
     defaultSortDirection: "desc",
-    gridTemplateColumns: "minmax(196px, 1.55fr) 116px 52px 52px 52px 58px 64px 64px 58px 64px 88px",
-    minWidth: "956px",
+    gridTemplateColumns: "minmax(210px, 1.7fr) 116px 108px 62px 70px 70px 88px 96px 88px",
+    minWidth: "908px",
     columns: [
       {
         id: "player",
         label: "Player",
-        width: "minmax(196px, 1.55fr)",
+        width: "minmax(210px, 1.7fr)",
         align: "left",
         emphasis: "primary",
         sortValue: (player) => player.displayName,
@@ -74,14 +72,17 @@ const STATS_VIEWS: StatsView[] = [
         sortValue: (player) => player.rating,
         render: renderRatingCell,
       },
-      { id: "kills", label: "K", width: "52px", align: "right", sortValue: (player) => player.kills, render: (player) => renderStat(player.kills) },
-      { id: "deaths", label: "D", width: "52px", align: "right", sortValue: (player) => player.deaths, render: (player) => renderStat(player.deaths) },
-      { id: "assists", label: "A", width: "52px", align: "right", sortValue: (player) => player.assists, render: (player) => renderStat(player.assists) },
-      { id: "kdRatio", label: "K/D", width: "58px", align: "right", sortValue: (player) => player.kdRatio, render: (player) => renderDecimal(player.kdRatio) },
-      { id: "adr", label: "ADR", width: "64px", align: "right", sortValue: (player) => player.adr, render: (player) => renderDecimal(player.adr, 1) },
-      { id: "kast", label: "KAST", width: "64px", align: "right", sortValue: (player) => player.kastPercentage, render: (player) => renderPercent(player.kastPercentage) },
-      { id: "kpr", label: "K/R", width: "58px", align: "right", sortValue: (player) => player.killsPerRound, render: (player) => renderDecimal(player.killsPerRound) },
-      { id: "hsPct", label: "HS %", width: "64px", align: "right", sortValue: (player) => player.headshotPercentage, render: (player) => renderPercent(player.headshotPercentage) },
+      {
+        id: "kad",
+        label: "K / A / D",
+        width: "108px",
+        align: "center",
+        sortValue: (player) => player.kills * 10000 + player.assists * 100 + player.deaths,
+        render: renderKadCell,
+      },
+      { id: "kdRatio", label: "K/D", width: "62px", align: "right", sortValue: (player) => player.kdRatio, render: (player) => renderDecimal(player.kdRatio) },
+      { id: "adr", label: "ADR", width: "70px", align: "right", sortValue: (player) => player.adr, render: (player) => renderDecimal(player.adr, 1) },
+      { id: "kast", label: "KAST", width: "70px", align: "right", sortValue: (player) => player.kastPercentage, render: (player) => renderPercent(player.kastPercentage) },
       {
         id: "util",
         label: "Util Dmg",
@@ -91,12 +92,27 @@ const STATS_VIEWS: StatsView[] = [
         sortValue: (player) => player.utilityDamageTotal,
         render: (player) => renderStat(Math.round(player.utilityDamageTotal)),
       },
+      {
+        id: "openingDuels",
+        label: "Op. Duels",
+        width: "96px",
+        align: "center",
+        sortValue: (player) => player.openingDifferential,
+        render: renderOpeningDuelsCell,
+      },
+      {
+        id: "roundsPlayed",
+        label: "Rounds",
+        width: "88px",
+        align: "right",
+        sortValue: (player) => player.roundsPlayed,
+        render: (player) => renderStat(player.roundsPlayed),
+      },
     ],
   },
   {
     id: "duels",
     label: "Duels",
-    description: "First-contact pressure, trade conversion, and head-to-head context.",
     defaultSortKey: "openingWinPercentage",
     defaultSortDirection: "desc",
     gridTemplateColumns: "minmax(196px, 1.45fr) 116px 74px 62px 62px 74px 70px 70px 76px minmax(160px, 1fr)",
@@ -117,7 +133,6 @@ const STATS_VIEWS: StatsView[] = [
   {
     id: "utility",
     label: "Utility",
-    description: "Damage, flashes, and grenade usage split by utility family.",
     defaultSortKey: "utilityDamageTotal",
     defaultSortDirection: "desc",
     gridTemplateColumns: "minmax(196px, 1.35fr) 116px 82px 78px 78px 76px 82px 82px 62px 58px 50px 58px",
@@ -140,7 +155,6 @@ const STATS_VIEWS: StatsView[] = [
   {
     id: "roles",
     label: "Roles / Style",
-    description: "Side-specific placement tendencies with a short note about what the player actually did in this match.",
     defaultSortKey: "role",
     defaultSortDirection: "desc",
     gridTemplateColumns: "minmax(196px, 1.1fr) 160px 160px minmax(340px, 1.8fr)",
@@ -155,7 +169,6 @@ const STATS_VIEWS: StatsView[] = [
   {
     id: "advanced",
     label: "Advanced",
-    description: "Impact, survival, clutch, sniper share, and objective contribution.",
     defaultSortKey: "impact",
     defaultSortDirection: "desc",
     gridTemplateColumns: "minmax(196px, 1.45fr) 116px 72px 64px 76px 90px 84px 76px 58px 64px",
@@ -276,7 +289,6 @@ export function StatsPage({ entry, onBackToMatches, onOpenReplay }: Props) {
             </button>
           ))}
         </div>
-        <p className="stats-view-description">{currentView.description}</p>
       </section>
 
       <div className="stats-team-grid">
@@ -290,7 +302,7 @@ export function StatsPage({ entry, onBackToMatches, onOpenReplay }: Props) {
                 <div className="card-title">{sideFilter === "all" ? (team.isWinner ? "Winner" : "Runner-up") : `${sideFilter} Focus`}</div>
                 <strong>{team.teamName}</strong>
               </div>
-              <span>{buildTeamHeaderMeta(team, currentView)}</span>
+              <span>{buildCompactTeamHeaderMeta(team, currentView)}</span>
             </div>
 
             <div className="stats-table">
@@ -408,6 +420,27 @@ function renderRatingCell(player: MatchStatsPlayerRow) {
   );
 }
 
+function renderKadCell(player: MatchStatsPlayerRow) {
+  return (
+    <div className="stats-kad-cell">
+      <strong>
+        {player.kills} / {player.assists} / {player.deaths}
+      </strong>
+    </div>
+  );
+}
+
+function renderOpeningDuelsCell(player: MatchStatsPlayerRow) {
+  return (
+    <div className="stats-rival-cell">
+      <strong>
+        {player.openingKills} : {player.openingDeaths}
+      </strong>
+      <small>{formatSigned(player.openingDifferential)}</small>
+    </div>
+  );
+}
+
 function renderTopRivalCell(player: MatchStatsPlayerRow) {
   if (!player.topDuelRival) {
     return <span className="stats-muted">No repeated duel</span>;
@@ -488,11 +521,77 @@ function clutchScore(player: MatchStatsPlayerRow) {
 
 
 function buildTeamHeaderMeta(team: MatchStatsTeamTable, currentView: StatsView) {
+  const standout = buildTeamStandout(team, currentView);
   if (team.sideFilter === "all") {
-    return `${currentView.label} · ${team.finalScore} rounds won`;
+    return standout ? `${currentView.label} · ${team.finalScore} rounds won · ${standout}` : `${currentView.label} · ${team.finalScore} rounds won`;
   }
 
-  return `${currentView.label} · ${team.sideFilter} split · match final ${team.finalScore}`;
+  return standout
+    ? `${currentView.label} · ${team.sideFilter} split · ${standout}`
+    : `${currentView.label} · ${team.sideFilter} split · match final ${team.finalScore}`;
+}
+
+function buildCompactTeamHeaderMeta(team: MatchStatsTeamTable, currentView: StatsView) {
+  const standout = buildTeamStandout(team, currentView);
+  if (team.sideFilter === "all") {
+    return standout ? `${team.finalScore} rounds won · ${standout}` : `${team.finalScore} rounds won`;
+  }
+
+  return standout ? `${team.sideFilter} split · ${standout}` : `${team.sideFilter} split · match final ${team.finalScore}`;
+}
+
+function buildTeamStandout(team: MatchStatsTeamTable, currentView: StatsView) {
+  const players = team.players;
+  if (players.length === 0) {
+    return null;
+  }
+
+  if (currentView.id === "summary") {
+    const player = pickTopPlayer(players, (entry) => entry.rating);
+    return player ? `Top rating ${player.displayName} ${player.rating.toFixed(2)}` : null;
+  }
+
+  if (currentView.id === "duels") {
+    const player = pickTopPlayer(players, (entry) => entry.openingDifferential);
+    return player ? `Best opener ${player.displayName} ${formatSigned(player.openingDifferential)}` : null;
+  }
+
+  if (currentView.id === "utility") {
+    const player = pickTopPlayer(players, (entry) => entry.utilityDamageTotal);
+    return player ? `Most util damage ${player.displayName} ${Math.round(player.utilityDamageTotal)}` : null;
+  }
+
+  if (currentView.id === "roles") {
+    const player = pickTopPlayer(players, (entry) => Math.max(entry.role.ctTendency?.occupancyShare ?? 0, entry.role.tTendency?.occupancyShare ?? 0));
+    if (!player) {
+      return null;
+    }
+
+    const strongest = (player.role.ctTendency?.occupancyShare ?? 0) >= (player.role.tTendency?.occupancyShare ?? 0) ? player.role.ctTendency : player.role.tTendency;
+    return strongest ? `${player.displayName} ${strongest.label}` : null;
+  }
+
+  const player = pickTopPlayer(players, (entry) => entry.impact);
+  return player ? `Highest impact ${player.displayName} ${player.impact.toFixed(2)}` : null;
+}
+
+function pickTopPlayer(players: MatchStatsPlayerRow[], score: (player: MatchStatsPlayerRow) => number) {
+  let best: MatchStatsPlayerRow | null = null;
+  let bestValue = Number.NEGATIVE_INFINITY;
+
+  for (const player of players) {
+    const value = score(player);
+    if (value > bestValue) {
+      best = player;
+      bestValue = value;
+    }
+  }
+
+  return best;
+}
+
+function formatSigned(value: number) {
+  return value > 0 ? `+${value}` : `${value}`;
 }
 
 function compareRows(left: MatchStatsPlayerRow, right: MatchStatsPlayerRow, column: StatsColumn | undefined, sortDirection: SortDirection) {

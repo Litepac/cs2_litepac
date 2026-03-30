@@ -250,22 +250,22 @@ function buildMatchNote(
 
   switch (primaryRole) {
     case "Opener":
-      summary = `High first-contact load with ${formatSigned(stats.openingDifferential)} opening differential across ${stats.openingAttempts} attempts.`;
+      summary = `Opening load ${formatSigned(stats.openingDifferential)} over ${stats.openingAttempts} attempts.`;
       break;
     case "Trader":
-      summary = `Trade involvement stayed high with ${stats.tradeKills} trade kills and ${stats.tradedDeaths} traded deaths.`;
+      summary = `Trade game ${stats.tradeKills} trade kills, ${stats.tradedDeaths} traded deaths.`;
       break;
     case "Closer":
-      summary = `Late-round pressure stood out with ${stats.clutchAttempts} clutch attempts and ${stats.clutchWins} conversions.`;
+      summary = `Late-round pressure ${stats.clutchWins} of ${stats.clutchAttempts} clutches converted.`;
       break;
     case "AWPer":
-      summary = `Sniper usage stood out with ${stats.sniperKills} sniper kills making up ${stats.sniperSharePercent}% of the fragging output.`;
+      summary = `Sniper share ${stats.sniperSharePercent}% from ${stats.sniperKills} sniper kills.`;
       break;
     case "Utility Support":
       if (stats.flashAssistsEstimated >= 2 || (stats.enemiesFlashed >= 8 && stats.blindSecondsRate >= 1.2)) {
-        summary = `Flash pressure stood out with ${stats.enemiesFlashed} enemies flashed and ${stats.blindSecondsRate.toFixed(1)} blind seconds per round.`;
+        summary = `Flash pressure ${stats.enemiesFlashed} flashed, ${stats.blindSecondsRate.toFixed(1)} blind sec/round.`;
       } else if (stats.utilityDamageRate >= 7) {
-        summary = `Utility pressure stood out at ${stats.utilityDamageRate.toFixed(1)} utility damage per round.`;
+        summary = `Utility pressure ${stats.utilityDamageRate.toFixed(1)} util damage/round.`;
       } else {
         summary = placementFallback;
       }
@@ -276,7 +276,7 @@ function buildMatchNote(
   }
 
   if (secondaryRole && primaryRole !== "Balanced" && summary !== placementFallback) {
-    summary += ` Secondary tendency: ${secondaryRole}.`;
+    summary += ` Secondary: ${secondaryRole}.`;
   }
 
   return summary;
@@ -287,18 +287,18 @@ function buildPlacementNote(ctTendency: SideRoleTendency | null, tTendency: Side
   const tLabel = placementPhrase(tTendency, "T");
 
   if (ctLabel && tLabel) {
-    return `Mostly held ${ctLabel} on CT and worked ${tLabel} on T.`;
+    return `CT ${ctLabel} · T ${tLabel}.`;
   }
 
   if (ctLabel) {
-    return `CT positioning centered on ${ctLabel} while the rest of the match stayed mixed.`;
+    return `CT ${ctLabel}.`;
   }
 
   if (tLabel) {
-    return `T-side routes centered on ${tLabel} while the rest of the match stayed mixed.`;
+    return `T ${tLabel}.`;
   }
 
-  return "Signals were mixed in this match, so no single playstyle clearly dominated.";
+  return "No clear single tendency in this match.";
 }
 
 function placementPhrase(tendency: SideRoleTendency | null, side: "CT" | "T") {

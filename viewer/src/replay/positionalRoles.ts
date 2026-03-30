@@ -66,6 +66,7 @@ const T_ROUTE_LABELS = new Set([
   "Connector",
   "Connector / Mid",
   "Donut",
+  "Elbow / Temple",
   "Ivy",
   "Long A",
   "Lobby / Hut",
@@ -75,7 +76,9 @@ const T_ROUTE_LABELS = new Set([
   "Outside",
   "Palace / Ramp",
   "Ramp",
+  "Short",
   "Short / Water",
+  "Water",
 ]);
 
 const MID_LIKE_ZONE_NAMES = new Set(["Mid", "Top Mid", "Second Mid", "Connector / Mid"]);
@@ -92,10 +95,11 @@ const MAP_ROLE_SAMPLING: Partial<Record<Replay["map"]["mapId"], Partial<Record<S
 const MAP_ZONES: Record<string, ZoneDefinition[]> = {
   de_ancient: [
     { name: "A Site", ctLabel: "A Anchor", tLabel: "A Hit", rects: [{ xMin: 0.02, xMax: 0.27, yMin: 0.12, yMax: 0.34 }] },
-    { name: "Cave", ctLabel: "A Rotation", tLabel: "Cave", rects: [{ xMin: 0.0, xMax: 0.24, yMin: 0.39, yMax: 0.88 }] },
-    { name: "Donut", ctLabel: "Mid Rotation", tLabel: "Donut", rects: [{ xMin: 0.22, xMax: 0.43, yMin: 0.18, yMax: 0.44 }] },
-    { name: "Mid", ctLabel: "Mid Rotation", tLabel: "Mid", rects: [{ xMin: 0.36, xMax: 0.72, yMin: 0.3, yMax: 0.62 }] },
-    { name: "B Lane", ctLabel: "B Anchor", tLabel: "B Lane", rects: [{ xMin: 0.56, xMax: 0.98, yMin: 0.16, yMax: 0.44 }] },
+    { name: "Cave", ctLabel: "A Rotation", tLabel: "Cave", rects: [{ xMin: 0.0, xMax: 0.24, yMin: 0.41, yMax: 0.9 }] },
+    { name: "Donut", ctLabel: "Mid Rotation", tLabel: "Donut", rects: [{ xMin: 0.2, xMax: 0.4, yMin: 0.2, yMax: 0.44 }] },
+    { name: "Mid", ctLabel: "Mid Rotation", tLabel: "Mid", rects: [{ xMin: 0.35, xMax: 0.56, yMin: 0.33, yMax: 0.64 }] },
+    { name: "Elbow / Temple", ctLabel: "B Rotation", tLabel: "Elbow / Temple", rects: [{ xMin: 0.56, xMax: 0.74, yMin: 0.24, yMax: 0.54 }] },
+    { name: "B Lane", ctLabel: "B Anchor", tLabel: "B Lane", rects: [{ xMin: 0.62, xMax: 0.98, yMin: 0.16, yMax: 0.42 }] },
     { name: "B Site", ctLabel: "B Anchor", tLabel: "B Hit", rects: [{ xMin: 0.72, xMax: 0.97, yMin: 0.18, yMax: 0.42 }] },
   ],
   de_inferno: [
@@ -141,11 +145,13 @@ const MAP_ZONES: Record<string, ZoneDefinition[]> = {
     { name: "Outside", ctLabel: "Yard", tLabel: "Outside", rects: [{ xMin: 0.64, xMax: 0.99, yMin: 0.16, yMax: 0.44 }] },
   ],
   de_overpass: [
-    { name: "A Site", ctLabel: "A Anchor", tLabel: "A Hit", rects: [{ xMin: 0.22, xMax: 0.48, yMin: 0.0, yMax: 0.18 }] },
-    { name: "A Long", ctLabel: "A Rotation", tLabel: "A Long", rects: [{ xMin: 0.0, xMax: 0.3, yMin: 0.17, yMax: 0.58 }] },
-    { name: "Connector / Mid", ctLabel: "Mid Rotation", tLabel: "Connector / Mid", rects: [{ xMin: 0.28, xMax: 0.56, yMin: 0.2, yMax: 0.58 }] },
-    { name: "B Site", ctLabel: "B Anchor", tLabel: "B Hit", rects: [{ xMin: 0.57, xMax: 0.9, yMin: 0.08, yMax: 0.33 }] },
-    { name: "Short / Water", ctLabel: "B Rotation", tLabel: "Short / Water", rects: [{ xMin: 0.56, xMax: 0.95, yMin: 0.33, yMax: 0.74 }] },
+    { name: "A Site", ctLabel: "A Anchor", tLabel: "A Hit", rects: [{ xMin: 0.23, xMax: 0.48, yMin: 0.0, yMax: 0.18 }] },
+    { name: "A Long", ctLabel: "A Rotation", tLabel: "A Long", rects: [{ xMin: 0.0, xMax: 0.26, yMin: 0.13, yMax: 0.55 }] },
+    { name: "Bathrooms", ctLabel: "A Rotation", tLabel: "Connector / Mid", rects: [{ xMin: 0.25, xMax: 0.42, yMin: 0.12, yMax: 0.39 }] },
+    { name: "Connector", ctLabel: "Mid Rotation", tLabel: "Connector / Mid", rects: [{ xMin: 0.36, xMax: 0.58, yMin: 0.31, yMax: 0.61 }] },
+    { name: "B Site", ctLabel: "B Anchor", tLabel: "B Hit", rects: [{ xMin: 0.58, xMax: 0.89, yMin: 0.09, yMax: 0.31 }] },
+    { name: "Short", ctLabel: "B Rotation", tLabel: "Short", rects: [{ xMin: 0.57, xMax: 0.87, yMin: 0.32, yMax: 0.53 }] },
+    { name: "Water", ctLabel: "B Rotation", tLabel: "Water", rects: [{ xMin: 0.57, xMax: 0.9, yMin: 0.53, yMax: 0.77 }] },
     { name: "Monster", ctLabel: "B Anchor", tLabel: "Monster", rects: [{ xMin: 0.6, xMax: 0.98, yMin: 0.7, yMax: 0.99 }] },
   ],
   de_train: [
@@ -283,8 +289,778 @@ function deriveMapSpecificTendency(
   top: { zone: ZoneDefinition; samples: number; share: number },
   second: { zone: ZoneDefinition; samples: number; share: number } | undefined,
 ): SideRoleTendency | null {
+  if (mapId === "de_ancient") {
+    return side === "CT" ? deriveAncientCtTendency(top, second) : deriveAncientTTendency(top, second);
+  }
+
+  if (mapId === "de_mirage") {
+    return side === "CT" ? deriveMirageCtTendency(top, second) : deriveMirageTTendency(top, second);
+  }
+
+  if (mapId === "de_anubis") {
+    return side === "CT" ? deriveAnubisCtTendency(top, second) : deriveAnubisTTendency(top, second);
+  }
+
+  if (mapId === "de_dust2") {
+    return side === "CT" ? deriveDust2CtTendency(top, second) : deriveDust2TTendency(top, second);
+  }
+
+  if (mapId === "de_nuke") {
+    return side === "CT" ? deriveNukeCtTendency(top, second) : deriveNukeTTendency(top, second);
+  }
+
+  if (mapId === "de_train") {
+    return side === "CT" ? deriveTrainCtTendency(top, second) : deriveTrainTTendency(top, second);
+  }
+
+  if (mapId === "de_vertigo") {
+    return side === "CT" ? deriveVertigoCtTendency(top, second) : deriveVertigoTTendency(top, second);
+  }
+
   if (mapId === "de_inferno") {
     return side === "CT" ? deriveInfernoCtTendency(top, second) : deriveInfernoTTendency(top, second);
+  }
+
+  if (mapId === "de_overpass") {
+    return side === "CT" ? deriveOverpassCtTendency(top, second) : deriveOverpassTTendency(top, second);
+  }
+
+  return null;
+}
+
+function deriveAnubisCtTendency(
+  top: { zone: ZoneDefinition; samples: number; share: number },
+  second: { zone: ZoneDefinition; samples: number; share: number } | undefined,
+): SideRoleTendency | null {
+  if (!second) {
+    return {
+      label: top.zone.ctLabel,
+      zoneLabel: top.zone.name,
+      occupancyShare: top.share,
+    };
+  }
+
+  const pair = [top.zone.name, second.zone.name];
+  const has = (name: string) => pair.includes(name);
+  const secondShare = second.share;
+
+  if (has("A Site") && has("Temple") && secondShare >= 0.14) {
+    return {
+      label: "A Anchor",
+      zoneLabel: "A Site / Temple",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("Temple") && has("Mid") && secondShare >= 0.14) {
+    return {
+      label: "Mid Rotation",
+      zoneLabel: "Temple / Mid",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("B Site") && has("Canal") && secondShare >= 0.12) {
+    return {
+      label: "B Anchor",
+      zoneLabel: "B Site / Canal",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("Mid") && has("Canal") && secondShare >= 0.14) {
+    return {
+      label: "B Rotation",
+      zoneLabel: "Mid / Canal",
+      occupancyShare: top.share,
+    };
+  }
+
+  return null;
+}
+
+function deriveAnubisTTendency(
+  top: { zone: ZoneDefinition; samples: number; share: number },
+  second: { zone: ZoneDefinition; samples: number; share: number } | undefined,
+): SideRoleTendency | null {
+  if (!second) {
+    return {
+      label: top.zone.tLabel,
+      zoneLabel: top.zone.name,
+      occupancyShare: top.share,
+    };
+  }
+
+  const pair = [top.zone.name, second.zone.name];
+  const has = (name: string) => pair.includes(name);
+  const secondShare = second.share;
+
+  if (has("Temple") && has("A Site") && secondShare >= 0.14) {
+    return {
+      label: "A Main",
+      zoneLabel: "Temple / A Site",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("Mid") && has("Temple") && secondShare >= 0.14) {
+    return {
+      label: "Mid / Temple",
+      zoneLabel: "Mid / Temple",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("Canal") && has("B Site") && secondShare >= 0.12) {
+    return {
+      label: "Canal",
+      zoneLabel: "Canal / B Site",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("Mid") && has("Canal") && secondShare >= 0.14) {
+    return {
+      label: "Mid / Canal",
+      zoneLabel: "Mid / Canal",
+      occupancyShare: top.share,
+    };
+  }
+
+  return null;
+}
+
+function deriveDust2CtTendency(
+  top: { zone: ZoneDefinition; samples: number; share: number },
+  second: { zone: ZoneDefinition; samples: number; share: number } | undefined,
+): SideRoleTendency | null {
+  if (!second) {
+    return {
+      label: top.zone.ctLabel,
+      zoneLabel: top.zone.name,
+      occupancyShare: top.share,
+    };
+  }
+
+  const pair = [top.zone.name, second.zone.name];
+  const has = (name: string) => pair.includes(name);
+  const secondShare = second.share;
+
+  if (has("A Site") && has("Long A") && secondShare >= 0.14) {
+    return {
+      label: "A Anchor",
+      zoneLabel: "A Site / Long",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("Mid") && has("Catwalk") && secondShare >= 0.14) {
+    return {
+      label: "Mid Rotation",
+      zoneLabel: "Mid / Catwalk",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("B Tunnels") && has("B Site") && secondShare >= 0.12) {
+    return {
+      label: "B Anchor",
+      zoneLabel: "B Tunnels / B Site",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("Mid") && has("B Tunnels") && secondShare >= 0.14) {
+    return {
+      label: "B Rotation",
+      zoneLabel: "Mid / B Tunnels",
+      occupancyShare: top.share,
+    };
+  }
+
+  return null;
+}
+
+function deriveDust2TTendency(
+  top: { zone: ZoneDefinition; samples: number; share: number },
+  second: { zone: ZoneDefinition; samples: number; share: number } | undefined,
+): SideRoleTendency | null {
+  if (!second) {
+    return {
+      label: top.zone.tLabel,
+      zoneLabel: top.zone.name,
+      occupancyShare: top.share,
+    };
+  }
+
+  const pair = [top.zone.name, second.zone.name];
+  const has = (name: string) => pair.includes(name);
+  const secondShare = second.share;
+
+  if (has("Long A") && has("A Site") && secondShare >= 0.14) {
+    return {
+      label: "Long A",
+      zoneLabel: "Long A / A Site",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("Mid") && has("Catwalk") && secondShare >= 0.14) {
+    return {
+      label: "Catwalk",
+      zoneLabel: "Mid / Catwalk",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("B Tunnels") && has("B Site") && secondShare >= 0.12) {
+    return {
+      label: "B Tunnels",
+      zoneLabel: "B Tunnels / B Site",
+      occupancyShare: top.share,
+    };
+  }
+
+  return null;
+}
+
+function deriveNukeCtTendency(
+  top: { zone: ZoneDefinition; samples: number; share: number },
+  second: { zone: ZoneDefinition; samples: number; share: number } | undefined,
+): SideRoleTendency | null {
+  if (!second) {
+    return {
+      label: top.zone.ctLabel,
+      zoneLabel: top.zone.name,
+      occupancyShare: top.share,
+    };
+  }
+
+  const pair = [top.zone.name, second.zone.name];
+  const has = (name: string) => pair.includes(name);
+  const secondShare = second.share;
+
+  if (has("A Site") && has("Lobby / Hut") && secondShare >= 0.14) {
+    return {
+      label: "A Anchor",
+      zoneLabel: "A Site / Lobby",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("Ramp") && has("A Site") && secondShare >= 0.14) {
+    return {
+      label: "Ramp Hold",
+      zoneLabel: "Ramp / A Site",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("Outside") && has("A Site") && secondShare >= 0.14) {
+    return {
+      label: "Yard",
+      zoneLabel: "Outside / A Site",
+      occupancyShare: top.share,
+    };
+  }
+
+  return null;
+}
+
+function deriveNukeTTendency(
+  top: { zone: ZoneDefinition; samples: number; share: number },
+  second: { zone: ZoneDefinition; samples: number; share: number } | undefined,
+): SideRoleTendency | null {
+  if (!second) {
+    return {
+      label: top.zone.tLabel,
+      zoneLabel: top.zone.name,
+      occupancyShare: top.share,
+    };
+  }
+
+  const pair = [top.zone.name, second.zone.name];
+  const has = (name: string) => pair.includes(name);
+  const secondShare = second.share;
+
+  if (has("Lobby / Hut") && has("A Site") && secondShare >= 0.14) {
+    return {
+      label: "Lobby / Hut",
+      zoneLabel: "Lobby / Hut / A Site",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("Lobby / Hut") && has("Ramp") && secondShare >= 0.14) {
+    return {
+      label: "Lobby / Ramp",
+      zoneLabel: "Lobby / Hut / Ramp",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("Outside") && has("A Site") && secondShare >= 0.14) {
+    return {
+      label: "Outside",
+      zoneLabel: "Outside / A Site",
+      occupancyShare: top.share,
+    };
+  }
+
+  return null;
+}
+
+function deriveTrainCtTendency(
+  top: { zone: ZoneDefinition; samples: number; share: number },
+  second: { zone: ZoneDefinition; samples: number; share: number } | undefined,
+): SideRoleTendency | null {
+  if (!second) {
+    return {
+      label: top.zone.ctLabel,
+      zoneLabel: top.zone.name,
+      occupancyShare: top.share,
+    };
+  }
+
+  const pair = [top.zone.name, second.zone.name];
+  const has = (name: string) => pair.includes(name);
+  const secondShare = second.share;
+
+  if (has("A Site") && has("Connector / Z") && secondShare >= 0.14) {
+    return {
+      label: "A Rotation",
+      zoneLabel: "A Site / Z",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("A Site") && has("Ivy") && secondShare >= 0.14) {
+    return {
+      label: "A Anchor",
+      zoneLabel: "A Site / Ivy",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("B Halls") && has("B Site") && secondShare >= 0.12) {
+    return {
+      label: "B Anchor",
+      zoneLabel: "B Halls / B Site",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("Connector / Z") && has("B Halls") && secondShare >= 0.14) {
+    return {
+      label: "B Rotation",
+      zoneLabel: "Z / B Halls",
+      occupancyShare: top.share,
+    };
+  }
+
+  return null;
+}
+
+function deriveTrainTTendency(
+  top: { zone: ZoneDefinition; samples: number; share: number },
+  second: { zone: ZoneDefinition; samples: number; share: number } | undefined,
+): SideRoleTendency | null {
+  if (!second) {
+    return {
+      label: top.zone.tLabel,
+      zoneLabel: top.zone.name,
+      occupancyShare: top.share,
+    };
+  }
+
+  const pair = [top.zone.name, second.zone.name];
+  const has = (name: string) => pair.includes(name);
+  const secondShare = second.share;
+
+  if (has("Ivy") && has("A Site") && secondShare >= 0.14) {
+    return {
+      label: "Ivy",
+      zoneLabel: "Ivy / A Site",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("Main / Pop") && has("A Site") && secondShare >= 0.14) {
+    return {
+      label: "Main / Pop",
+      zoneLabel: "Main / Pop / A Site",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("Connector / Z") && has("A Site") && secondShare >= 0.14) {
+    return {
+      label: "Connector",
+      zoneLabel: "Connector / A Site",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("B Halls") && has("B Site") && secondShare >= 0.12) {
+    return {
+      label: "B Halls",
+      zoneLabel: "B Halls / B Site",
+      occupancyShare: top.share,
+    };
+  }
+
+  return null;
+}
+
+function deriveVertigoCtTendency(
+  top: { zone: ZoneDefinition; samples: number; share: number },
+  second: { zone: ZoneDefinition; samples: number; share: number } | undefined,
+): SideRoleTendency | null {
+  if (!second) {
+    return {
+      label: top.zone.ctLabel,
+      zoneLabel: top.zone.name,
+      occupancyShare: top.share,
+    };
+  }
+
+  const pair = [top.zone.name, second.zone.name];
+  const has = (name: string) => pair.includes(name);
+  const secondShare = second.share;
+
+  if (has("A Ramp") && has("A Site") && secondShare >= 0.14) {
+    return {
+      label: "A Rotation",
+      zoneLabel: "A Ramp / A Site",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("B Stairs") && has("B Site") && secondShare >= 0.12) {
+    return {
+      label: "B Anchor",
+      zoneLabel: "B Stairs / B Site",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("Mid") && has("B Stairs") && secondShare >= 0.14) {
+    return {
+      label: "B Rotation",
+      zoneLabel: "Mid / B Stairs",
+      occupancyShare: top.share,
+    };
+  }
+
+  return null;
+}
+
+function deriveVertigoTTendency(
+  top: { zone: ZoneDefinition; samples: number; share: number },
+  second: { zone: ZoneDefinition; samples: number; share: number } | undefined,
+): SideRoleTendency | null {
+  if (!second) {
+    return {
+      label: top.zone.tLabel,
+      zoneLabel: top.zone.name,
+      occupancyShare: top.share,
+    };
+  }
+
+  const pair = [top.zone.name, second.zone.name];
+  const has = (name: string) => pair.includes(name);
+  const secondShare = second.share;
+
+  if (has("A Lobby / T Spawn") && has("A Ramp") && secondShare >= 0.14) {
+    return {
+      label: "A Lobby / Ramp",
+      zoneLabel: "A Lobby / A Ramp",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("A Ramp") && has("A Site") && secondShare >= 0.14) {
+    return {
+      label: "A Ramp",
+      zoneLabel: "A Ramp / A Site",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("Mid") && has("B Stairs") && secondShare >= 0.14) {
+    return {
+      label: "Mid / B",
+      zoneLabel: "Mid / B Stairs",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("B Stairs") && has("B Site") && secondShare >= 0.12) {
+    return {
+      label: "B Stairs",
+      zoneLabel: "B Stairs / B Site",
+      occupancyShare: top.share,
+    };
+  }
+
+  return null;
+}
+
+function deriveMirageCtTendency(
+  top: { zone: ZoneDefinition; samples: number; share: number },
+  second: { zone: ZoneDefinition; samples: number; share: number } | undefined,
+): SideRoleTendency | null {
+  if (!second) {
+    return {
+      label: top.zone.ctLabel,
+      zoneLabel: top.zone.name,
+      occupancyShare: top.share,
+    };
+  }
+
+  const pair = [top.zone.name, second.zone.name];
+  const has = (name: string) => pair.includes(name);
+  const secondShare = second.share;
+
+  if (has("A Site") && has("Palace / Ramp") && secondShare >= 0.14) {
+    return {
+      label: "A Anchor",
+      zoneLabel: "A Site / Ramp",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("A Site") && has("Connector / Jungle") && secondShare >= 0.14) {
+    return {
+      label: "A Rotation",
+      zoneLabel: "A Site / Connector",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("Mid") && has("Connector / Jungle") && secondShare >= 0.16) {
+    return {
+      label: "Mid Rotation",
+      zoneLabel: "Mid / Connector",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("Apartments") && has("B Site") && secondShare >= 0.14) {
+    return {
+      label: "B Anchor",
+      zoneLabel: "Apartments / B Site",
+      occupancyShare: top.share,
+    };
+  }
+
+  return null;
+}
+
+function deriveMirageTTendency(
+  top: { zone: ZoneDefinition; samples: number; share: number },
+  second: { zone: ZoneDefinition; samples: number; share: number } | undefined,
+): SideRoleTendency | null {
+  if (!second) {
+    return {
+      label: top.zone.tLabel,
+      zoneLabel: top.zone.name,
+      occupancyShare: top.share,
+    };
+  }
+
+  const pair = [top.zone.name, second.zone.name];
+  const has = (name: string) => pair.includes(name);
+  const secondShare = second.share;
+
+  if (has("Apartments") && has("B Site") && secondShare >= 0.18) {
+    return {
+      label: "Apartments / B",
+      zoneLabel: "Apartments / B Site",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("Apartments") && has("Mid") && secondShare >= 0.18) {
+    return {
+      label: "Apartments / Mid",
+      zoneLabel: "Apartments / Mid",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("Palace / Ramp") && has("A Site") && secondShare >= 0.14) {
+    return {
+      label: "Palace / Ramp",
+      zoneLabel: "Palace / Ramp / A Site",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("Mid") && has("Connector / Jungle") && secondShare >= 0.14) {
+    return {
+      label: "Mid / Connector",
+      zoneLabel: "Mid / Connector",
+      occupancyShare: top.share,
+    };
+  }
+
+  return null;
+}
+
+function deriveAncientCtTendency(
+  top: { zone: ZoneDefinition; samples: number; share: number },
+  second: { zone: ZoneDefinition; samples: number; share: number } | undefined,
+): SideRoleTendency | null {
+  if (!second) {
+    return {
+      label: top.zone.ctLabel,
+      zoneLabel: top.zone.name,
+      occupancyShare: top.share,
+    };
+  }
+
+  const pair = [top.zone.name, second.zone.name];
+  const has = (name: string) => pair.includes(name);
+  const secondShare = second.share;
+
+  if (has("A Site") && has("Donut") && secondShare >= 0.14) {
+    return {
+      label: "A Anchor",
+      zoneLabel: "A Site / Donut",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("Donut") && has("Mid") && secondShare >= 0.16) {
+    return {
+      label: "Mid Rotation",
+      zoneLabel: "Donut / Mid",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("Mid") && has("Elbow / Temple") && secondShare >= 0.14) {
+    return {
+      label: "B Rotation",
+      zoneLabel: "Mid / Temple",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("B Lane") && has("B Site") && secondShare >= 0.12) {
+    return {
+      label: "B Anchor",
+      zoneLabel: "B Lane / B Site",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("B Lane") && has("Elbow / Temple") && secondShare >= 0.12) {
+    return {
+      label: "B Rotation",
+      zoneLabel: "B Lane / Temple",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("Mid") && has("B Lane") && secondShare >= 0.14) {
+    return {
+      label: "B Rotation",
+      zoneLabel: "Mid / B Lane",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("A Site") && has("Cave") && secondShare >= 0.14) {
+    return {
+      label: "A Rotation",
+      zoneLabel: "A Site / Cave",
+      occupancyShare: top.share,
+    };
+  }
+
+  return null;
+}
+
+function deriveAncientTTendency(
+  top: { zone: ZoneDefinition; samples: number; share: number },
+  second: { zone: ZoneDefinition; samples: number; share: number } | undefined,
+): SideRoleTendency | null {
+  if (!second) {
+    return {
+      label: top.zone.tLabel,
+      zoneLabel: top.zone.name,
+      occupancyShare: top.share,
+    };
+  }
+
+  const pair = [top.zone.name, second.zone.name];
+  const has = (name: string) => pair.includes(name);
+  const secondShare = second.share;
+
+  if (top.zone.name === "Cave" && top.share >= 0.68 && secondShare < 0.25) {
+    return {
+      label: "Cave",
+      zoneLabel: "Cave",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("Cave") && has("Mid")) {
+    return {
+      label: "Cave / Mid",
+      zoneLabel: "Cave / Mid",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("Mid") && has("Donut")) {
+    return {
+      label: "Mid / Donut",
+      zoneLabel: "Mid / Donut",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("Cave") && has("A Site") && secondShare >= 0.12) {
+    return {
+      label: "Cave / A",
+      zoneLabel: "Cave / A Site",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("B Lane") && has("B Site")) {
+    return {
+      label: "B Lane",
+      zoneLabel: "B Lane / B Site",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("Mid") && has("B Lane") && secondShare >= 0.12) {
+    return {
+      label: "Mid / B",
+      zoneLabel: "Mid / B Lane",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("Mid") && has("Elbow / Temple") && secondShare >= 0.12) {
+    return {
+      label: "Temple / Mid",
+      zoneLabel: "Mid / Temple",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("Donut") && has("A Site") && secondShare >= 0.12) {
+    return {
+      label: "Donut / A",
+      zoneLabel: "Donut / A Site",
+      occupancyShare: top.share,
+    };
   }
 
   return null;
@@ -499,6 +1275,139 @@ function deriveInfernoTTendency(
     return {
       label: "Arch Wrap",
       zoneLabel: `${has("Arch") ? "Arch" : "Library"} / A Site`,
+      occupancyShare: top.share,
+    };
+  }
+
+  return null;
+}
+
+function deriveOverpassCtTendency(
+  top: { zone: ZoneDefinition; samples: number; share: number },
+  second: { zone: ZoneDefinition; samples: number; share: number } | undefined,
+): SideRoleTendency | null {
+  if (!second) {
+    return {
+      label: top.zone.ctLabel,
+      zoneLabel: top.zone.name,
+      occupancyShare: top.share,
+    };
+  }
+
+  const pair = [top.zone.name, second.zone.name];
+  const has = (name: string) => pair.includes(name);
+
+  if (has("B Site") && (has("Short") || has("Water"))) {
+    return {
+      label: "B Anchor",
+      zoneLabel: has("Short") ? "B Site / Short" : "B Site / Water",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("Short") && has("Water")) {
+    return {
+      label: "B Rotation",
+      zoneLabel: "Short / Water",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("Connector") && (has("Short") || has("Water"))) {
+    return {
+      label: "B Rotation",
+      zoneLabel: has("Short") ? "Connector / Short" : "Connector / Water",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("Bathrooms") && has("A Long")) {
+    return {
+      label: "A Rotation",
+      zoneLabel: "Bathrooms / A Long",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("A Site") && (has("Bathrooms") || has("A Long"))) {
+    return {
+      label: "A Anchor",
+      zoneLabel: has("Bathrooms") ? "A Site / Bathrooms" : "A Site / A Long",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("Bathrooms") && has("Connector")) {
+    return {
+      label: "Mid Rotation",
+      zoneLabel: "Bathrooms / Connector",
+      occupancyShare: top.share,
+    };
+  }
+
+  return null;
+}
+
+function deriveOverpassTTendency(
+  top: { zone: ZoneDefinition; samples: number; share: number },
+  second: { zone: ZoneDefinition; samples: number; share: number } | undefined,
+): SideRoleTendency | null {
+  if (!second) {
+    return {
+      label: top.zone.tLabel,
+      zoneLabel: top.zone.name,
+      occupancyShare: top.share,
+    };
+  }
+
+  const pair = [top.zone.name, second.zone.name];
+  const has = (name: string) => pair.includes(name);
+  const secondShare = second.share;
+
+  if (has("Monster") && has("Water")) {
+    return {
+      label: "Monster / Water",
+      zoneLabel: "Monster / Water",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("Monster") && has("Short")) {
+    return {
+      label: "Monster / Short",
+      zoneLabel: "Monster / Short",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("Short") && has("Water")) {
+    return {
+      label: "Short / Water",
+      zoneLabel: "Short / Water",
+      occupancyShare: top.share,
+    };
+  }
+
+  if (has("Short") && has("B Site") && secondShare >= 0.12) {
+    return {
+      label: "Short",
+      zoneLabel: "Short / B Site",
+      occupancyShare: top.share,
+    };
+  }
+
+  if ((has("Connector") || has("Bathrooms")) && has("A Long")) {
+    return {
+      label: "A Long / Mid",
+      zoneLabel: has("Bathrooms") ? "Bathrooms / A Long" : "Connector / A Long",
+      occupancyShare: top.share,
+    };
+  }
+
+  if ((has("Connector") || has("Bathrooms")) && has("A Site") && secondShare >= 0.12) {
+    return {
+      label: "Mid / A",
+      zoneLabel: has("Bathrooms") ? "Bathrooms / A Site" : "Connector / A Site",
       occupancyShare: top.share,
     };
   }

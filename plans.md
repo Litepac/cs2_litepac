@@ -24,8 +24,13 @@ Planning note:
 ## In Progress
 - Finish the replay bottom area with one tightly scoped geometry/readability pass so the dock feels unified, compact, and clearly separated from the round strip without regressing map space
 - Polish the new match stats destination into a stronger premium analytical surface while keeping it table-first and limited to trustworthy parser-backed stats
-- Tighten placement-aware CT/T role inference across the active map pool by preferring early-route and hold labels over generic hit/rotation outputs when occupancy is close, then validate against staged fixtures
-- Finish Inferno role tuning before broadening more maps by tightening route sampling, A-side zoning, and side-specific label rules so the map produces stable `A Anchor` / `A Rotation` / `Second Mid` / `Top Mid` reads on real fixtures
+- Tighten placement-aware CT/T role inference across the active map pool by refining one map at a time from staged fixture output, with Inferno, Overpass, Ancient, and Mirage now materially ahead of the rest and the remaining maps needing fixture-backed validation
+- Productize the advanced stats tabs so the new data plumbing reads like a deliberate analysis product surface instead of raw debug tables, while keeping the current compact page structure
+- Compress the advanced stats framing so the scoreboards start higher: one tighter analysis toolbar, fewer repeated explanatory bands, and shorter Roles / Style notes
+- Calm the Stats scoreboard typography so player identity stays strongest, rating remains important but integrated, and secondary values stop competing equally
+- Strip remaining pre-table promo chrome from Stats and reduce the stacked-card feeling so the route behaves more like one unified analysis surface
+- Make the Summary table more ruthless by cutting secondary stats, keeping only first-read metrics, and softening the remaining grid so the data scans more naturally
+- Continue moving Stats from “upgraded scoreboard” toward a real analysis product by exposing faster per-view takeaways before the tables
 - Reconcile intentional post-round sampling through `officialEndTick` with round/stream validation so parser truth stays internally consistent
 - Make bomb timer/state fully parser-owned and event-backed so planted countdown truth no longer depends on fragile parse-end state or inference
 
@@ -164,6 +169,16 @@ Planning note:
 - Tightened Inferno specifically by shifting T-side route sampling later in the round and promoting `Second Mid` / `Top Mid` as honest route outputs when the fixture is genuinely mid-heavy instead of flattening those reads into broad `Mid`
 - Refined Inferno further with a map-specific T chooser that can promote `Top Mid` over `Second Mid` when deeper mid occupancy is materially present, keeping Inferno as the only active role-tuning target until its labels feel finished
 - Refined Inferno A-side zoning with explicit `Arch`, `Library`, `Short`, and `A Site / Pit` buckets, and let Inferno-specific combo logic run before the generic minimum-share fallback so mixed A defenders no longer collapse into `Allround`
+- Added map-specific Overpass CT/T role resolution so B anchors, B rotations, and monster-side T routes no longer collapse into broad generic buckets on the staged fixture
+- Added map-specific Ancient CT/T role resolution so dominant `Mid` and `Cave` reads stay honest while mixed `A Site / Donut`, `Donut / Mid`, and `B Lane / Temple` patterns resolve into map-aware labels
+- Added light map-specific Mirage CT/T role resolution so `Mid / Connector`, `A Site / Ramp`, and `Apartments / B` patterns surface intentionally on the staged Mirage fixture instead of flattening back to the top raw zone
+- Added conservative map-specific fallback resolvers for Anubis, Dust2, Nuke, Train, and Vertigo so the active pool no longer depends entirely on generic role-combo fallback while those maps await fixture-backed validation
+- Added a compact per-view analysis context band and team-specific standout cues to the advanced stats tabs so Summary / Duels / Utility / Roles / Advanced read more like productized analysis lenses and less like raw column switches
+- Added compact match-level insight items per stats view so the page now surfaces one or two fast tab-specific reads before the scoreboards, making the advanced tabs feel more like analysis lenses than raw data slices
+- Compressed the advanced stats framing into one compact analysis toolbar and shortened Roles / Style match notes so the tables start higher and rely less on pre-table explanatory chrome
+- Calmed the Stats scoreboard typography by darkening the header strip slightly, softening most body values to off-white, reducing numeric font weight, and reserving the brightest text for player identity and key anchors
+- Removed the extra Stats helper/promo layer above the scoreboards and softened the remaining slab framing so the page gets to the data faster and feels less like stacked boxed modules
+- Simplified the Summary table down to first-read metrics (Player, HLTV Rating, K/A/D, K/D, ADR, KAST, Util Dmg, Op. Duels, Rounds) and softened the grid so the summary reads more naturally and with less visual competition
 
 ## Blocked
 - Visual truth-checking still needs screenshots or side-by-side demo review

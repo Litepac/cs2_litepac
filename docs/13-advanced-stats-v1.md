@@ -14,6 +14,13 @@ Implemented areas:
 
 The current stats page still uses the same compact header + stacked scoreboard + round-matrix structure, but the tables can now switch between multiple data views instead of overloading one summary scoreboard.
 
+The stats route was later simplified again so it gets to the data faster:
+
+- no extra promo / explainer layer above the scoreboards
+- calmer Summary table focused on first-read metrics
+- less box-heavy slab framing and less visual competition across the row
+- advanced tabs now work more like analysis lenses than mini-dashboard modules
+
 There is also now a small local inspection helper for validating role outputs against staged fixtures:
 
 - `tools/inspect-stats-roles.ts`
@@ -153,6 +160,19 @@ It is **not** trying to answer:
 - what is this player's permanent team role?
 - what map position did they hold all game?
 
+The roles view is now presented more like an analysis lens than a debug table:
+
+- `CT Role`
+- `T Role`
+- `Match Note`
+
+with the surrounding UI making it clear that these are match-specific inferences, not permanent identity labels.
+
+The `Match Note` is now intentionally short and scan-first:
+
+- it should support the side-role columns, not overpower them
+- the note favors compact factual phrasing over longer explanatory sentences
+
 The current product split is:
 
 - `CT Role` / `T Role` = side-specific placement tendency from alive occupancy samples in named map zones
@@ -176,6 +196,22 @@ Higher-leverage summary:
 - last-alive rounds
 - sniper share
 - plants / defuses
+
+The advanced tabs are meant to grow as the product matures, but the current UI now has a clearer product shape:
+
+- `Summary` answers the broad “who had the strongest match?” question
+- `Duels` answers “who created first-contact and trade pressure?”
+- `Utility` answers “who created value with grenades and flashes?”
+- `Roles / Style` answers “where and how did they tend to operate in this match?”
+- `Advanced` answers “who generated high-leverage rounds beyond the basic scoreboard?”
+
+The current product presentation goal is:
+
+- keep the lens understandable
+- get to the table quickly
+- let the table carry the main read
+
+instead of forcing the user to decode the entire tab only from raw columns or stacked helper chrome.
 
 ## Role / style inference v1
 
@@ -219,10 +255,10 @@ The first positional layer is now driven from:
   - T prefers route labels over generic `... Hit` or broad `Mid` outputs when the signal is close
   - CT prefers clearer hold / anchor reads over vague rotation labels when the signal is close
 - curated map zones for:
-  - `de_ancient`
-  - `de_dust2`
-  - `de_inferno`
-  - `de_mirage`
+- `de_ancient`
+- `de_dust2`
+- `de_inferno`
+- `de_mirage`
   - `de_anubis`
   - `de_nuke`
   - `de_overpass`
@@ -250,6 +286,21 @@ This is still v1:
   - `Short`
   - `A Site / Pit`
 - Inferno map-specific combo logic now runs before the generic minimum-share fallback, so mixed A defenders can resolve to meaningful `A Anchor` / `A Rotation` labels instead of dropping to `Allround`
+- Overpass now has map-specific CT/T role resolution instead of broad generic bucket fallback:
+  - CT can resolve to `A Anchor`, `A Rotation`, `Mid Rotation`, `B Anchor`, `B Rotation`
+  - T can resolve to route pairings like `Monster / Water`, `Monster / Short`, `A Long / Mid`, `Mid / A`
+- Ancient now has map-specific CT/T role resolution instead of relying only on the top raw bucket:
+  - CT can resolve more intentionally around `A Site / Donut`, `Donut / Mid`, `Mid / Temple`, `B Lane / Temple`, `B Lane / B Site`
+  - T can now separate dominant `Cave` from genuinely mixed `Cave / Mid`, `Mid / Donut`, `Mid / B`, and `Temple / Mid`
+- Mirage now has light map-specific CT/T role resolution on top of the zone model:
+  - CT can resolve more intentionally around `A Site / Ramp`, `A Site / Connector`, `Mid / Connector`, and `Apartments / B Site`
+  - T can now distinguish `Apartments / B` and `Apartments / Mid` from plain `Apartments` when the route is genuinely mixed
+- The remaining active-pool maps now also have conservative map-specific resolver logic instead of relying entirely on generic fallback:
+  - `de_anubis`
+  - `de_dust2`
+  - `de_nuke`
+  - `de_train`
+  - `de_vertigo`
 
 ### Fixture validation snapshot
 
@@ -275,12 +326,30 @@ What the fixture pass improved:
 - close occupancy ties now prefer more specific route/hold labels over broad `Hit`, `Mid`, or generic rotation reads
 - when the Inferno fixture is truly mid-heavy, the role layer now says `Second Mid` explicitly instead of hiding that behind a broad `Mid` label
 - Inferno now promotes `Top Mid` over `Second Mid` when the deeper mid share is meaningfully present, so mixed mid routes no longer flatten into one generic label
+- Overpass CT reads now separate `B Anchor` from `B Rotation` and `Mid Rotation` more credibly instead of overusing generic `Short / Water` style outputs
+- Overpass T reads now produce more believable monster-side routes like `Monster / Water` instead of broad undifferentiated B-route labels
+- Ancient CT reads now keep dominant `Mid` players as `Mid Rotation` instead of overpromoting `B Rotation` from tiny secondary temple shares
+- Ancient T reads now keep dominant `Cave` players as `Cave` while still exposing genuine mixed `Cave / Mid` behavior when the split is real
+- Mirage CT reads now separate `Mid / Connector` and `A Site / Ramp` patterns more intentionally instead of falling back to whichever single zone barely wins
+- Mirage T reads now surface mixed `Apartments / B` and `Apartments / Mid` routes instead of flattening almost every B-side path into plain `Apartments`
 
 What still needs more refinement later:
 
-- Overpass is still broad and tends to overuse `Short / Water` on T
-- Ancient still leans heavily toward `Mid` because the v1 zoning is intentionally coarse
+- Overpass is materially better, but A-side route separation is still broader than B-side route separation
+- Ancient is materially better, but the map still leans `Cave` / `Mid` heavy because the v1 zoning is intentionally coarse
 - Nuke needs floor-aware upper/lower treatment before it can support stronger role labels
+- maps without staged fixtures in the repo still need the same output-driven validation before their labels should be considered equally trustworthy
+- fixture-validated first:
+  - `de_inferno`
+  - `de_overpass`
+  - `de_ancient`
+  - `de_mirage`
+- authored-but-not-yet-fixture-validated:
+  - `de_anubis`
+  - `de_dust2`
+  - `de_nuke`
+  - `de_train`
+  - `de_vertigo`
 
 ### Product honesty
 

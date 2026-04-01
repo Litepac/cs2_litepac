@@ -7,6 +7,7 @@ Planning note:
 
 ## Planned
 ### Next Up
+- Keep refining replay analysis modes so `Heatmap` / `Positions` / `Utility Atlas` read more clearly at a glance, with the next focus on selected-player drill-in quality, overlap clarity, and richer replay jumps from analysis overlays
 - Tighten ingest failure handling and empty-state guidance now that parser-backed round progress and the demo-only local match flow are in place
 - Continue live visual QA against staged fixtures at 1080p and 1440p/2K
 - Add fixture/integration coverage around parser-to-viewer ingest flow once the current product surfaces settle
@@ -33,8 +34,25 @@ Planning note:
 - Continue moving Stats from “upgraded scoreboard” toward a real analysis product by exposing faster per-view takeaways before the tables
 - Reconcile intentional post-round sampling through `officialEndTick` with round/stream validation so parser truth stays internally consistent
 - Make bomb timer/state fully parser-owned and event-backed so planted countdown truth no longer depends on fragile parse-end state or inference
+- Correct `Position Player` so it behaves like an actual replay-analysis view: keep the normal replay transport visible, make CT/T broad mode honor the chosen side, make selected-player CT/T filters compare that player's own CT/T rounds, preserve the sampled replay moment when clicking a ghost token, use the same round numbering as the strip, and keep selected-player isolation explicit without extra current-round clutter
 
 ## Done
+- Rebuilt `Heatmap` around scalar density semantics instead of CT/T occupancy fog by shrinking the analysis grid, adding a low-density cutoff, log-scaling bucket intensity, smoothing it into a neighborhood field, rendering raster-style cool-to-hot density patches, and then tuning thresholds by scope so full-match/all-player stays selective while selected-player heatmaps remain useful
+- Refined `Heatmap` tuning by scope and selection so full-match/all-player now behaves more like a stricter occupancy surface, selected-player views stay hotter and more localized, and the dock copy is more honest about density vs occupancy semantics
+- Reframed replay `Heatmap` semantics so the left rail now presents the broad mode as `Occupancy`, the top-left analysis panel switches between `Occupancy Map` and `Player Heatmap`, and the dock copy now matches that split instead of calling all scopes the same kind of heatmap
+- Tightened replay-analysis wording again so the broad mode now reads simply as `Occupancy`, selected-player state reads as `Player Heatmap`, and the player section explicitly becomes `Player Focus` when drilling into one person
+- Tightened selected-player `Positions` by carrying parser-backed yaw through trail samples and rendering clearer miniature replay tokens for the chosen player across rounds, so `Player` view now reads as actual cross-round movement presence instead of only a brighter route bundle
+- Corrected the first `Heatmap` rendering pass by removing the visible tile-shell treatment and switching the replay stage back to a softer continuous density read, so occupancy now reads as heat instead of a bucket grid
+- Tightened the replay analysis chrome so the left-rail mode stack, top-left analysis panel, and dock context read as one calmer operator surface instead of three separate boxed tools
+- Refined `Heatmap` so the analysis layer now emits raw grid buckets instead of pre-rendered heat values, the stage resolves CT/T dominance and mixed overlap near the render path, and the dock summary uses one unified analysis descriptor instead of repeated mode ternaries
+- Shipped `Heatmap` as the third replay analysis slice, using parser-backed alive player positions to render round / current-half / full-match density overlays on the same left-rail analysis shell as `Utility Atlas` and `Positions`
+- Renamed replay analysis scope wording from `Current Block` to `Current Half` so the side-block view reads like a real replay concept instead of an internal implementation label
+- Moved replay-analysis player selection into the top-left analysis panel with explicit CT/T player chips, an `All Players` reset/deselect path, and hidden right-roster dependency during `Utility Atlas` / `Positions` so analysis mode now selects from one clean surface
+- Shipped `Positions` as the second replay analysis slice, using parser-backed alive player streams to render round / side-block / full-match route overlays with left-rail mode selection, compact top-left controls, and selected-player isolation on the same analysis shell as Utility Atlas
+- Pivoted the 2D replay toward a real analysis workspace by adding parser-backed replay analysis modes, with `Utility Atlas` as the first shipped slice
+- Refined `Utility Atlas` into a cleaner replay mode by moving it into the left replay rail, shifting atlas controls into compact upper-left map chrome, renaming fire-family UI to Molotov, reintroducing faint flash/HE trails while keeping pop/explosion points primary, letting selected-player atlas mode isolate one player cleanly, and making atlas utility markers jump directly into the live replayer
+- Refined `Utility Atlas` again so flash/HE keep subtle route context while still reading pop-first, the replay rail and atlas chrome fit the existing shell more naturally, `Molotov` naming is explicit instead of generic `Fire`, and clicking an atlas marker jumps straight back into live replay at the correct round/tick
+- Shipped `Utility Atlas` as a bounded replay mode with current-round / current-side-block / full-match utility overlays, side filtering, selected-thrower filtering, and static pre-aggregated rendering outside the live tick loop
 - Proposed clean project structure and stack direction
 - Defined canonical `mastermind.replay.json` replay schema
 - Added machine-readable schema draft

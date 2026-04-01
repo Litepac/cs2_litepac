@@ -107,6 +107,53 @@ export function renderPlayers(
   drawPlayerLabels(eventLayer, livePlayers);
 }
 
+export function renderContextPlayers(
+  playerLayer: Container,
+  replay: Replay,
+  round: Round,
+  currentTick: number,
+  radarViewport: RadarViewport,
+  selectedPlayerId: string | null,
+) {
+  for (const stream of round.playerStreams) {
+    const sample = interpolatePlayerSample(stream, currentTick);
+    if (!sample) {
+      continue;
+    }
+
+    const { alive, x, y } = sample;
+    if (!alive || x == null || y == null) {
+      continue;
+    }
+
+    const point = worldToScreen(replay, radarViewport, x, y);
+    const marker = new Graphics();
+    marker.alpha = stream.playerId === selectedPlayerId ? 0.6 : 0.18;
+
+    const equipment = resolvePlayerEquipmentState({
+      activeWeapon: sample.activeWeapon,
+      activeWeaponClass: sample.activeWeaponClass,
+      mainWeapon: sample.mainWeapon,
+      recentUtilityThrow: false,
+    });
+
+    drawPlayerMarker(
+      marker,
+      point.x,
+      point.y,
+      stream.side,
+      stream.playerId === selectedPlayerId,
+      sample.yaw,
+      sample.health,
+      equipment.tokenMode,
+      equipment.activeUtilityKind,
+      null,
+    );
+
+    playerLayer.addChild(marker);
+  }
+}
+
 function interpolatePlayerSample(
   stream: Round["playerStreams"][number],
   currentTick: number,
@@ -209,7 +256,7 @@ function drawPlayerLabel(
   layer.addChild(text);
 }
 
-function drawPlayerMarker(
+export function drawPlayerMarker(
   marker: Graphics,
   x: number,
   y: number,

@@ -53,6 +53,7 @@ export async function createStageState(hostElement: HTMLDivElement) {
     currentMapKey: null,
     currentViewportHeight: null,
     currentViewportWidth: null,
+    lastAtlasEntryKey: null,
     lastFullRenderTick: null,
     lastRoundNumber: null,
     lastSelectedPlayerId: null,
@@ -114,6 +115,7 @@ export async function ensureStageMap(
   stage.currentMapKey = replay.map.radarImageKey;
   stage.currentViewportWidth = viewportWidth;
   stage.currentViewportHeight = viewportHeight;
+  stage.lastAtlasEntryKey = null;
   stage.lastFullRenderTick = null;
   stage.lastRoundNumber = null;
   stage.lastSelectedPlayerId = null;

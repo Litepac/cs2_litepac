@@ -2,6 +2,7 @@ import { Container, Graphics, Text } from "pixi.js";
 
 import type { RadarViewport } from "../maps/transform";
 import { worldToScreen } from "../maps/transform";
+import { normalizeUtilityVisualKind, utilityColorPixi } from "../replay/utilityPresentation";
 import type { Replay, UtilityEntity } from "../replay/types";
 import {
   utilityActivationTick,
@@ -109,6 +110,134 @@ export function drawUtilityVisual(
   }
 
   drawProjectileVisual(overlayLayer, point, utility.kind, throwerSide);
+}
+
+export function drawUtilityAtlasVisual(
+  trailLayer: Container,
+  overlayLayer: Container,
+  replay: Replay,
+  utility: UtilityEntity,
+  throwerSide: "T" | "CT" | null,
+  radarViewport: RadarViewport,
+  options?: {
+    emphasize?: boolean;
+    endpointAlpha?: number;
+    trailAlpha?: number;
+  },
+  onSelect?: () => void,
+) {
+  const utilityKind = normalizeUtilityVisualKind(utility.kind) ?? "smoke";
+  const trajectoryMode = resolveAtlasTrajectoryMode(utility.kind, options?.emphasize ?? false);
+  const showTrajectory = trajectoryMode !== "none";
+  const trajectoryPoints = showTrajectory
+    ? trajectoryTrailPoints(
+        replay,
+        utility,
+        utilityLifecycleEndTick(utility),
+        radarViewport,
+        trajectoryMode === "minimal" ? 2 : 1,
+      )
+    : [];
+  if (trajectoryPoints.length >= 2) {
+    const trail = new Graphics();
+    trail.moveTo(trajectoryPoints[0].x, trajectoryPoints[0].y);
+    for (let index = 1; index < trajectoryPoints.length; index += 1) {
+      trail.lineTo(trajectoryPoints[index].x, trajectoryPoints[index].y);
+    }
+    trail.stroke({
+      color: utilityColorPixi(utilityKind),
+      width:
+        options?.emphasize
+          ? trajectoryMode === "primary"
+            ? 2.45
+            : 1.85
+          : trajectoryMode === "primary"
+            ? 1.7
+            : 1.25,
+      alpha: options?.trailAlpha ?? resolveAtlasTrailAlpha(utility.kind, options?.emphasize ?? false, trajectoryMode),
+      cap: "round",
+      join: "round",
+    });
+    trailLayer.addChild(trail);
+  }
+
+  const activePoint = resolveUtilityAtlasOutcomePoint(replay, utility, radarViewport);
+
+  if (!activePoint) {
+    return;
+  }
+
+  if (onSelect) {
+    const hitTarget = new Graphics();
+    hitTarget.circle(
+      activePoint.x,
+      activePoint.y,
+      utility.kind === "smoke" || utility.kind === "molotov" || utility.kind === "incendiary" ? 18 : 14,
+    );
+    hitTarget.fill({ color: 0xffffff, alpha: 0.001 });
+    hitTarget.eventMode = "static";
+    hitTarget.cursor = "pointer";
+    hitTarget.on("pointertap", (event) => {
+      event.stopPropagation();
+      onSelect();
+    });
+    overlayLayer.addChild(hitTarget);
+  }
+
+  if (utility.kind === "smoke") {
+    const cloud = new Graphics();
+    cloud.circle(activePoint.x, activePoint.y, options?.emphasize ? 11.5 : 9.2);
+    cloud.fill({ color: 0xe9f0f5, alpha: options?.endpointAlpha ?? (options?.emphasize ? 0.4 : 0.22) });
+    cloud.circle(activePoint.x, activePoint.y, options?.emphasize ? 15.8 : 13);
+    cloud.stroke({
+      color: throwerSide === "CT" ? 0x4faeff : throwerSide === "T" ? 0xf3a448 : 0xbac8d3,
+      width: options?.emphasize ? 1.8 : 1.3,
+      alpha: options?.emphasize ? 0.66 : 0.38,
+    });
+    overlayLayer.addChild(cloud);
+    return;
+  }
+
+  if (utility.kind === "molotov" || utility.kind === "incendiary") {
+    const fire = new Graphics();
+    fire.circle(activePoint.x, activePoint.y, options?.emphasize ? 10 : 8.2);
+    fire.fill({ color: 0xffb461, alpha: options?.endpointAlpha ?? (options?.emphasize ? 0.42 : 0.2) });
+    fire.circle(activePoint.x, activePoint.y, options?.emphasize ? 13.2 : 11.2);
+    fire.stroke({ color: 0xffd4a3, width: options?.emphasize ? 1.6 : 1.15, alpha: options?.emphasize ? 0.42 : 0.22 });
+    overlayLayer.addChild(fire);
+    return;
+  }
+
+  if (utility.kind === "flashbang") {
+    const flash = new Graphics();
+    flash.circle(activePoint.x, activePoint.y, options?.emphasize ? 12.6 : 10.4);
+    flash.fill({ color: 0xfff6d6, alpha: options?.endpointAlpha ?? (options?.emphasize ? 0.24 : 0.14) });
+    flash.circle(activePoint.x, activePoint.y, options?.emphasize ? 21.5 : 17.4);
+    flash.stroke({ color: 0xfff8e7, width: options?.emphasize ? 2.35 : 1.75, alpha: options?.emphasize ? 0.62 : 0.36 });
+    flash.circle(activePoint.x, activePoint.y, options?.emphasize ? 5.2 : 4.1);
+    flash.fill({ color: 0xfffef8, alpha: options?.emphasize ? 0.74 : 0.46 });
+    overlayLayer.addChild(flash);
+    return;
+  }
+
+  if (utility.kind === "hegrenade") {
+    const burst = new Graphics();
+    burst.circle(activePoint.x, activePoint.y, options?.emphasize ? 7.8 : 6.3);
+    burst.fill({ color: 0xff8c79, alpha: options?.endpointAlpha ?? (options?.emphasize ? 0.28 : 0.16) });
+    burst.circle(activePoint.x, activePoint.y, options?.emphasize ? 16.4 : 13.2);
+    burst.stroke({ color: 0xffb2a1, width: options?.emphasize ? 2.2 : 1.55, alpha: options?.emphasize ? 0.54 : 0.3 });
+    burst.circle(activePoint.x, activePoint.y, options?.emphasize ? 3.9 : 3.1);
+    burst.fill({ color: 0xffe1d7, alpha: options?.emphasize ? 0.64 : 0.36 });
+    overlayLayer.addChild(burst);
+    return;
+  }
+
+  drawProjectileVisual(overlayLayer, activePoint, utility.kind, throwerSide);
+  const endpoint = overlayLayer.children[overlayLayer.children.length - 1] as Graphics | undefined;
+  if (endpoint) {
+    endpoint.alpha = options?.endpointAlpha ?? (options?.emphasize ? 0.88 : 0.48);
+    endpoint.scale.set(options?.emphasize ? 1.08 : 0.9);
+  }
 }
 
 function drawSmokeUtilityVisual(
@@ -865,13 +994,14 @@ function trajectoryTrailPoints(
   utility: UtilityEntity,
   currentTick: number,
   radarViewport: RadarViewport,
+  sampleStride = 1,
 ) {
   const endTick = Math.min(currentTick, utilityActivationTick(utility) ?? utilityLifecycleEndTick(utility));
   const points: ScreenPoint[] = [];
   const sampleInterval = Math.max(1, utility.trajectory.sampleIntervalTicks || 1);
   const sampleCount = utility.trajectory.x.length;
 
-  for (let index = 0; index < sampleCount; index += 1) {
+  for (let index = 0; index < sampleCount; index += Math.max(1, sampleStride)) {
     const sampleTick = utility.trajectory.sampleOriginTick + index * sampleInterval;
     if (sampleTick > endTick) {
       break;
@@ -897,6 +1027,45 @@ function trajectoryTrailPoints(
   }
 
   return points;
+}
+
+function resolveAtlasTrajectoryMode(
+  utilityKind: UtilityEntity["kind"],
+  emphasize: boolean,
+): "none" | "minimal" | "primary" {
+  if (utilityKind === "smoke" || utilityKind === "molotov" || utilityKind === "incendiary") {
+    return "primary";
+  }
+
+  if (utilityKind === "flashbang" || utilityKind === "hegrenade") {
+    return "minimal";
+  }
+
+  if (utilityKind === "decoy") {
+    return emphasize ? "minimal" : "none";
+  }
+
+  return "minimal";
+}
+
+function resolveAtlasTrailAlpha(
+  utilityKind: UtilityEntity["kind"],
+  emphasize: boolean,
+  mode: "none" | "minimal" | "primary",
+) {
+  if (mode === "none") {
+    return 0;
+  }
+
+  if (mode === "minimal") {
+    if (utilityKind === "flashbang" || utilityKind === "hegrenade") {
+      return emphasize ? 0.4 : 0.24;
+    }
+
+    return emphasize ? 0.32 : 0.18;
+  }
+
+  return emphasize ? 0.64 : 0.28;
 }
 
 function isWorldPointNearMap(replay: Replay, worldX: number, worldY: number) {
@@ -1090,6 +1259,42 @@ function resolveSmokeActivePoint(replay: Replay, utility: UtilityEntity, radarVi
   }
 
   return null;
+}
+
+function resolveUtilityAtlasOutcomePoint(
+  replay: Replay,
+  utility: UtilityEntity,
+  radarViewport: RadarViewport,
+) {
+  if (utility.kind === "smoke") {
+    return resolveSmokeActivePoint(replay, utility, radarViewport, resolveSmokeDetonationTick(utility));
+  }
+
+  const outcomePhase =
+    [...utility.phaseEvents]
+      .filter((event) => event.x != null && event.y != null)
+      .filter((event) =>
+        utility.kind === "flashbang" || utility.kind === "hegrenade"
+          ? event.type === "detonate"
+          : event.type === "detonate" || event.type === "expire" || event.type === "land",
+      )
+      .sort((left, right) => right.tick - left.tick)[0] ?? null;
+
+  if (outcomePhase?.x != null && outcomePhase?.y != null) {
+    const phasePoint = worldToScreen(replay, radarViewport, outcomePhase.x, outcomePhase.y);
+    if (isScreenPointVisible(phasePoint, radarViewport)) {
+      return phasePoint;
+    }
+  }
+
+  const phaseKind =
+    utility.kind === "flashbang" || utility.kind === "hegrenade"
+      ? "burst"
+      : utility.kind === "molotov" || utility.kind === "incendiary"
+        ? "active"
+        : "projectile";
+
+  return utilityDisplayPoint(replay, utility, utilityLifecycleEndTick(utility), radarViewport, phaseKind)?.point ?? null;
 }
 
 function resolveSmokeDisplacementVisual(

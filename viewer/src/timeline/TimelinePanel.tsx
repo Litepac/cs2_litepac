@@ -1,6 +1,9 @@
 import { useEffect, useRef, type CSSProperties } from "react";
 
 import { scoreForSide, sideTeam } from "../replay/derived";
+import type { HeatmapScope, HeatmapSnapshot } from "../replay/heatmapAnalysis";
+import type { PositionPlayerSnapshot, PositionTrailEntry, PositionsTeamFilter, PositionsView } from "../replay/positionsAnalysis";
+import type { ReplayAnalysisMode, UtilityAtlasEntry } from "../replay/replayAnalysis";
 import { normalizeUtilityVisualKind, utilityColorCss } from "../replay/utilityPresentation";
 import type { UtilityFocus } from "../replay/utilityFilter";
 import type { Replay, Round } from "../replay/types";
@@ -8,7 +11,11 @@ import type { TimelineEventItem } from "../replay/timeline";
 
 type Props = {
   activeRoundIndex: number;
+  analysisMode: ReplayAnalysisMode;
   currentTick: number;
+  heatmapLabel: string;
+  heatmapScope: HeatmapScope;
+  heatmapSnapshot: HeatmapSnapshot;
   markers: TimelineEventItem[];
   playing: boolean;
   replay: Replay;
@@ -19,7 +26,15 @@ type Props = {
   speed: number;
   tick: number;
   tickRate: number;
+  positionPlayerSnapshots: PositionPlayerSnapshot[];
+  positionTrailEntries: PositionTrailEntry[];
+  positionsLabel: string;
+  positionsTeamFilter: PositionsTeamFilter;
+  positionsView: PositionsView;
+  utilityAtlasEntries: UtilityAtlasEntry[];
+  utilityAtlasLabel: string;
   utilityFocus: UtilityFocus;
+  selectedPlayerId: string | null;
   onPlayToggle: () => void;
   onReset: () => void;
   onSelectRound: (index: number) => void;
@@ -34,14 +49,18 @@ const UTILITY_OPTIONS: Array<{ label: string; value: UtilityFocus }> = [
   { label: "Smoke", value: "smoke" },
   { label: "Flash", value: "flashbang" },
   { label: "HE", value: "hegrenade" },
-  { label: "Fire", value: "fire" },
+  { label: "Molotov", value: "fire" },
   { label: "Decoy", value: "decoy" },
   { label: "All", value: "all" },
 ];
 
 export function TimelinePanel({
   activeRoundIndex,
+  analysisMode,
   currentTick,
+  heatmapLabel,
+  heatmapScope,
+  heatmapSnapshot,
   markers,
   playing,
   replay,
@@ -52,7 +71,15 @@ export function TimelinePanel({
   speed,
   tick,
   tickRate,
+  positionPlayerSnapshots,
+  positionTrailEntries,
+  positionsLabel,
+  positionsTeamFilter,
+  positionsView,
+  utilityAtlasEntries,
+  utilityAtlasLabel,
   utilityFocus,
+  selectedPlayerId,
   onPlayToggle,
   onReset,
   onSelectRound,
@@ -76,6 +103,40 @@ export function TimelinePanel({
   const ctTeam = sideTeam(replay, round, "CT");
   const tTeam = sideTeam(replay, round, "T");
   const currentPhase = resolveCurrentPhase(phases, seekValue);
+  const atlasMode = analysisMode === "utilityAtlas";
+  const positionsMode = analysisMode === "positions";
+  const heatmapMode = analysisMode === "heatmap";
+  const analysisModeActive = atlasMode || positionsMode || heatmapMode;
+  const useReplayTransport = !analysisModeActive || positionsMode;
+  const atlasRoundCount = new Set(utilityAtlasEntries.map((entry) => entry.roundIndex)).size;
+  const atlasSelectedCount = selectedPlayerId
+    ? utilityAtlasEntries.filter((entry) => entry.throwerPlayerId === selectedPlayerId).length
+    : 0;
+  const positionsRoundCount = new Set(positionTrailEntries.flatMap((entry) => entry.segments.map((segment) => segment.roundIndex))).size;
+  const positionsPlayerCount = new Set(positionTrailEntries.map((entry) => entry.playerId)).size;
+  const positionsSnapshotCount = positionPlayerSnapshots.length;
+  const heatmapBucketCount = heatmapSnapshot.buckets.length;
+  const analysisDescriptor = analysisModeActive
+    ? resolveAnalysisDescriptor({
+        analysisMode,
+        heatmapBucketCount,
+        heatmapLabel,
+        heatmapScope,
+        heatmapSnapshot,
+        positionsLabel,
+        positionsSnapshotCount,
+        positionsTeamFilter,
+        positionsPlayerCount,
+        positionsRoundCount,
+        positionsView,
+        roundClock,
+        selectedPlayerId,
+        utilityAtlasEntries,
+        utilityAtlasLabel,
+        utilityAtlasRoundCount: atlasRoundCount,
+        utilityAtlasSelectedCount: atlasSelectedCount,
+      })
+    : null;
   const rowRef = useRef<HTMLDivElement | null>(null);
   const buttonRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
@@ -132,98 +193,134 @@ export function TimelinePanel({
 
       <div className="timeline-main-dock">
         <div className="timeline-left-controls">
-          <button className="timeline-play-button" onClick={onPlayToggle}>
-            {playing ? "Pause" : "Play"}
-          </button>
-          <div className="timeline-clock-block">
-            <span>
-              Round {displayedRoundNumber} - Tick {tick}
-            </span>
-            <strong>{roundClock ?? "--:--"}</strong>
-          </div>
+          {analysisDescriptor && !positionsMode ? (
+            <div className="timeline-atlas-summary">
+              <span>{analysisDescriptor.title}</span>
+              <strong>{analysisDescriptor.label}</strong>
+              <small>{analysisDescriptor.summary}</small>
+            </div>
+          ) : (
+            <>
+              <button className="timeline-play-button" onClick={onPlayToggle}>
+                {playing ? "Pause" : "Play"}
+              </button>
+              <div className="timeline-clock-block">
+                <span>
+                  Round {displayedRoundNumber} - Tick {tick}
+                </span>
+                <strong>{roundClock ?? "--:--"}</strong>
+              </div>
+            </>
+          )}
         </div>
 
         <div className="timeline-center-dock">
-          <div className="timeline-transport-row">
-            <div className="timeline-track-shell">
-              <div className="timeline-guide-layer" aria-hidden="true">
-                {secondMarkers.map((marker) => (
-                  <span
-                    key={`guide-${marker.tick}`}
-                    className="timeline-guide-line"
-                    style={{ left: `${((marker.tick - displayStartTick) / range) * 100}%` }}
-                  />
-                ))}
-              </div>
-
-              <div className="timeline-ruler-row timeline-track-lane">
-                {secondMarkers.map((marker) => (
-                  <span
-                    key={marker.tick}
-                    className="timeline-ruler-marker"
-                    style={{ left: `${((marker.tick - displayStartTick) / range) * 100}%` }}
-                  >
-                    <span className="timeline-ruler-line" />
-                    <span className="timeline-ruler-label">{marker.label}</span>
-                  </span>
-                ))}
-                <span className="timeline-current-line" style={{ left: currentPercent }} />
-              </div>
-
-              <div className="timeline-marker-row timeline-track-lane">
-                {visibleMarkers.map((event) => (
-                  <span
-                    key={event.key}
-                    className={timelineMarkerClassName(event)}
-                    style={timelineMarkerStyle(event, displayStartTick, range)}
-                    title={event.label}
-                  />
-                ))}
-                <span className="timeline-current-line" style={{ left: currentPercent }} />
-              </div>
-
-              <div className="timeline-seek-row timeline-track-lane">
-                <input
-                  type="range"
-                  min={displayStartTick}
-                  max={displayEndTick}
-                  value={seekValue}
-                  onChange={(event) => onTickChange(Number(event.target.value))}
-                />
+          {!useReplayTransport ? (
+            <div className="timeline-transport-row timeline-transport-row-atlas">
+              <div className="timeline-track-shell timeline-track-shell-atlas">
+                <div className="timeline-atlas-context">
+                  <span className="timeline-atlas-context-label">Scope</span>
+                  <strong>{analysisDescriptor?.label}</strong>
+                  <small>{analysisDescriptor?.context}</small>
+                </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="timeline-transport-row">
+              <div className="timeline-track-shell">
+                <div className="timeline-guide-layer" aria-hidden="true">
+                  {secondMarkers.map((marker) => (
+                    <span
+                      key={`guide-${marker.tick}`}
+                      className="timeline-guide-line"
+                      style={{ left: `${((marker.tick - displayStartTick) / range) * 100}%` }}
+                    />
+                  ))}
+                </div>
+
+                <div className="timeline-ruler-row timeline-track-lane">
+                  {secondMarkers.map((marker) => (
+                    <span
+                      key={marker.tick}
+                      className="timeline-ruler-marker"
+                      style={{ left: `${((marker.tick - displayStartTick) / range) * 100}%` }}
+                    >
+                      <span className="timeline-ruler-line" />
+                      <span className="timeline-ruler-label">{marker.label}</span>
+                    </span>
+                  ))}
+                  <span className="timeline-current-line" style={{ left: currentPercent }} />
+                </div>
+
+                <div className="timeline-marker-row timeline-track-lane">
+                  {visibleMarkers.map((event) => (
+                    <span
+                      key={event.key}
+                      className={timelineMarkerClassName(event)}
+                      style={timelineMarkerStyle(event, displayStartTick, range)}
+                      title={event.label}
+                    />
+                  ))}
+                  <span className="timeline-current-line" style={{ left: currentPercent }} />
+                </div>
+
+                <div className="timeline-seek-row timeline-track-lane">
+                  <input
+                    type="range"
+                    min={displayStartTick}
+                    max={displayEndTick}
+                    value={seekValue}
+                    onChange={(event) => onTickChange(Number(event.target.value))}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="timeline-controls-panel">
             <div className="timeline-context-strip">
               <span className="timeline-map-label">{replay.map.displayName}</span>
-              <span className={`timeline-readout-chip timeline-readout-chip-${currentPhase.kind}`}>{currentPhase.label}</span>
-              {round.winnerSide ? (
-                <span className={`timeline-readout-side timeline-readout-side-${round.winnerSide.toLowerCase()}`}>
-                  {round.winnerSide}
-                </span>
-              ) : null}
-              {round.endReason ? <span className="timeline-readout-meta">{round.endReason}</span> : null}
-              {officialOffsetTicks != null ? <span className="timeline-readout-meta">official +{officialOffsetTicks}</span> : null}
+              <span className={analysisModeActive ? "timeline-readout-chip timeline-readout-chip-live" : `timeline-readout-chip timeline-readout-chip-${currentPhase.kind}`}>
+                {analysisDescriptor?.title ?? currentPhase.label}
+              </span>
+              {analysisModeActive ? (
+                <>
+                  <span className="timeline-readout-meta">{analysisDescriptor?.meta}</span>
+                  <span className="timeline-readout-meta">{analysisDescriptor?.label}</span>
+                </>
+              ) : (
+                <>
+                  {round.winnerSide ? (
+                    <span className={`timeline-readout-side timeline-readout-side-${round.winnerSide.toLowerCase()}`}>
+                      {round.winnerSide}
+                    </span>
+                  ) : null}
+                  {round.endReason ? <span className="timeline-readout-meta">{round.endReason}</span> : null}
+                  {officialOffsetTicks != null ? <span className="timeline-readout-meta">official +{officialOffsetTicks}</span> : null}
+                </>
+              )}
             </div>
+
             <div className="timeline-controls-secondary">
-              <div className="timeline-segmented-row timeline-utility-toggle-row">
-                <button
-                  className={showFreezeTime ? "control-button control-button-active" : "control-button"}
-                  onClick={() => onShowFreezeTimeChange(!showFreezeTime)}
-                >
-                  Freeze
-                </button>
-                {UTILITY_OPTIONS.map((option) => (
+              {!analysisModeActive ? (
+                <div className="timeline-segmented-row timeline-utility-toggle-row">
                   <button
-                    key={option.value}
-                    className={option.value === utilityFocus ? "control-button control-button-active" : "control-button"}
-                    onClick={() => onUtilityFocusChange(option.value)}
+                    className={showFreezeTime ? "control-button control-button-active" : "control-button"}
+                    onClick={() => onShowFreezeTimeChange(!showFreezeTime)}
                   >
-                    {option.label}
+                    Freeze
                   </button>
-                ))}
-              </div>
+                  {UTILITY_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      className={option.value === utilityFocus ? "control-button control-button-active" : "control-button"}
+                      onClick={() => onUtilityFocusChange(option.value)}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
 
               <div className="timeline-controls-inline">
                 <div className="timeline-readout-scoreboard">
@@ -231,20 +328,27 @@ export function TimelinePanel({
                   <CompactScore side="T" score={scoreForSide(round, "T", "before")} label={tTeam?.displayName ?? "T Side"} />
                 </div>
 
-                <div className="timeline-segmented-row timeline-segmented-row-speed">
-                  {SPEEDS.map((entry) => (
-                    <button
-                      key={entry}
-                      className={entry === speed ? "control-button control-button-active" : "control-button"}
-                      onClick={() => onSpeedChange(entry)}
-                    >
-                      {entry}x
+                {useReplayTransport ? (
+                  <>
+                    <button className="timeline-play-button timeline-play-button-inline" onClick={onPlayToggle}>
+                      {playing ? "Pause" : "Play"}
                     </button>
-                  ))}
-                </div>
-                <button className="control-button timeline-reset-button" onClick={onReset}>
-                  Reset
-                </button>
+                    <div className="timeline-segmented-row timeline-segmented-row-speed">
+                      {SPEEDS.map((entry) => (
+                        <button
+                          key={entry}
+                          className={entry === speed ? "control-button control-button-active" : "control-button"}
+                          onClick={() => onSpeedChange(entry)}
+                        >
+                          {entry}x
+                        </button>
+                      ))}
+                    </div>
+                    <button className="control-button timeline-reset-button" onClick={onReset}>
+                      Reset
+                    </button>
+                  </>
+                ) : null}
               </div>
             </div>
           </div>
@@ -373,4 +477,95 @@ function buildSecondMarkers(displayStartTick: number, displayEndTick: number, ti
 function resolveCurrentPhase(phases: RoundPhase[], tick: number) {
   const phase = phases.find((entry) => tick >= entry.startTick && tick <= entry.endTick) ?? phases[phases.length - 1];
   return phase ?? { kind: "live", label: "Live", startTick: tick, endTick: tick };
+}
+
+type AnalysisDescriptorInput = {
+  analysisMode: ReplayAnalysisMode;
+  heatmapBucketCount: number;
+  heatmapLabel: string;
+  heatmapScope: HeatmapScope;
+  heatmapSnapshot: HeatmapSnapshot;
+  positionsLabel: string;
+  positionsSnapshotCount: number;
+  positionsTeamFilter: PositionsTeamFilter;
+  positionsPlayerCount: number;
+  positionsRoundCount: number;
+  positionsView: PositionsView;
+  roundClock: string | null;
+  selectedPlayerId: string | null;
+  utilityAtlasEntries: UtilityAtlasEntry[];
+  utilityAtlasLabel: string;
+  utilityAtlasRoundCount: number;
+  utilityAtlasSelectedCount: number;
+};
+
+type AnalysisDescriptor = {
+  context: string;
+  label: string;
+  meta: string;
+  summary: string;
+  title: string;
+};
+
+function resolveAnalysisDescriptor({
+  analysisMode,
+  heatmapBucketCount,
+  heatmapLabel,
+  heatmapScope,
+  heatmapSnapshot,
+  positionsLabel,
+  positionsSnapshotCount,
+  positionsTeamFilter,
+  positionsPlayerCount,
+  positionsRoundCount,
+  positionsView,
+  roundClock,
+  selectedPlayerId,
+  utilityAtlasEntries,
+  utilityAtlasLabel,
+  utilityAtlasRoundCount,
+  utilityAtlasSelectedCount,
+}: AnalysisDescriptorInput): AnalysisDescriptor {
+  if (analysisMode === "utilityAtlas") {
+    const roundCountLabel = `${utilityAtlasRoundCount} round${utilityAtlasRoundCount === 1 ? "" : "s"}`;
+    return {
+      context: "Parser-backed impact surfaces rendered outside the live tick loop.",
+      label: utilityAtlasLabel,
+      meta: `${utilityAtlasEntries.length} throws`,
+      summary: `${utilityAtlasEntries.length} throws across ${roundCountLabel}${selectedPlayerId ? ` - ${utilityAtlasSelectedCount} by selected` : ""}`,
+      title: "Utility Atlas",
+    };
+  }
+
+  if (analysisMode === "heatmap") {
+    const roundCountLabel = `${heatmapSnapshot.roundCount} round${heatmapSnapshot.roundCount === 1 ? "" : "s"}`;
+    const selected = selectedPlayerId != null;
+    const occupancyLabel = selected ? "hotspot" : "occupancy";
+    return {
+      context: selected
+        ? "Selected-player movement hotspots sampled after freeze time across the selected replay scope."
+        : "All-player presence sampled after freeze time across the selected replay scope.",
+      label: heatmapLabel,
+      meta: `${heatmapSnapshot.playerCount} players`,
+      summary: `${heatmapBucketCount} ${occupancyLabel} cells from ${heatmapSnapshot.sampleCount} samples across ${roundCountLabel}${selected ? " - player hotspots" : ""}`,
+      title: selected ? "Player Heatmap" : "Occupancy",
+    };
+  }
+
+  const roundCountLabel = `${positionsRoundCount} round${positionsRoundCount === 1 ? "" : "s"}`;
+  const positionsPlayerScopeLabel =
+    positionsTeamFilter === "CT" ? "CT" : positionsTeamFilter === "T" ? "T" : "All";
+  return {
+    context:
+      positionsView === "player"
+        ? "Selected-player replay tokens aligned to the same moment from the main replay timeline across all matching rounds."
+        : "Alive player routes sampled after freeze time across the selected replay scope.",
+    label: positionsView === "player" ? `${positionsPlayerScopeLabel} · ${roundClock ?? "--:--"}` : positionsLabel,
+    meta: positionsView === "player" ? "player snapshot" : `${positionsPlayerCount} players`,
+    summary:
+      positionsView === "player"
+        ? `${selectedPlayerId ? "Selected player" : "All players"} across ${positionsPlayerScopeLabel.toLowerCase()} rounds · ${positionsSnapshotCount} visible snapshots`
+        : `${positionsPlayerCount} player${positionsPlayerCount === 1 ? "" : "s"} across ${roundCountLabel}${selectedPlayerId ? " - selected focus" : ""}`,
+    title: "Positions",
+  };
 }

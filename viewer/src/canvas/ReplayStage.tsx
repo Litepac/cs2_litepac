@@ -8,11 +8,24 @@ import { renderDynamicFrame } from "./replayStage/renderFrame";
 import type { ReplayStageProps, StageState } from "./replayStage/types";
 
 export function ReplayStage({
+  activeRoundIndex,
+  analysisMode,
   currentTick,
+  heatmapCellSize,
+  heatmapScope,
+  heatmapBuckets,
+  heatmapMaxSampleCount,
+  onSelectAtlasEntry,
+  positionPlayerSnapshots,
+  positionTrailEntries,
+  showPositionRoundNumbers,
+  positionsView,
   replay,
   round,
   selectedPlayerId,
+  utilityAtlasEntries,
   utilityFocus,
+  onSelectPositionSnapshot,
   onSelectPlayer,
 }: ReplayStageProps) {
   const hostRef = useRef<HTMLDivElement | null>(null);
@@ -23,8 +36,21 @@ export function ReplayStage({
   const roundRef = useRef(round);
   const playerByIdRef = useRef(playerById);
   const selectedPlayerIdRef = useRef(selectedPlayerId);
+  const activeRoundIndexRef = useRef(activeRoundIndex);
+  const analysisModeRef = useRef(analysisMode);
+  const utilityAtlasEntriesRef = useRef(utilityAtlasEntries);
   const utilityFocusRef = useRef(utilityFocus);
+  const positionPlayerSnapshotsRef = useRef(positionPlayerSnapshots);
+  const positionTrailEntriesRef = useRef(positionTrailEntries);
+  const positionsViewRef = useRef(positionsView);
+  const showPositionRoundNumbersRef = useRef(showPositionRoundNumbers);
+  const heatmapCellSizeRef = useRef(heatmapCellSize);
+  const heatmapScopeRef = useRef(heatmapScope);
+  const heatmapBucketsRef = useRef(heatmapBuckets);
+  const heatmapMaxSampleCountRef = useRef(heatmapMaxSampleCount);
   const onSelectPlayerRef = useRef(onSelectPlayer);
+  const onSelectAtlasEntryRef = useRef(onSelectAtlasEntry);
+  const onSelectPositionSnapshotRef = useRef(onSelectPositionSnapshot);
   const renderErrorRef = useRef<string | null>(null);
   const [stageRevision, setStageRevision] = useState(0);
   const [renderError, setRenderError] = useState<string | null>(null);
@@ -54,9 +80,22 @@ export function ReplayStage({
     roundRef.current = round;
     playerByIdRef.current = playerById;
     selectedPlayerIdRef.current = selectedPlayerId;
+    activeRoundIndexRef.current = activeRoundIndex;
+    analysisModeRef.current = analysisMode;
+    positionPlayerSnapshotsRef.current = positionPlayerSnapshots;
+    positionTrailEntriesRef.current = positionTrailEntries;
+    positionsViewRef.current = positionsView;
+    showPositionRoundNumbersRef.current = showPositionRoundNumbers;
+    heatmapCellSizeRef.current = heatmapCellSize;
+    heatmapScopeRef.current = heatmapScope;
+    heatmapBucketsRef.current = heatmapBuckets;
+    heatmapMaxSampleCountRef.current = heatmapMaxSampleCount;
+    utilityAtlasEntriesRef.current = utilityAtlasEntries;
     utilityFocusRef.current = utilityFocus;
     onSelectPlayerRef.current = onSelectPlayer;
-  }, [currentTick, onSelectPlayer, playerById, replay, round, selectedPlayerId, utilityFocus]);
+    onSelectAtlasEntryRef.current = onSelectAtlasEntry;
+    onSelectPositionSnapshotRef.current = onSelectPositionSnapshot;
+  }, [activeRoundIndex, analysisMode, currentTick, heatmapBuckets, heatmapCellSize, heatmapMaxSampleCount, heatmapScope, onSelectAtlasEntry, onSelectPlayer, onSelectPositionSnapshot, playerById, positionPlayerSnapshots, positionTrailEntries, positionsView, replay, round, selectedPlayerId, showPositionRoundNumbers, utilityAtlasEntries, utilityFocus]);
 
   useLayoutEffect(() => {
     if (!hostRef.current) {
@@ -202,13 +241,26 @@ export function ReplayStage({
     try {
       renderDynamicFrame(
         stage,
+        analysisModeRef.current,
         replayRef.current,
         roundRef.current,
         currentTickRef.current,
         selectedPlayerIdRef.current,
+        activeRoundIndexRef.current,
+        heatmapCellSizeRef.current,
+        heatmapScopeRef.current,
+        heatmapBucketsRef.current,
+        heatmapMaxSampleCountRef.current,
+        positionPlayerSnapshotsRef.current,
+        positionTrailEntriesRef.current,
+        showPositionRoundNumbersRef.current,
+        positionsViewRef.current,
+        utilityAtlasEntriesRef.current,
         utilityFocusRef.current,
         playerByIdRef.current,
         onSelectPlayerRef.current,
+        onSelectAtlasEntryRef.current,
+        onSelectPositionSnapshotRef.current,
       );
       if (renderErrorRef.current != null) {
         renderErrorRef.current = null;
@@ -221,7 +273,7 @@ export function ReplayStage({
         setRenderError(nextError);
       }
     }
-  }, [currentTick, stageRevision, replay, round, selectedPlayerId, utilityFocus, playerById]);
+  }, [activeRoundIndex, analysisMode, currentTick, heatmapBuckets, heatmapCellSize, heatmapMaxSampleCount, heatmapScope, stageRevision, replay, round, selectedPlayerId, positionPlayerSnapshots, positionTrailEntries, positionsView, showPositionRoundNumbers, utilityAtlasEntries, utilityFocus, playerById]);
 
   return (
     <div className="stage-shell">

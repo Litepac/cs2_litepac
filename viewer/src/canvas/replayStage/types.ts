@@ -1,15 +1,32 @@
 import type { Application, Container } from "pixi.js";
 
+import type { HeatmapBucket } from "../../replay/heatmapAnalysis";
+import type { PositionPlayerSnapshot, PositionTrailEntry, PositionsView } from "../../replay/positionsAnalysis";
+import type { ReplayAnalysisMode, UtilityAtlasEntry } from "../../replay/replayAnalysis";
+import type { HeatmapScope } from "../../replay/heatmapAnalysis";
 import type { RadarViewport } from "../../maps/transform";
 import type { UtilityFocus } from "../../replay/utilityFilter";
 import type { Replay } from "../../replay/types";
 
 export type ReplayStageProps = {
+  activeRoundIndex: number;
+  analysisMode: ReplayAnalysisMode;
+  heatmapCellSize: number;
+  heatmapScope: HeatmapScope;
   currentTick: number;
+  heatmapBuckets: HeatmapBucket[];
+  heatmapMaxSampleCount: number;
+  onSelectAtlasEntry?: (entry: UtilityAtlasEntry) => void;
+  positionPlayerSnapshots: PositionPlayerSnapshot[];
+  positionTrailEntries: PositionTrailEntry[];
+  showPositionRoundNumbers: boolean;
+  positionsView: PositionsView;
   replay: Replay;
   round: Replay["rounds"][number];
   selectedPlayerId: string | null;
+  utilityAtlasEntries: UtilityAtlasEntry[];
   utilityFocus: UtilityFocus;
+  onSelectPositionSnapshot?: (snapshot: PositionPlayerSnapshot) => void;
   onSelectPlayer: (playerId: string) => void;
 };
 
@@ -24,6 +41,7 @@ export type StageState = {
   trailLayer: Container;
   playerLayer: Container;
   eventLayer: Container;
+  lastAtlasEntryKey: string | null;
   currentMapKey: string | null;
   currentViewportHeight: number | null;
   currentViewportWidth: number | null;

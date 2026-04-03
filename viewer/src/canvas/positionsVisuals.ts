@@ -113,6 +113,7 @@ export function drawPositionPlayerSnapshotVisual(
   options?: {
     active?: boolean;
     onSelectSnapshot?: (snapshot: PositionPlayerSnapshot) => void;
+    selectedPlayerFocus?: boolean;
     showRoundNumber?: boolean;
   },
 ) {
@@ -122,6 +123,9 @@ export function drawPositionPlayerSnapshotVisual(
     return;
   }
   const active = options?.active ?? false;
+  const selectedPlayerFocus = options?.selectedPlayerFocus ?? false;
+  const ghostAlpha = active ? 0.98 : selectedPlayerFocus ? 0.42 : 0.18;
+  const haloAlpha = active ? 0.26 : selectedPlayerFocus ? 0.1 : 0.05;
   const equipment = resolvePlayerEquipmentState({
     activeWeapon: snapshot.activeWeapon,
     activeWeaponClass: snapshot.activeWeaponClass,
@@ -137,7 +141,7 @@ export function drawPositionPlayerSnapshotVisual(
   overlayLayer.addChild(snapshotLayer);
 
   const sampleMarker = new Graphics();
-  sampleMarker.alpha = active ? 0.98 : 0.38;
+  sampleMarker.alpha = ghostAlpha;
   drawPlayerMarker(
     sampleMarker,
     screenPoint.x,
@@ -164,8 +168,13 @@ export function drawPositionPlayerSnapshotVisual(
 
   const halo = new Graphics();
   halo.circle(screenPoint.x, screenPoint.y, active ? 9.6 : 8.6);
-  halo.stroke({ color: baseColor, alpha: active ? 0.24 : 0.08, width: active ? 1.8 : 1.2 });
+  halo.stroke({ color: baseColor, alpha: haloAlpha, width: active ? 1.8 : 1.2 });
   snapshotLayer.addChild(halo);
+
+  if (selectedPlayerFocus && active) {
+    drawPositionPlayerNameLabel(snapshotLayer, snapshot, screenPoint.x, screenPoint.y, baseColor, options?.showRoundNumber ?? false);
+    return;
+  }
 
   if (options?.showRoundNumber) {
     const roundLabel = new Text({
@@ -184,12 +193,52 @@ export function drawPositionPlayerSnapshotVisual(
 
     const labelBg = new Graphics();
     labelBg.roundRect(roundLabel.x - 3, roundLabel.y - 1, roundLabel.width + 6, roundLabel.height + 2, 3);
-    labelBg.fill({ color: 0x091219, alpha: active ? 0.82 : 0.56 });
-    labelBg.stroke({ color: baseColor, alpha: active ? 0.5 : 0.28, width: 0.8 });
-    roundLabel.alpha = active ? 0.98 : 0.74;
+    labelBg.fill({ color: 0x091219, alpha: active ? 0.82 : selectedPlayerFocus ? 0.58 : 0.46 });
+    labelBg.stroke({ color: baseColor, alpha: active ? 0.5 : selectedPlayerFocus ? 0.3 : 0.18, width: 0.8 });
+    roundLabel.alpha = active ? 0.98 : selectedPlayerFocus ? 0.78 : 0.56;
     snapshotLayer.addChild(labelBg);
     snapshotLayer.addChild(roundLabel);
   }
+}
+
+function drawPositionPlayerNameLabel(
+  layer: Container,
+  snapshot: PositionPlayerSnapshot,
+  anchorX: number,
+  anchorY: number,
+  baseColor: number,
+  showRoundNumber: boolean,
+) {
+  const labelText = showRoundNumber
+    ? `${compactPlayerLabel(snapshot.playerName, 11)}  R${snapshot.displayRoundNumber}`
+    : compactPlayerLabel(snapshot.playerName, 14);
+  const label = new Text({
+    text: labelText,
+    style: {
+      fill: 0xf3f7fa,
+      fontFamily: "IBM Plex Sans, Segoe UI, sans-serif",
+      fontSize: 8,
+      fontWeight: "700",
+      letterSpacing: 0.12,
+    },
+  });
+  label.resolution = 2;
+  label.roundPixels = true;
+
+  const paddingX = 5;
+  const paddingY = 2;
+  const labelX = Math.round(anchorX - label.width / 2);
+  const labelY = Math.round(anchorY + 12);
+
+  const labelBg = new Graphics();
+  labelBg.roundRect(labelX - paddingX, labelY - paddingY, label.width + paddingX * 2, label.height + paddingY * 2, 3);
+  labelBg.fill({ color: 0x091219, alpha: 0.8 });
+  labelBg.stroke({ color: baseColor, alpha: 0.42, width: 0.8 });
+  layer.addChild(labelBg);
+
+  label.x = labelX;
+  label.y = labelY - 1;
+  layer.addChild(label);
 }
 
 function drawSelectedPlayerPathSamples(
@@ -208,11 +257,13 @@ function drawSelectedPlayerPathSamples(
       continue;
     }
     const sampleMarker = new Graphics();
+    sampleMarker.x = screenPoint.x;
+    sampleMarker.y = screenPoint.y;
     sampleMarker.alpha = pointIndex === segment.points.length - 1 ? 0.94 : sampleOrder === 0 ? 0.42 : 0.28;
     drawPlayerMarker(
       sampleMarker,
-      screenPoint.x,
-      screenPoint.y,
+      0,
+      0,
       entry.side,
       false,
       point.yaw,
@@ -277,4 +328,12 @@ function isScreenPointVisible(point: { x: number; y: number }, radarViewport: Ra
     point.y >= radarViewport.offsetY - margin &&
     point.y <= radarViewport.offsetY + radarViewport.imageHeight * radarViewport.scale + margin
   );
+}
+
+function compactPlayerLabel(name: string, maxLength: number) {
+  if (name.length <= maxLength) {
+    return name;
+  }
+
+  return `${name.slice(0, Math.max(3, maxLength - 1))}...`;
 }

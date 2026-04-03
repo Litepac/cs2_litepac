@@ -15,6 +15,7 @@ export function ReplayStage({
   heatmapScope,
   heatmapBuckets,
   heatmapMaxSampleCount,
+  livePlayerContextMode,
   onSelectAtlasEntry,
   positionPlayerSnapshots,
   positionTrailEntries,
@@ -48,6 +49,7 @@ export function ReplayStage({
   const heatmapScopeRef = useRef(heatmapScope);
   const heatmapBucketsRef = useRef(heatmapBuckets);
   const heatmapMaxSampleCountRef = useRef(heatmapMaxSampleCount);
+  const livePlayerContextModeRef = useRef(livePlayerContextMode);
   const onSelectPlayerRef = useRef(onSelectPlayer);
   const onSelectAtlasEntryRef = useRef(onSelectAtlasEntry);
   const onSelectPositionSnapshotRef = useRef(onSelectPositionSnapshot);
@@ -90,12 +92,13 @@ export function ReplayStage({
     heatmapScopeRef.current = heatmapScope;
     heatmapBucketsRef.current = heatmapBuckets;
     heatmapMaxSampleCountRef.current = heatmapMaxSampleCount;
+    livePlayerContextModeRef.current = livePlayerContextMode;
     utilityAtlasEntriesRef.current = utilityAtlasEntries;
     utilityFocusRef.current = utilityFocus;
     onSelectPlayerRef.current = onSelectPlayer;
     onSelectAtlasEntryRef.current = onSelectAtlasEntry;
     onSelectPositionSnapshotRef.current = onSelectPositionSnapshot;
-  }, [activeRoundIndex, analysisMode, currentTick, heatmapBuckets, heatmapCellSize, heatmapMaxSampleCount, heatmapScope, onSelectAtlasEntry, onSelectPlayer, onSelectPositionSnapshot, playerById, positionPlayerSnapshots, positionTrailEntries, positionsView, replay, round, selectedPlayerId, showPositionRoundNumbers, utilityAtlasEntries, utilityFocus]);
+  }, [activeRoundIndex, analysisMode, currentTick, heatmapBuckets, heatmapCellSize, heatmapMaxSampleCount, heatmapScope, livePlayerContextMode, onSelectAtlasEntry, onSelectPlayer, onSelectPositionSnapshot, playerById, positionPlayerSnapshots, positionTrailEntries, positionsView, replay, round, selectedPlayerId, showPositionRoundNumbers, utilityAtlasEntries, utilityFocus]);
 
   useLayoutEffect(() => {
     if (!hostRef.current) {
@@ -251,6 +254,7 @@ export function ReplayStage({
         heatmapScopeRef.current,
         heatmapBucketsRef.current,
         heatmapMaxSampleCountRef.current,
+        livePlayerContextModeRef.current,
         positionPlayerSnapshotsRef.current,
         positionTrailEntriesRef.current,
         showPositionRoundNumbersRef.current,
@@ -273,7 +277,7 @@ export function ReplayStage({
         setRenderError(nextError);
       }
     }
-  }, [activeRoundIndex, analysisMode, currentTick, heatmapBuckets, heatmapCellSize, heatmapMaxSampleCount, heatmapScope, stageRevision, replay, round, selectedPlayerId, positionPlayerSnapshots, positionTrailEntries, positionsView, showPositionRoundNumbers, utilityAtlasEntries, utilityFocus, playerById]);
+  }, [activeRoundIndex, analysisMode, currentTick, heatmapBuckets, heatmapCellSize, heatmapMaxSampleCount, heatmapScope, livePlayerContextMode, stageRevision, replay, round, selectedPlayerId, positionPlayerSnapshots, positionTrailEntries, positionsView, showPositionRoundNumbers, utilityAtlasEntries, utilityFocus, playerById]);
 
   return (
     <div className="stage-shell">

@@ -23,6 +23,7 @@ export function renderDynamicFrame(
   heatmapScope: HeatmapScope,
   heatmapBuckets: HeatmapBucket[],
   heatmapMaxSampleCount: number,
+  livePlayerContextMode: boolean,
   positionPlayerSnapshots: PositionPlayerSnapshot[],
   positionTrailEntries: PositionTrailEntry[],
   showPositionRoundNumbers: boolean,
@@ -130,6 +131,7 @@ export function renderDynamicFrame(
         drawPositionPlayerSnapshotVisual(stage.utilityOverlayLayer, replay, snapshot, radarViewport, {
           active: snapshot.roundIndex === activeRoundIndex,
           onSelectSnapshot: onSelectPositionSnapshot,
+          selectedPlayerFocus: selectedPlayerId != null,
           showRoundNumber: showPositionRoundNumbers,
         });
       }
@@ -212,6 +214,7 @@ export function renderDynamicFrame(
     fullRenderTick,
     radarViewport,
     selectedPlayerId,
+    livePlayerContextMode,
     playerById,
     onSelectPlayer,
   );

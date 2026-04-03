@@ -19,11 +19,7 @@ export function useReplayPlayback(
   const initialRoundTick = round ? resolveInitialRoundTick(round) : 0;
   const effectiveRoundEndTick = round ? resolveVisibleRoundEndTick(round) : 0;
   const renderTick = round ? clampTick(displayTick, round.startTick, effectiveRoundEndTick) : 0;
-  const clockStartTick = round
-    ? showFreezeTime
-      ? round.startTick
-      : clampTick(round.freezeEndTick ?? round.startTick, round.startTick, round.endTick)
-    : 0;
+  const clockStartTick = round ? (showFreezeTime ? round.startTick : initialRoundTick) : 0;
 
   useEffect(() => {
     if (!round) {

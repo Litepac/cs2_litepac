@@ -16,6 +16,7 @@ Priority is a correct replay core, not dashboards or broad stats.
 - Prefer root-cause fixes over layered workarounds
 - Keep changes as small as possible while still solving the real problem
 - If a fix feels heavier or uglier than necessary, simplify before calling it done
+- For local startup, prefer the Go parser API spawned by `viewer` dev server. Treat `tools/local-parser-bridge.mjs` as a fallback bridge only when the Go API path is unavailable, and verify `/api/health` so future chats do not silently attach to the wrong parser process.
 
 ## Local specialist guides
 Use the repo-local guides under `.github/agents/` when the work matches them:

@@ -25,7 +25,8 @@ Use one fixed replay and one fixed interaction sequence so traces stay comparabl
 
 - Open Chrome DevTools -> `Performance`
 - Record the interaction sequence above
-- Export the trace JSON into this folder
+- Export the trace JSON into this folder for local comparison runs
+- Trace JSON exports in this folder are ignored by git on purpose; if a baseline needs to be shared, commit a short summary file outside the ignored JSON glob
 
 ## Naming
 

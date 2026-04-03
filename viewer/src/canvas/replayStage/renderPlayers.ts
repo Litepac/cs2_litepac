@@ -2,29 +2,19 @@ import { Container, Graphics, Text } from "pixi.js";
 
 import type { RadarViewport } from "../../maps/transform";
 import { worldToScreen } from "../../maps/transform";
+import { interpolatePlayerStreamSample } from "../../replay/playerStream";
 import type { Replay, Round } from "../../replay/types";
-import { resolvePlayerEquipmentState, type PlayerTokenMode, type UtilityKind, type WeaponClass } from "../../replay/weapons";
+import { resolvePlayerEquipmentState, type PlayerTokenMode, type UtilityKind } from "../../replay/weapons";
 import { RECENT_UTILITY_THROW_MODE_SECONDS } from "./constants";
 import type { BlindEffectState } from "./types";
 import { clamp } from "./camera";
-
-type InterpolatedPlayerSample = {
-  alive: boolean;
-  hasBomb: boolean;
-  health: number | null;
-  activeWeapon: string | null;
-  activeWeaponClass: WeaponClass | null;
-  mainWeapon: string | null;
-  x: number | null;
-  y: number | null;
-  yaw: number | null;
-};
 
 type LivePlayerEntry = {
   hasBomb: boolean;
   player: Replay["players"][number];
   point: { x: number; y: number };
   selected: boolean;
+  showLabel: boolean;
   side: "T" | "CT" | null;
 };
 
@@ -36,14 +26,16 @@ export function renderPlayers(
   currentTick: number,
   radarViewport: RadarViewport,
   selectedPlayerId: string | null,
+  livePlayerContextMode: boolean,
   playerById: Map<string, Replay["players"][number]>,
   onSelectPlayer: (playerId: string) => void,
 ) {
   const blindEffects = buildActiveBlindEffects(round, currentTick, replay.match.tickRate);
+  const contextModeActive = livePlayerContextMode && selectedPlayerId != null;
   const livePlayers: LivePlayerEntry[] = [];
 
   for (const stream of round.playerStreams) {
-    const sample = interpolatePlayerSample(stream, currentTick);
+    const sample = interpolatePlayerStreamSample(stream, currentTick);
     if (!sample) {
       continue;
     }
@@ -69,6 +61,7 @@ export function renderPlayers(
     });
 
     const marker = new Graphics();
+    marker.alpha = contextModeActive && !selected ? 0.2 : 1;
     marker.eventMode = "static";
     marker.cursor = "pointer";
     marker.on("pointertap", () => onSelectPlayer(stream.playerId));
@@ -100,117 +93,12 @@ export function renderPlayers(
       player,
       point,
       selected,
+      showLabel: !contextModeActive || selected,
       side: stream.side,
     });
   }
 
   drawPlayerLabels(eventLayer, livePlayers);
-}
-
-export function renderContextPlayers(
-  playerLayer: Container,
-  replay: Replay,
-  round: Round,
-  currentTick: number,
-  radarViewport: RadarViewport,
-  selectedPlayerId: string | null,
-) {
-  for (const stream of round.playerStreams) {
-    const sample = interpolatePlayerSample(stream, currentTick);
-    if (!sample) {
-      continue;
-    }
-
-    const { alive, x, y } = sample;
-    if (!alive || x == null || y == null) {
-      continue;
-    }
-
-    const point = worldToScreen(replay, radarViewport, x, y);
-    const marker = new Graphics();
-    marker.alpha = stream.playerId === selectedPlayerId ? 0.6 : 0.18;
-
-    const equipment = resolvePlayerEquipmentState({
-      activeWeapon: sample.activeWeapon,
-      activeWeaponClass: sample.activeWeaponClass,
-      mainWeapon: sample.mainWeapon,
-      recentUtilityThrow: false,
-    });
-
-    drawPlayerMarker(
-      marker,
-      point.x,
-      point.y,
-      stream.side,
-      stream.playerId === selectedPlayerId,
-      sample.yaw,
-      sample.health,
-      equipment.tokenMode,
-      equipment.activeUtilityKind,
-      null,
-    );
-
-    playerLayer.addChild(marker);
-  }
-}
-
-function interpolatePlayerSample(
-  stream: Round["playerStreams"][number],
-  currentTick: number,
-): InterpolatedPlayerSample | null {
-  const relativeTick = currentTick - stream.sampleOriginTick;
-  const baseIndex = Math.floor(relativeTick);
-  if (baseIndex < 0 || baseIndex >= stream.x.length) {
-    return null;
-  }
-
-  const nextIndex = Math.min(stream.x.length - 1, baseIndex + 1);
-  const mix = Math.max(0, Math.min(1, relativeTick - baseIndex));
-
-  return {
-    alive: stream.alive[baseIndex] ?? false,
-    hasBomb: stream.hasBomb[baseIndex] ?? false,
-    health: stream.health[baseIndex] ?? null,
-    activeWeapon: stream.activeWeapon[baseIndex] ?? null,
-    activeWeaponClass: stream.activeWeaponClass[baseIndex] ?? null,
-    mainWeapon: stream.mainWeapon[baseIndex] ?? null,
-    x: interpolateNullableNumber(stream.x[baseIndex], stream.x[nextIndex], mix),
-    y: interpolateNullableNumber(stream.y[baseIndex], stream.y[nextIndex], mix),
-    yaw: interpolateAngle(stream.yaw[baseIndex], stream.yaw[nextIndex], mix),
-  };
-}
-
-function interpolateNullableNumber(left: number | null, right: number | null, mix: number) {
-  if (left == null && right == null) {
-    return null;
-  }
-
-  if (left == null) {
-    return right;
-  }
-
-  if (right == null) {
-    return left;
-  }
-
-  return left + (right - left) * mix;
-}
-
-function interpolateAngle(left: number | null, right: number | null, mix: number) {
-  if (mix <= 0) {
-    return left ?? right;
-  }
-
-  if (mix >= 1) {
-    return right ?? left;
-  }
-
-  if (left == null || right == null) {
-    return null;
-  }
-
-  const delta = ((((right - left) % 360) + 540) % 360) - 180;
-  return left + delta * mix;
 }
 
 function drawPlayerLabel(
@@ -788,6 +676,10 @@ function drawPlayerLabels(layer: Container, livePlayers: LivePlayerEntry[]) {
   });
 
   for (const entry of ordered) {
+    if (!entry.showLabel) {
+      continue;
+    }
+
     const displayName = compactPlayerLabel(entry.player.displayName, entry.selected ? 12 : 9);
     const fontSize = entry.selected ? 9 : 8;
     const paddingX = entry.selected ? 6 : 5;

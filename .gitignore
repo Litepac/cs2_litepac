@@ -9,9 +9,12 @@ viewer/dist/
 viewer/*.log
 viewer/*.png
 viewer/*.tsbuildinfo
+parser/*.log
 parser/.cache/
 testdata/demos/*.dem
 testdata/replays/*.json
 assets/fixtures/*.json
 tmp-*.log
+.tmp-*.log
+.vscode/
 docs/perf/traces/*.json

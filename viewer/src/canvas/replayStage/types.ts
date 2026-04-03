@@ -16,6 +16,7 @@ export type ReplayStageProps = {
   currentTick: number;
   heatmapBuckets: HeatmapBucket[];
   heatmapMaxSampleCount: number;
+  livePlayerContextMode: boolean;
   onSelectAtlasEntry?: (entry: UtilityAtlasEntry) => void;
   positionPlayerSnapshots: PositionPlayerSnapshot[];
   positionTrailEntries: PositionTrailEntry[];

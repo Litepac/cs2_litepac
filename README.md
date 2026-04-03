@@ -42,31 +42,35 @@ cd viewer
 npm.cmd run build
 ```
 
-### Run the local parser upload API
-
-```powershell
-cd parser
-go run .\cmd\mastermind-api
-```
-
-This starts a local HTTP parser bridge on `http://127.0.0.1:4318`.
-
-- `GET /api/health` confirms the bridge is available
-- `POST /api/parse-demo` accepts multipart `.dem` upload and returns canonical `mastermind.replay.json`
-
-The viewer can then offer `.dem` upload from the page while still keeping raw demo parsing outside the browser runtime.
-
 ### Run the viewer locally
 
 ```powershell
 cd viewer
-npm.cmd run dev
+npm.cmd run dev -- --host 127.0.0.1 --port 4173
 ```
+
+The viewer dev server starts the Go parser API from `parser/cmd/mastermind-api` and serves the app on `http://127.0.0.1:4173/`.
+
+- `GET http://127.0.0.1:4318/api/health` confirms which parser process is serving the local ingest API
+- `POST /api/parse-demo` accepts multipart `.dem` upload and returns canonical `mastermind.replay.json`
+
+The viewer can then offer `.dem` upload from the page while still keeping raw demo parsing outside the browser runtime.
+
+If Windows blocks the Go parser binary, use the fallback Node bridge instead:
+
+```powershell
+cd parser
+go build -o fixtureparse.exe .\cmd\fixtureparse
+cd ..
+node tools\local-parser-bridge.mjs
+```
+
+`/api/health` should then report `"bridge":"node-fixtureparse"`.
 
 You can then either:
 
 - load a generated `mastermind.replay.json` file manually through the UI, or
-- upload a `.dem` directly in the UI if the local parser API is running, or
+- upload a `.dem` directly in the UI if one of the local parser API paths above is running, or
 - click a staged fixture from the left panel if `go run .\cmd\fixturestage` has been run
 
 ## Visual Review Loop
@@ -74,5 +78,5 @@ You can then either:
 1. Put `.dem` files in `testdata/demos/`
 2. Run `go run .\cmd\fixtureparse`
 3. Run `go run .\cmd\fixturestage`
-4. Start the viewer with `npm.cmd run dev`
+4. Start the viewer with `npm.cmd run dev -- --host 127.0.0.1 --port 4173`
 5. Load a fixture replay and compare it against the source demo

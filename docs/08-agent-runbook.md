@@ -23,7 +23,32 @@ Use it when:
 4. Compare specific rounds against observed demo behavior
 5. Fix either parser semantics or viewer interpretation, not both blindly
 
+## Local Startup Rules
+- Default dev path: run the viewer dev server from `viewer/`. `viewer/vite.config.ts` is expected to spawn the Go parser API from `parser/cmd/mastermind-api`.
+- Fallback path: use `tools/local-parser-bridge.mjs` only if the Go API path is unavailable on the current machine. That bridge serves the same local API surface on `127.0.0.1:4318`, but shells out to `parser/fixtureparse.exe` and only emits an initial `roundsParsed: 0` event before the final result.
+- Before debugging ingest, call `http://127.0.0.1:4318/api/health` and check whether the response is the direct Go API or the fallback Node bridge (`bridge: "node-fixtureparse"`).
+- Do not make a new chat invent a third startup path. If parser startup behavior is wrong, fix or document one of these two paths instead.
+
 ## Commands
+
+### Start viewer + default parser API
+```powershell
+cd viewer
+npm.cmd run dev -- --host 127.0.0.1 --port 4173
+```
+
+### Check parser API identity
+```powershell
+(Invoke-WebRequest -UseBasicParsing http://127.0.0.1:4318/api/health).Content
+```
+
+### Fallback local parser bridge
+```powershell
+cd parser
+go build -o fixtureparse.exe .\cmd\fixtureparse
+cd ..
+node tools\local-parser-bridge.mjs
+```
 
 ### Parse fixtures
 ```powershell

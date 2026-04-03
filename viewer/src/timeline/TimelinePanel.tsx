@@ -16,6 +16,7 @@ type Props = {
   heatmapLabel: string;
   heatmapScope: HeatmapScope;
   heatmapSnapshot: HeatmapSnapshot;
+  initialRoundTick: number;
   markers: TimelineEventItem[];
   playing: boolean;
   replay: Replay;
@@ -27,6 +28,7 @@ type Props = {
   tick: number;
   tickRate: number;
   positionPlayerSnapshots: PositionPlayerSnapshot[];
+  positionPlayerSelectedCount: number;
   positionTrailEntries: PositionTrailEntry[];
   positionsLabel: string;
   positionsTeamFilter: PositionsTeamFilter;
@@ -34,7 +36,9 @@ type Props = {
   utilityAtlasEntries: UtilityAtlasEntry[];
   utilityAtlasLabel: string;
   utilityFocus: UtilityFocus;
+  livePlayerContextMode: boolean;
   selectedPlayerId: string | null;
+  selectedPlayerName: string | null;
   onPlayToggle: () => void;
   onReset: () => void;
   onSelectRound: (index: number) => void;
@@ -61,6 +65,7 @@ export function TimelinePanel({
   heatmapLabel,
   heatmapScope,
   heatmapSnapshot,
+  initialRoundTick,
   markers,
   playing,
   replay,
@@ -72,6 +77,7 @@ export function TimelinePanel({
   tick,
   tickRate,
   positionPlayerSnapshots,
+  positionPlayerSelectedCount,
   positionTrailEntries,
   positionsLabel,
   positionsTeamFilter,
@@ -79,7 +85,9 @@ export function TimelinePanel({
   utilityAtlasEntries,
   utilityAtlasLabel,
   utilityFocus,
+  livePlayerContextMode,
   selectedPlayerId,
+  selectedPlayerName,
   onPlayToggle,
   onReset,
   onSelectRound,
@@ -89,7 +97,7 @@ export function TimelinePanel({
   onUtilityFocusChange,
 }: Props) {
   const displayedRoundNumber = activeRoundIndex + 1;
-  const displayStartTick = showFreezeTime ? round.startTick : clamp(round.freezeEndTick ?? round.startTick, round.startTick, round.endTick);
+  const displayStartTick = showFreezeTime ? round.startTick : initialRoundTick;
   const displayEndTick =
     round.officialEndTick != null && round.officialEndTick > round.endTick ? round.officialEndTick : round.endTick;
   const range = Math.max(1, displayEndTick - displayStartTick);
@@ -128,6 +136,7 @@ export function TimelinePanel({
         positionsTeamFilter,
         positionsPlayerCount,
         positionsRoundCount,
+        positionPlayerSelectedCount,
         positionsView,
         roundClock,
         selectedPlayerId,
@@ -280,13 +289,24 @@ export function TimelinePanel({
           <div className="timeline-controls-panel">
             <div className="timeline-context-strip">
               <span className="timeline-map-label">{replay.map.displayName}</span>
-              <span className={analysisModeActive ? "timeline-readout-chip timeline-readout-chip-live" : `timeline-readout-chip timeline-readout-chip-${currentPhase.kind}`}>
-                {analysisDescriptor?.title ?? currentPhase.label}
+              <span
+                className={
+                  analysisModeActive || (livePlayerContextMode && selectedPlayerName)
+                    ? "timeline-readout-chip timeline-readout-chip-live"
+                    : `timeline-readout-chip timeline-readout-chip-${currentPhase.kind}`
+                }
+              >
+                {analysisDescriptor?.title ?? (livePlayerContextMode && selectedPlayerName ? "Player Focus" : currentPhase.label)}
               </span>
               {analysisModeActive ? (
                 <>
                   <span className="timeline-readout-meta">{analysisDescriptor?.meta}</span>
                   <span className="timeline-readout-meta">{analysisDescriptor?.label}</span>
+                </>
+              ) : livePlayerContextMode && selectedPlayerName ? (
+                <>
+                  <span className="timeline-readout-meta">{selectedPlayerName}</span>
+                  <span className="timeline-readout-meta">Context faded</span>
                 </>
               ) : (
                 <>
@@ -490,6 +510,7 @@ type AnalysisDescriptorInput = {
   positionsTeamFilter: PositionsTeamFilter;
   positionsPlayerCount: number;
   positionsRoundCount: number;
+  positionPlayerSelectedCount: number;
   positionsView: PositionsView;
   roundClock: string | null;
   selectedPlayerId: string | null;
@@ -518,6 +539,7 @@ function resolveAnalysisDescriptor({
   positionsTeamFilter,
   positionsPlayerCount,
   positionsRoundCount,
+  positionPlayerSelectedCount,
   positionsView,
   roundClock,
   selectedPlayerId,
@@ -555,17 +577,42 @@ function resolveAnalysisDescriptor({
   const roundCountLabel = `${positionsRoundCount} round${positionsRoundCount === 1 ? "" : "s"}`;
   const positionsPlayerScopeLabel =
     positionsTeamFilter === "CT" ? "CT" : positionsTeamFilter === "T" ? "T" : "All";
-  return {
+  const descriptor: AnalysisDescriptor = {
     context:
       positionsView === "player"
-        ? "Selected-player replay tokens aligned to the same moment from the main replay timeline across all matching rounds."
+        ? positionPlayerSelectedCount > 1
+          ? "A capped compare set of player replay tokens aligned to the same moment from the main replay timeline across all matching rounds."
+          : "Selected-player replay tokens aligned to the same moment from the main replay timeline across all matching rounds."
         : "Alive player routes sampled after freeze time across the selected replay scope.",
     label: positionsView === "player" ? `${positionsPlayerScopeLabel} · ${roundClock ?? "--:--"}` : positionsLabel,
-    meta: positionsView === "player" ? "player snapshot" : `${positionsPlayerCount} players`,
+    meta: positionsView === "player"
+      ? positionPlayerSelectedCount > 1
+        ? `${positionPlayerSelectedCount} players`
+        : "player snapshot"
+      : `${positionsPlayerCount} players`,
     summary:
       positionsView === "player"
         ? `${selectedPlayerId ? "Selected player" : "All players"} across ${positionsPlayerScopeLabel.toLowerCase()} rounds · ${positionsSnapshotCount} visible snapshots`
         : `${positionsPlayerCount} player${positionsPlayerCount === 1 ? "" : "s"} across ${roundCountLabel}${selectedPlayerId ? " - selected focus" : ""}`,
-    title: "Positions",
+    title: positionsView === "player" ? "Position Player" : "Position Paths",
   };
+
+  if (positionsView === "player") {
+    descriptor.label = `${positionsPlayerScopeLabel} - ${roundClock ?? "--:--"}`;
+    descriptor.summary = `${formatPositionPlayerScopeSummary(positionPlayerSelectedCount, selectedPlayerId != null)} across ${positionsPlayerScopeLabel.toLowerCase()} rounds - ${positionsSnapshotCount} visible snapshots`;
+  }
+
+  return descriptor;
+}
+
+function formatPositionPlayerScopeSummary(selectedCount: number, hasSelectedPlayer: boolean) {
+  if (selectedCount > 1) {
+    return `${selectedCount} selected players`;
+  }
+
+  if (hasSelectedPlayer || selectedCount === 1) {
+    return "Selected player";
+  }
+
+  return "All players";
 }

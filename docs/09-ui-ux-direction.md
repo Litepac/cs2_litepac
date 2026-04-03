@@ -34,6 +34,12 @@ Move the viewer toward an operator-style replay surface similar in spirit to Sky
 5. Move ambiguous replay-state logic out of the viewer and into parser/canonical artifact ownership.
 6. Map pan/zoom interaction.
 
+## Replay Shell Structure
+- Keep the left rail for app-level destinations only.
+- Do not use the narrow left rail as a vertical tab stack for sibling replay modes.
+- Put replay mode switching in a single horizontal strip adjacent to the mode's controls so the active tool and its settings read as one surface.
+- Keep that strip compact enough to preserve the map as the dominant surface, and prefer short labels over wrapped mode names.
+
 ## Reference Locked Rebuild
 - Remove noisy or wrong overlays before adding polish.
 - Do not let utility filters or secondary controls consume map height above the stage.

@@ -1,4 +1,5 @@
 import type { Side } from "./derived";
+import { interpolatePlayerStreamSample } from "./playerStream";
 import {
   analysisScopeLabel,
   collectAnalysisRounds,
@@ -57,6 +58,11 @@ export type PositionPlayerSnapshot = {
   x: number;
   y: number;
   yaw: number | null;
+};
+
+export type PositionPlayerSelection = {
+  playerIds: string[];
+  side: Side;
 };
 
 export type PositionsConfig = {
@@ -131,12 +137,17 @@ export function collectPositionTrailEntries(
 
 export function collectPositionPlayerSnapshots(
   replay: Replay,
-  selectedPlayerId: string | null,
+  selectedPlayers: PositionPlayerSelection[],
   teamFilter: PositionsTeamFilter,
   comparisonOffsetTicks: number,
   showFreezeTime: boolean,
 ) {
   const snapshots: PositionPlayerSnapshot[] = [];
+  const selectedPlayerKeys = new Set(
+    selectedPlayers.flatMap((player) =>
+      player.playerIds.map((playerId) => toPositionPlayerSelectionKey(playerId, player.side)),
+    ),
+  );
   const playerById = new Map(replay.players.map((player) => [player.playerId, player]));
 
   for (const [roundIndex, round] of replay.rounds.entries()) {
@@ -148,18 +159,13 @@ export function collectPositionPlayerSnapshots(
       continue;
     }
 
-    const selectedPlayerStream =
-      selectedPlayerId != null ? round.playerStreams.find((stream) => stream.playerId === selectedPlayerId) ?? null : null;
-    if (selectedPlayerStream && teamFilter !== "all" && selectedPlayerStream.side !== teamFilter) {
-      continue;
-    }
-
     for (const stream of round.playerStreams) {
-      if (selectedPlayerId != null && stream.playerId !== selectedPlayerId) {
+      const selectionKey = stream.side ? toPositionPlayerSelectionKey(stream.playerId, stream.side) : null;
+      if (selectedPlayerKeys.size > 0 && (!selectionKey || !selectedPlayerKeys.has(selectionKey))) {
         continue;
       }
 
-      if (selectedPlayerId == null && teamFilter !== "all" && stream.side !== teamFilter) {
+      if (teamFilter !== "all" && stream.side !== teamFilter) {
         continue;
       }
 
@@ -168,7 +174,7 @@ export function collectPositionPlayerSnapshots(
         continue;
       }
 
-      const sample = interpolatePositionPlayerSample(stream, targetTick);
+      const sample = interpolatePlayerStreamSample(stream, targetTick);
       if (!sample || !sample.alive || sample.x == null || sample.y == null) {
         continue;
       }
@@ -176,7 +182,7 @@ export function collectPositionPlayerSnapshots(
       snapshots.push({
         activeWeapon: sample.activeWeapon,
         activeWeaponClass: sample.activeWeaponClass,
-        displayRoundNumber: roundIndex + 1,
+        displayRoundNumber: round.roundNumber,
         hasBomb: sample.hasBomb,
         health: sample.health,
         key: `${roundIndex}:${stream.playerId}:${stream.side ?? "unknown"}`,
@@ -198,11 +204,15 @@ export function collectPositionPlayerSnapshots(
     if (left.roundIndex !== right.roundIndex) {
       return left.roundIndex - right.roundIndex;
     }
-    if (selectedPlayerId == null && left.side !== right.side) {
+    if (selectedPlayerKeys.size === 0 && left.side !== right.side) {
       return left.side === "CT" ? -1 : 1;
     }
     return left.playerName.localeCompare(right.playerName);
   });
+}
+
+export function toPositionPlayerSelectionKey(playerId: string, side: Side) {
+  return `${side}:${playerId}`;
 }
 
 function resolveTrailStepTicks(replay: Replay, scope: PositionsScope) {
@@ -307,63 +317,4 @@ function comparePositionEntries(left: PositionTrailEntry, right: PositionTrailEn
   }
 
   return left.playerName.localeCompare(right.playerName);
-}
-
-function interpolatePositionPlayerSample(
-  stream: Round["playerStreams"][number],
-  currentTick: number,
-) {
-  const relativeTick = currentTick - stream.sampleOriginTick;
-  const baseIndex = Math.floor(relativeTick);
-  if (baseIndex < 0 || baseIndex >= stream.x.length) {
-    return null;
-  }
-
-  const nextIndex = Math.min(stream.x.length - 1, baseIndex + 1);
-  const mix = Math.max(0, Math.min(1, relativeTick - baseIndex));
-
-  return {
-    alive: stream.alive[baseIndex] ?? false,
-    hasBomb: stream.hasBomb[baseIndex] ?? false,
-    health: stream.health[baseIndex] ?? null,
-    activeWeapon: stream.activeWeapon[baseIndex] ?? null,
-    activeWeaponClass: stream.activeWeaponClass[baseIndex] ?? null,
-    mainWeapon: stream.mainWeapon[baseIndex] ?? null,
-    x: interpolateNullableNumber(stream.x[baseIndex], stream.x[nextIndex], mix),
-    y: interpolateNullableNumber(stream.y[baseIndex], stream.y[nextIndex], mix),
-    yaw: interpolateAngle(stream.yaw[baseIndex], stream.yaw[nextIndex], mix),
-  };
-}
-
-function interpolateNullableNumber(left: number | null, right: number | null, mix: number) {
-  if (left == null && right == null) {
-    return null;
-  }
-
-  if (left == null) {
-    return right;
-  }
-
-  if (right == null) {
-    return left;
-  }
-
-  return left + (right - left) * mix;
-}
-
-function interpolateAngle(left: number | null, right: number | null, mix: number) {
-  if (mix <= 0) {
-    return left ?? right;
-  }
-
-  if (mix >= 1) {
-    return right ?? left;
-  }
-
-  if (left == null || right == null) {
-    return null;
-  }
-
-  const delta = ((((right - left) % 360) + 540) % 360) - 180;
-  return left + delta * mix;
 }

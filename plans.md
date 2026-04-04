@@ -35,9 +35,10 @@ Planning note:
 - Revisit a separate internal AI runtime surface only if direct VSCode/Codex integration becomes valuable enough to justify a true runtime-first sidecar instead of another staged prototype
 
 ## In Progress
-- Live-review whether `Position Player` side rows now contain the correct non-duplicated CT/T player sets after the binding-only roster fix
+- Live smoke-test the temporary Cloudflare quick-tunnel URL while this PC is serving `http://127.0.0.1:4173/`, and keep the tunnel caveat explicit: the public URL only works while the local viewer/parser processes and this machine stay awake
 
 ## Done
+- Set up the one-origin local tunnel path for friend testing: made parser requests default to same-origin `/api` unless `VITE_PARSER_API_BASE_URL` is explicitly set, added a Vite dev proxy from `/api` to `127.0.0.1:4318`, installed `cloudflared` in the user profile, started a Cloudflare quick tunnel, and verified `http://127.0.0.1:4173/` plus `http://127.0.0.1:4173/api/health`
 - Fixed `Position Player` row assignment without touching the grouped picker layout: each roster entry now keeps one owning display side, rows are emitted only into that CT or T group, and the player sort no longer forces dual-side rows into CT; verified with `cd viewer && npm.cmd run build`
 - Reverted `Position Player` to the same grouped CT/T player-row layout used by `Utility`, `Paths`, and `Heatmap`: one side label row for CT, one for T, normal player chips, unchanged `All Players` placement, and removed the unused per-player side-tag CSS; verified with `cd viewer && npm.cmd run build`
 - Restored `Position Player` to one shared player grid under the existing Team filter and All Players action, removed the large CT/T section wrappers, and changed only the player card item so each chip now carries a tiny CT/T marker above the player name without changing the surrounding picker structure; verified with `cd viewer && npm.cmd run build`

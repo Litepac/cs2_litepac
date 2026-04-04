@@ -8,7 +8,7 @@ type StreamEvent =
   | { type: "error"; error?: string };
 
 const parserApiBaseUrl =
-  (import.meta.env.VITE_PARSER_API_BASE_URL as string | undefined)?.trim() || "http://127.0.0.1:4318";
+  (import.meta.env.VITE_PARSER_API_BASE_URL as string | undefined)?.trim() || "";
 
 function parserApiUrl(path: string) {
   return `${parserApiBaseUrl.replace(/\/+$/, "")}${path}`;

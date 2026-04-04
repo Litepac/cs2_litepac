@@ -65,6 +65,7 @@ export default defineConfig(({ command }) => ({
   plugins: [react(), ...(command === "serve" ? [localParserApiPlugin()] : [])],
   publicDir: path.resolve(repoRoot, "assets"),
   server: {
+    allowedHosts: [".trycloudflare.com"],
     fs: {
       allow: [repoRoot],
     },

@@ -38,6 +38,7 @@ Planning note:
 - Live smoke-test the temporary Cloudflare quick-tunnel URL while this PC is serving `http://127.0.0.1:4173/`, and keep the tunnel caveat explicit: the public URL only works while the local viewer/parser processes and this machine stay awake
 
 ## Done
+- Allowed Cloudflare quick-tunnel hostnames in the Vite dev server with `server.allowedHosts`, so temporary `*.trycloudflare.com` URLs can reach the local viewer without Vite's blocked-host guard
 - Set up the one-origin local tunnel path for friend testing: made parser requests default to same-origin `/api` unless `VITE_PARSER_API_BASE_URL` is explicitly set, added a Vite dev proxy from `/api` to `127.0.0.1:4318`, installed `cloudflared` in the user profile, started a Cloudflare quick tunnel, and verified `http://127.0.0.1:4173/` plus `http://127.0.0.1:4173/api/health`
 - Fixed `Position Player` row assignment without touching the grouped picker layout: each roster entry now keeps one owning display side, rows are emitted only into that CT or T group, and the player sort no longer forces dual-side rows into CT; verified with `cd viewer && npm.cmd run build`
 - Reverted `Position Player` to the same grouped CT/T player-row layout used by `Utility`, `Paths`, and `Heatmap`: one side label row for CT, one for T, normal player chips, unchanged `All Players` placement, and removed the unused per-player side-tag CSS; verified with `cd viewer && npm.cmd run build`

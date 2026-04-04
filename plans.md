@@ -35,10 +35,9 @@ Planning note:
 - Revisit a separate internal AI runtime surface only if direct VSCode/Codex integration becomes valuable enough to justify a true runtime-first sidecar instead of another staged prototype
 
 ## In Progress
-- Redeploy `litepac-api` on Render from the pushed Go-version fix, verify `/api/health`, and then point `litepac-viewer` at the live parser URL with `VITE_PARSER_API_BASE_URL`
+- Live-review whether `Position Player` side rows now contain the correct non-duplicated CT/T player sets after the binding-only roster fix
 
 ## Done
-- Fixed the first `litepac-api` Render deploy failure by lowering `parser/go.mod` from Go 1.26.1 to 1.26.0 so Render's current Go image can build the parser module, and verified with `cd parser && go build ./...`
 - Fixed `Position Player` row assignment without touching the grouped picker layout: each roster entry now keeps one owning display side, rows are emitted only into that CT or T group, and the player sort no longer forces dual-side rows into CT; verified with `cd viewer && npm.cmd run build`
 - Reverted `Position Player` to the same grouped CT/T player-row layout used by `Utility`, `Paths`, and `Heatmap`: one side label row for CT, one for T, normal player chips, unchanged `All Players` placement, and removed the unused per-player side-tag CSS; verified with `cd viewer && npm.cmd run build`
 - Restored `Position Player` to one shared player grid under the existing Team filter and All Players action, removed the large CT/T section wrappers, and changed only the player card item so each chip now carries a tiny CT/T marker above the player name without changing the surrounding picker structure; verified with `cd viewer && npm.cmd run build`

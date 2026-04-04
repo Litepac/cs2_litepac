@@ -35,9 +35,10 @@ Planning note:
 - Revisit a separate internal AI runtime surface only if direct VSCode/Codex integration becomes valuable enough to justify a true runtime-first sidecar instead of another staged prototype
 
 ## In Progress
-- Live smoke-test the temporary Cloudflare quick-tunnel URL while this PC is serving `http://127.0.0.1:4173/`, and keep the tunnel caveat explicit: the public URL only works while the local viewer/parser processes and this machine stay awake
+- Live smoke-test usage events from the public Cloudflare tunnel in a browser session, while keeping `.tmp-usage-events.ndjson` open locally so product actions can be inspected as they arrive
 
 ## Done
+- Added local friend-test usage telemetry for `app_opened`, `demo_upload_started`, `demo_upload_succeeded`, `demo_upload_failed`, `fixture_opened`, `replay_opened`, `stats_opened`, and `match_deleted`, implemented `/api/usage-events` in both parser API paths, appended JSONL records to `.tmp-usage-events.ndjson`, documented tailing that file in the runbook, and verified parser build, viewer build, bridge syntax, and a direct `204` telemetry POST smoke test
 - Allowed Cloudflare quick-tunnel hostnames in the Vite dev server with `server.allowedHosts`, so temporary `*.trycloudflare.com` URLs can reach the local viewer without Vite's blocked-host guard
 - Set up the one-origin local tunnel path for friend testing: made parser requests default to same-origin `/api` unless `VITE_PARSER_API_BASE_URL` is explicitly set, added a Vite dev proxy from `/api` to `127.0.0.1:4318`, installed `cloudflared` in the user profile, started a Cloudflare quick tunnel, and verified `http://127.0.0.1:4173/` plus `http://127.0.0.1:4173/api/health`
 - Fixed `Position Player` row assignment without touching the grouped picker layout: each roster entry now keeps one owning display side, rows are emitted only into that CT or T group, and the player sort no longer forces dual-side rows into CT; verified with `cd viewer && npm.cmd run build`

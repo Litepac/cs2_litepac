@@ -1,7 +1,7 @@
 import { constants as fsConstants } from "node:fs";
 import { execFile } from "node:child_process";
 import { createServer } from "node:http";
-import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { access, appendFile, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -14,8 +14,10 @@ const parserRoot = path.resolve(repoRoot, "parser");
 const parserExe = path.resolve(parserRoot, "fixtureparse.exe");
 const assetsRoot = path.resolve(repoRoot, "assets", "maps");
 const schemaPath = path.resolve(repoRoot, "schema", "mastermind.replay.schema.json");
+const usageLogPath = path.resolve(repoRoot, ".tmp-usage-events.ndjson");
 const listenPort = Number(process.env.LITEPAC_PARSER_BRIDGE_PORT || 4318);
 const maxUploadBytes = 2 * 1024 * 1024 * 1024;
+const maxUsageEventBytes = 32 * 1024;
 
 await assertParserExecutableAvailable();
 
@@ -64,6 +66,22 @@ const server = createServer(async (request, response) => {
       })}\n`);
       response.end();
     }
+    return;
+  }
+
+  if (request.url === "/api/usage-events") {
+    if (request.method !== "POST") {
+      writeJson(response, 405, { error: "method not allowed" });
+      return;
+    }
+
+    try {
+      await appendUsageEvent(request);
+    } catch (error) {
+      process.stderr.write(`usage-event logging failed: ${error instanceof Error ? error.message : String(error)}\n`);
+    }
+    response.writeHead(204);
+    response.end();
     return;
   }
 
@@ -216,4 +234,24 @@ function sanitizeDemoFileName(fileName) {
   }
 
   return /\.dem$/i.test(baseName) ? baseName : `${baseName}.dem`;
+}
+
+async function appendUsageEvent(request) {
+  const body = await readRequestBody(request, maxUsageEventBytes);
+  const payload = JSON.parse(body.toString("utf8"));
+  const eventName = typeof payload.event === "string" && payload.event.trim() ? payload.event.trim() : "unknown";
+  const entry = {
+    event: eventName,
+    details: payload.details && typeof payload.details === "object" ? payload.details : undefined,
+    host: request.headers.host || undefined,
+    method: request.method,
+    origin: request.headers.origin || undefined,
+    path: request.url,
+    remote: request.socket.remoteAddress || undefined,
+    timestamp: new Date().toISOString(),
+    userAgent: request.headers["user-agent"] || undefined,
+  };
+  const line = `${JSON.stringify(entry)}\n`;
+  process.stdout.write(line);
+  await appendFile(usageLogPath, line, "utf8");
 }

@@ -56,6 +56,22 @@ func Serve(opts Options) error {
 			return
 		}
 	})
+	mux.HandleFunc("/api/usage-events", func(w http.ResponseWriter, r *http.Request) {
+		allowCORS(w)
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		if r.Method != http.MethodPost {
+			writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
+			return
+		}
+
+		if err := appendUsageEvent(r); err != nil {
+			fmt.Fprintf(os.Stderr, "usage-event logging failed: %v\n", err)
+		}
+		w.WriteHeader(http.StatusNoContent)
+	})
 
 	addr := opts.ListenAddr
 	if strings.TrimSpace(addr) == "" {

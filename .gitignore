@@ -16,5 +16,6 @@ testdata/replays/*.json
 assets/fixtures/*.json
 tmp-*.log
 .tmp-*.log
+.tmp-*.ndjson
 .vscode/
 docs/perf/traces/*.json

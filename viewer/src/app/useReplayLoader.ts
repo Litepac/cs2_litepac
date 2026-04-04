@@ -5,7 +5,7 @@ import { loadReplayURL } from "../replay/loader";
 import type { DemoIngestState } from "../replay/ingestState";
 import { createMatchLibraryEntry, type MatchLibraryEntry, type MatchLibrarySource } from "../replay/matchLibrary";
 import { deleteStoredMatch, listStoredMatches, saveStoredMatch } from "../replay/matchStore";
-import { checkParserBridge, parseDemoFile } from "../replay/parserBridge";
+import { checkParserBridge, parseDemoFile, trackUsageEvent } from "../replay/parserBridge";
 import type { Replay } from "../replay/types";
 
 export function useReplayLoader() {
@@ -86,6 +86,11 @@ export function useReplayLoader() {
       return;
     }
 
+    trackUsageEvent("demo_upload_started", {
+      fileName: file.name,
+      fileSizeBytes: file.size,
+    });
+
     try {
       setError(null);
       setLoadingSource("demo");
@@ -146,8 +151,21 @@ export function useReplayLoader() {
         step: "save",
       });
       await ingestReplay(loaded, "demo", { openViewer: false, persist: true });
+      trackUsageEvent("demo_upload_succeeded", {
+        fileName: file.name,
+        fileSizeBytes: file.size,
+        mapName: loaded.map.displayName,
+        roundCount: loaded.rounds.length,
+        sourceSha256: loaded.sourceDemo.sha256,
+      });
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : String(loadError));
+      const message = loadError instanceof Error ? loadError.message : String(loadError);
+      setError(message);
+      trackUsageEvent("demo_upload_failed", {
+        error: message,
+        fileName: file.name,
+        fileSizeBytes: file.size,
+      });
     } finally {
       setDemoIngestState(null);
       setLoadingSource(null);
@@ -161,6 +179,12 @@ export function useReplayLoader() {
       setLoadingSource("fixture");
       const loaded = await loadReplayURL(`/fixtures/${fileName}`);
       await ingestReplay(loaded, "fixture", { openViewer: true, persist: false });
+      trackUsageEvent("fixture_opened", {
+        fileName,
+        mapName: loaded.map.displayName,
+        roundCount: loaded.rounds.length,
+        sourceSha256: loaded.sourceDemo.sha256,
+      });
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : String(loadError));
     } finally {
@@ -169,6 +193,14 @@ export function useReplayLoader() {
   }
 
   function openReplay(id: string) {
+    const entry = libraryEntries.find((candidate) => candidate.id === id);
+    trackUsageEvent("replay_opened", {
+      matchId: id,
+      mapName: entry?.summary.mapName ?? null,
+      source: entry?.source ?? null,
+      teamAName: entry?.summary.teamAName ?? null,
+      teamBName: entry?.summary.teamBName ?? null,
+    });
     setActiveReplayId(id);
     setRoundIndex(0);
     setSelectedPlayerId(null);
@@ -193,6 +225,9 @@ export function useReplayLoader() {
     try {
       await deleteStoredMatch(id);
       setError(null);
+      trackUsageEvent("match_deleted", {
+        matchId: id,
+      });
     } catch (deleteError) {
       setLibraryEntries(previousEntries);
       if (deletingActiveReplay) {

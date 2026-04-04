@@ -25,6 +25,31 @@ export async function checkParserBridge(): Promise<boolean> {
   }
 }
 
+export function trackUsageEvent(event: string, details?: Record<string, unknown>) {
+  const trimmedEvent = event.trim();
+  if (!trimmedEvent) {
+    return;
+  }
+
+  void fetch(parserApiUrl("/api/usage-events"), {
+    body: JSON.stringify({
+      details: {
+        host: window.location.host,
+        path: window.location.pathname,
+        ...(details ?? {}),
+      },
+      event: trimmedEvent,
+    }),
+    headers: {
+      "Content-Type": "application/json",
+    },
+    keepalive: true,
+    method: "POST",
+  }).catch(() => {
+    // Usage logging must never block core app flows.
+  });
+}
+
 export async function parseDemoFile(
   file: File,
   options?: { onProgress?: (progress: { roundsParsed: number }) => void; onStage?: (stage: DemoParseStage) => void },

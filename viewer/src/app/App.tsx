@@ -38,6 +38,7 @@ import {
   type UtilityAtlasSourceFilter,
   type UtilityAtlasTeamFilter,
 } from "../replay/replayAnalysis";
+import { trackUsageEvent } from "../replay/parserBridge";
 import type { UtilityFocus } from "../replay/utilityFilter";
 import { TimelinePanel } from "../timeline/TimelinePanel";
 import { useFixtureCatalog } from "./useFixtureCatalog";
@@ -223,6 +224,12 @@ export function App() {
   const heatmapLabel = replay ? heatmapScopeLabel(replay, roundIndex, replaySideBlocks, heatmapScope) : "Round";
 
   useEffect(() => {
+    trackUsageEvent("app_opened", {
+      shellPage,
+    });
+  }, []);
+
+  useEffect(() => {
     if (selectedPlayerId == null && utilityAtlasSourceFilter === "selected") {
       setUtilityAtlasSourceFilter("all");
     }
@@ -264,6 +271,14 @@ export function App() {
   }
 
   function handleOpenStats(id: string) {
+    const entry = libraryEntries.find((candidate) => candidate.id === id);
+    trackUsageEvent("stats_opened", {
+      mapName: entry?.summary.mapName ?? null,
+      matchId: id,
+      source: entry?.source ?? null,
+      teamAName: entry?.summary.teamAName ?? null,
+      teamBName: entry?.summary.teamBName ?? null,
+    });
     setStatsMatchId(id);
     setShellPage("stats");
   }

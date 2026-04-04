@@ -42,6 +42,11 @@ npm.cmd run dev -- --host 127.0.0.1 --port 4173
 (Invoke-WebRequest -UseBasicParsing http://127.0.0.1:4318/api/health).Content
 ```
 
+### Watch local tunnel usage events
+```powershell
+Get-Content -Path .\.tmp-usage-events.ndjson -Tail 40 -Wait
+```
+
 ### Fallback local parser bridge
 ```powershell
 cd parser

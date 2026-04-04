@@ -23,6 +23,10 @@ function localParserApiPlugin(): Plugin {
       const command = process.platform === "win32" ? "go.exe" : "go";
       parserProcess = spawn(command, ["run", "./cmd/mastermind-api"], {
         cwd: parserRoot,
+        env: {
+          ...process.env,
+          LITEPAC_USAGE_LOG: path.resolve(repoRoot, ".tmp-usage-events.ndjson"),
+        },
         stdio: ["ignore", "pipe", "pipe"],
         windowsHide: true,
       });

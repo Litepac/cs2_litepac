@@ -24,7 +24,7 @@ Use it when:
 5. Fix either parser semantics or viewer interpretation, not both blindly
 
 ## Local Startup Rules
-- When the user says "start everything up", start the local viewer/parser first, then start a Cloudflare quick tunnel to `http://127.0.0.1:4173`, and keep the usage-event log tail available if friend-testing activity needs to be observed.
+- When the user says "start everything up", start the local viewer/parser first, then start a Cloudflare quick tunnel to `http://127.0.0.1:4173`, and keep the `friend-logs/` tails available if friend-testing activity needs to be observed.
 - Default dev path: run the viewer dev server from `viewer/`. `viewer/vite.config.ts` is expected to spawn the Go parser API from `parser/cmd/mastermind-api`.
 - Fallback path: use `tools/local-parser-bridge.mjs` only if the Go API path is unavailable on the current machine. That bridge serves the same local API surface on `127.0.0.1:4318`, but shells out to `parser/fixtureparse.exe` and only emits an initial `roundsParsed: 0` event before the final result.
 - Before debugging ingest, call `http://127.0.0.1:4318/api/health` and check whether the response is the direct Go API or the fallback Node bridge (`bridge: "node-fixtureparse"`).
@@ -37,6 +37,16 @@ Use it when:
 cd viewer
 npm.cmd run dev -- --host 127.0.0.1 --port 4173
 ```
+
+The `dev` script uses Vite's native config loader on this machine. In the ideal path, `viewer/vite.config.ts` starts the Go parser API child automatically.
+
+### Start viewer + fallback parser bridge in one command
+```powershell
+cd viewer
+npm.cmd run dev:bridge
+```
+
+Use this on the current machine when Windows Application Control blocks the Go child process. It starts the Node parser bridge on `127.0.0.1:4318`, then starts the viewer with the Go child disabled, so `/api/health` still resolves through the viewer dev server on `127.0.0.1:4173`.
 
 ### Start Cloudflare tunnel for friend testing
 ```powershell
@@ -53,7 +63,17 @@ Cloudflare prints a temporary `trycloudflare.com` URL in that terminal. Expect a
 
 ### Watch local tunnel usage events
 ```powershell
-Get-Content -Path .\.tmp-usage-events.ndjson -Tail 40 -Wait
+Get-Content -Path .\friend-logs\usage.log -Tail 40 -Wait
+```
+
+### Watch local feedback submissions
+```powershell
+Get-Content -Path .\friend-logs\feedback.log -Tail 40 -Wait
+```
+
+### Read feedback from the machine log
+```powershell
+Get-Content -Path .\friend-logs\feedback.log -Tail 40
 ```
 
 ### Fallback local parser bridge

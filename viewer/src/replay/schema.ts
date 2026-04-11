@@ -3,6 +3,9 @@ import Ajv2020 from "ajv/dist/2020";
 import schema from "../../../schema/mastermind.replay.schema.json";
 import type { Replay } from "./types";
 
+// The replay schema is repo-owned and validated from a bundled JSON document. We keep
+// strict mode off so Ajv does not reject newer schema keywords before the validator
+// dependency is upgraded, while replay shape errors still fail validation normally.
 const ajv = new Ajv2020({ allErrors: true, strict: false });
 const validate = ajv.compile<Replay>(schema);
 

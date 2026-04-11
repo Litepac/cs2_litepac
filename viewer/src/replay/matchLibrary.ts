@@ -16,9 +16,18 @@ export type MatchSummary = {
   mapImageUrl: string;
   teamAName: string;
   teamBName: string;
+  teamAPlayersLabel: string;
+  teamBPlayersLabel: string;
   teamAScore: number;
   teamBScore: number;
+  winnerTeamId: string | null;
+  winnerTeamName: string | null;
+  teamAResult: "win" | "loss" | "draw";
+  teamBResult: "win" | "loss" | "draw";
+  playedLabel: string | null;
+  playedStatusLabel: string;
   addedLabel: string;
+  addedStatusLabel: string;
   sourceLabel: string;
 };
 
@@ -34,8 +43,12 @@ export function createMatchLibraryEntry(replay: Replay, source: MatchLibrarySour
   };
 }
 
+export function createMatchLibraryFingerprint(replay: Replay, source: MatchLibrarySource) {
+  return `${source}:${replay.sourceDemo.sha256}`;
+}
+
 function createMatchLibraryEntryId(replay: Replay, source: MatchLibrarySource, addedAt: string) {
-  return `${source}:${replay.sourceDemo.sha256}:${addedAt}`;
+  return `${createMatchLibraryFingerprint(replay, source)}:${addedAt}`;
 }
 
 export function deriveMatchSummary(replay: Replay, source: MatchLibrarySource, addedAt: string): MatchSummary {
@@ -62,14 +75,28 @@ export function deriveMatchSummary(replay: Replay, source: MatchLibrarySource, a
     wins.set(sideTeamId, (wins.get(sideTeamId) ?? 0) + 1);
   }
 
+  const teamAScore = teamA ? wins.get(teamA.teamId) ?? 0 : 0;
+  const teamBScore = teamB ? wins.get(teamB.teamId) ?? 0 : 0;
+  const winnerTeamId =
+    !teamA || !teamB ? null : teamAScore === teamBScore ? null : teamAScore > teamBScore ? teamA.teamId : teamB.teamId;
+
   return {
     mapName: replay.map.displayName,
-    mapImageUrl: radarImageURL(replay.map.radarImageKey),
+    mapImageUrl: mapBannerURL(replay.map.mapId),
     teamAName: teamA ? teamName(replay, teamA.teamId) : "Unknown",
     teamBName: teamB ? teamName(replay, teamB.teamId) : "Unknown",
-    teamAScore: teamA ? wins.get(teamA.teamId) ?? 0 : 0,
-    teamBScore: teamB ? wins.get(teamB.teamId) ?? 0 : 0,
+    teamAPlayersLabel: teamRosterLabel(replay, teamA?.teamId ?? null),
+    teamBPlayersLabel: teamRosterLabel(replay, teamB?.teamId ?? null),
+    teamAScore,
+    teamBScore,
+    winnerTeamId,
+    winnerTeamName: winnerTeamId ? teamName(replay, winnerTeamId) : null,
+    teamAResult: teamResult(teamA?.teamId ?? null, winnerTeamId),
+    teamBResult: teamResult(teamB?.teamId ?? null, winnerTeamId),
+    playedLabel: null,
+    playedStatusLabel: "Played",
     addedLabel: formatAddedAt(addedAt),
+    addedStatusLabel: sourceTimeLabel(source),
     sourceLabel: sourceLabel(source),
   };
 }
@@ -120,6 +147,40 @@ function formatAddedAt(value: string) {
   }).format(date);
 }
 
+function teamRosterLabel(replay: Replay, teamId: string | null) {
+  const names = teamRosterNames(replay, teamId);
+  if (names.length === 0) {
+    return "Players unavailable";
+  }
+
+  return names.join(" / ");
+}
+
+function teamRosterNames(replay: Replay, teamId: string | null) {
+  if (!teamId) {
+    return [];
+  }
+
+  const names = Array.from(
+    new Set(
+      replay.players
+        .filter((player) => player.teamId === teamId)
+        .map((player) => player.displayName.trim())
+        .filter((name) => name.length > 0),
+    ),
+  );
+
+  return names;
+}
+
+function teamResult(teamId: string | null, winnerTeamId: string | null): "win" | "loss" | "draw" {
+  if (!teamId || !winnerTeamId) {
+    return "draw";
+  }
+
+  return teamId === winnerTeamId ? "win" : "loss";
+}
+
 function sourceLabel(source: MatchLibrarySource) {
   switch (source) {
     case "demo":
@@ -131,7 +192,30 @@ function sourceLabel(source: MatchLibrarySource) {
   }
 }
 
-function radarImageURL(radarImageKey: string) {
-  const normalizedKey = radarImageKey.replace(/^\/+/, "");
-  return normalizedKey.startsWith("maps/") ? `/${normalizedKey}` : `/maps/${normalizedKey}`;
+function sourceTimeLabel(source: MatchLibrarySource) {
+  switch (source) {
+    case "demo":
+      return "Uploaded";
+    case "fixture":
+      return "Added";
+    case "replay":
+      return "Added";
+  }
 }
+
+function mapBannerURL(mapId: string) {
+  const bannerId = MAP_BANNER_IDS.has(mapId) ? mapId : "default-banner";
+  return bannerId === "default-banner" ? "/maps/default-banner.svg" : `/maps/${bannerId}/banner.svg`;
+}
+
+const MAP_BANNER_IDS = new Set([
+  "de_ancient",
+  "de_anubis",
+  "de_dust2",
+  "de_inferno",
+  "de_mirage",
+  "de_nuke",
+  "de_overpass",
+  "de_train",
+  "de_vertigo",
+]);

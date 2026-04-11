@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 384" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7fc0ef"/>
+      <stop offset="58%" stop-color="#d2b07e"/>
+      <stop offset="100%" stop-color="#684b2e"/>
+    </linearGradient>
+  </defs>
+  <rect width="960" height="384" fill="url(#sky)"/>
+  <rect y="238" width="960" height="146" fill="#302115"/>
+  <rect x="92" y="122" width="182" height="164" fill="#d8ba8d"/>
+  <rect x="184" y="92" width="42" height="194" fill="#c89e65"/>
+  <rect x="310" y="96" width="154" height="190" fill="#c9a373"/>
+  <path d="M496 286V106h194v180Z" fill="#b88453"/>
+  <path d="M548 286V82h54v204Z" fill="#d4a96f"/>
+  <path d="M724 286V146h124v140Z" fill="#8f623e"/>
+  <path d="M332 156h102l34 30v100H332Z" fill="#e9cf9c" opacity="0.78"/>
+  <path d="M0 292 178 262 366 280 520 248 692 266 960 236V384H0Z" fill="#1d1713" opacity="0.9"/>
+  <g fill="#2a4a2b" opacity="0.78">
+    <path d="M760 286c10-44 22-78 36-104 14 28 22 62 24 104Z"/>
+    <path d="M790 286c10-36 22-64 34-86 10 22 18 50 22 86Z"/>
+  </g>
+  <rect y="318" width="960" height="66" fill="#0b0e11" opacity="0.94"/>
+</svg>

@@ -17,14 +17,21 @@ export function interpolatePlayerStreamSample(
   stream: Round["playerStreams"][number],
   currentTick: number,
 ): InterpolatedPlayerStreamSample | null {
+  const sampleIntervalTicks = Math.max(1, stream.sampleIntervalTicks || 1);
   const relativeTick = currentTick - stream.sampleOriginTick;
-  const baseIndex = Math.floor(relativeTick);
+  const lastSampleTick = stream.sampleOriginTick + sampleIntervalTicks * Math.max(0, stream.x.length - 1);
+  if (currentTick > lastSampleTick) {
+    return null;
+  }
+
+  const relativeSampleIndex = relativeTick / sampleIntervalTicks;
+  const baseIndex = Math.floor(relativeSampleIndex);
   if (baseIndex < 0 || baseIndex >= stream.x.length) {
     return null;
   }
 
   const nextIndex = Math.min(stream.x.length - 1, baseIndex + 1);
-  const mix = Math.max(0, Math.min(1, relativeTick - baseIndex));
+  const mix = Math.max(0, Math.min(1, relativeSampleIndex - baseIndex));
 
   return {
     activeWeapon: stream.activeWeapon[baseIndex] ?? null,

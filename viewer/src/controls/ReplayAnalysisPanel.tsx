@@ -13,6 +13,15 @@ type AnalysisPanelPlayer = {
   teamName: string;
 };
 
+type AnalysisTeamStripRow = {
+  active: boolean;
+  disabled?: boolean;
+  key: string;
+  label: string;
+  playerIds: string[];
+  title: string;
+};
+
 type Props = {
   analysisMode: ReplayAnalysisMode;
   analysisPlayers: AnalysisPanelPlayer[];
@@ -155,7 +164,7 @@ export function ReplayAnalysisPanel({
   const positionPlayerRoster = positionPlayerCompareMode ? buildPositionPlayerRoster(analysisPlayers) : [];
 
   return (
-    <section className="replay-analysis-panel">
+    <section className={liveMode ? "replay-analysis-panel replay-analysis-panel-mode-live" : "replay-analysis-panel replay-analysis-panel-mode-analysis"}>
       <div className="replay-analysis-panel-header">
         <div className="replay-analysis-panel-heading">
           <span className="replay-analysis-panel-label">Analysis</span>
@@ -250,7 +259,7 @@ export function ReplayAnalysisPanel({
       {atlasMode ? (
         <div className="replay-analysis-control-group replay-analysis-control-group-inline">
           <span className="replay-analysis-control-label">Utility</span>
-          <div className="timeline-segmented-row replay-analysis-segmented-row replay-analysis-segmented-row-wrap">
+          <div className="timeline-segmented-row replay-analysis-segmented-row replay-analysis-segmented-row-utility">
             {UTILITY_OPTIONS.map((option) => (
               <button
                 key={option.value}
@@ -298,18 +307,26 @@ export function ReplayAnalysisPanel({
           />
         ) : (
           <>
-            <AnalysisPlayerGroup
-              title="CT"
-              players={ctPlayers}
-              selectedPlayerId={selectedPlayerId}
-              selectedActive={selectedActive}
+            <AnalysisTeamStrip
+              side="CT"
+              rows={ctPlayers.map((player) => ({
+                active: selectedActive && player.playerId === selectedPlayerId,
+                key: `${player.side}:${player.playerId}`,
+                label: player.displayName,
+                playerIds: [player.playerId],
+                title: player.displayName,
+              }))}
               onTogglePlayer={onAnalysisPlayerToggle}
             />
-            <AnalysisPlayerGroup
-              title="T"
-              players={tPlayers}
-              selectedPlayerId={selectedPlayerId}
-              selectedActive={selectedActive}
+            <AnalysisTeamStrip
+              side="T"
+              rows={tPlayers.map((player) => ({
+                active: selectedActive && player.playerId === selectedPlayerId,
+                key: `${player.side}:${player.playerId}`,
+                label: player.displayName,
+                playerIds: [player.playerId],
+                title: player.displayName,
+              }))}
               onTogglePlayer={onAnalysisPlayerToggle}
             />
           </>
@@ -343,45 +360,37 @@ export function ReplayAnalysisPanel({
 }
 
 type AnalysisPlayerGroupProps = {
-  title: string;
-  players: AnalysisPanelPlayer[];
-  selectedPlayerId: string | null;
-  selectedActive: boolean;
+  rows: AnalysisTeamStripRow[];
+  side: Side;
   onTogglePlayer: (playerIds: string[], playerSide: Side) => void;
 };
 
-function AnalysisPlayerGroup({
-  title,
-  players,
-  selectedPlayerId,
-  selectedActive,
-  onTogglePlayer,
-}: AnalysisPlayerGroupProps) {
-  if (players.length === 0) {
+function AnalysisTeamStrip({ rows, side, onTogglePlayer }: AnalysisPlayerGroupProps) {
+  if (rows.length === 0) {
     return null;
   }
 
   return (
-    <div className={`replay-analysis-player-group replay-analysis-player-group-${title.toLowerCase()}`}>
-      <span className={`replay-analysis-player-group-title replay-analysis-player-group-title-${title.toLowerCase()}`}>
-        {title}
+    <div className={`analysis-team-strip analysis-team-strip-${side.toLowerCase()}`}>
+      <span className={`analysis-team-strip-title analysis-team-strip-title-${side.toLowerCase()}`}>
+        {side}
       </span>
-      <div className="replay-analysis-player-grid">
-        {players.map((player) => {
-          const selectionKey = `${player.side}:${player.playerId}`;
-          const active = selectedActive && player.playerId === selectedPlayerId;
+      <div className="analysis-team-strip-row">
+        {rows.map((row) => {
           return (
             <button
-              key={selectionKey}
-              className={
-                active
-                  ? `replay-analysis-player-chip replay-analysis-player-chip-${player.side.toLowerCase()} replay-analysis-player-chip-active`
-                  : `replay-analysis-player-chip replay-analysis-player-chip-${player.side.toLowerCase()}`
-              }
-              onClick={() => onTogglePlayer([player.playerId], player.side)}
-              title={player.displayName}
+              key={row.key}
+              className={[
+                "analysis-team-strip-chip",
+                `analysis-team-strip-chip-${side.toLowerCase()}`,
+                row.active ? "analysis-team-strip-chip-active" : "",
+              ].filter(Boolean).join(" ")}
+              disabled={row.disabled}
+              onClick={() => onTogglePlayer(row.playerIds, side)}
+              title={row.title}
+              type="button"
             >
-              {player.displayName}
+              {row.label}
             </button>
           );
         })}
@@ -426,46 +435,29 @@ function PositionPlayerRoster({
   return (
     <div className="position-player-roster">
       {players.map((group) => (
-        <div
-          className={`replay-analysis-player-group replay-analysis-player-group-${group.side.toLowerCase()}`}
+        <AnalysisTeamStrip
           key={group.side}
-        >
-          <span
-            className={`replay-analysis-player-group-title replay-analysis-player-group-title-${group.side.toLowerCase()}`}
-          >
-            {group.side}
-          </span>
-          <div className="replay-analysis-player-grid">
-            {group.rows.map((player) => {
-              const playerIds = player.playerIdsBySide[group.side] ?? [];
-              const selectionKey = toPositionPlayerRosterSelectionKey(playerIds, group.side);
-              const active = selectedPlayerKeys.includes(selectionKey);
-              const sideVisible = selectedTeamFilter === "all" || selectedTeamFilter === group.side;
-              const disabled = disableUnselected && !active;
+          side={group.side}
+          rows={group.rows.map((player) => {
+            const playerIds = player.playerIdsBySide[group.side] ?? [];
+            const selectionKey = toPositionPlayerRosterSelectionKey(playerIds, group.side);
+            const active = selectedPlayerKeys.includes(selectionKey);
+            const sideVisible = selectedTeamFilter === "all" || selectedTeamFilter === group.side;
+            const disabled = disableUnselected && !active;
 
-              return (
-                <button
-                  className={
-                    active
-                      ? `replay-analysis-player-chip replay-analysis-player-chip-${group.side.toLowerCase()} replay-analysis-player-chip-active`
-                      : `replay-analysis-player-chip replay-analysis-player-chip-${group.side.toLowerCase()}`
-                  }
-                  disabled={disabled}
-                  key={`${group.side}:${player.rowKey}`}
-                  onClick={() => onTogglePlayer(playerIds, group.side)}
-                  title={
-                    disabled
-                      ? `Selection limit reached (${selectedPlayerKeys.length} players)`
-                      : `${player.displayName} ${group.side}${sideVisible ? "" : " - outside current team filter, click to add and switch back to All"}`
-                  }
-                  type="button"
-                >
-                  {player.displayName}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+            return {
+              active,
+              disabled,
+              key: `${group.side}:${player.rowKey}`,
+              label: player.displayName,
+              playerIds,
+              title: disabled
+                ? `Selection limit reached (${selectedPlayerKeys.length} players)`
+                : `${player.displayName} ${group.side}${sideVisible ? "" : " - outside current team filter, click to add and switch back to All"}`,
+            } satisfies AnalysisTeamStripRow;
+          })}
+          onTogglePlayer={onTogglePlayer}
+        />
       ))}
     </div>
   );
@@ -475,7 +467,7 @@ function buildPositionPlayerRoster(players: AnalysisPanelPlayer[]) {
   const roster = new Map<string, PositionPlayerRosterRow>();
 
   for (const player of players) {
-    const rowKey = `${player.teamId}:${player.displayName.trim().toLowerCase() || player.playerId}`;
+    const rowKey = `${player.teamId}:${player.playerId}`;
     const row = roster.get(rowKey);
     if (!row) {
       roster.set(rowKey, {

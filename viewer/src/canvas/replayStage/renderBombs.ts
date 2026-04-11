@@ -2,18 +2,10 @@ import { Container, Graphics } from "pixi.js";
 
 import type { RadarViewport } from "../../maps/transform";
 import { worldToScreen } from "../../maps/transform";
+import { resolveActiveBombState, resolveDroppedBombState, type ActiveBombState, type DroppedBombState } from "../../replay/bombState";
 import type { Replay, Round } from "../../replay/types";
 import { RECENT_BOMB_WINDOW_TICKS } from "./constants";
 import { clamp } from "./camera";
-
-type ActiveBombState = {
-  defuseCompletionTick: number | null;
-  defuseStartTick: number | null;
-  explodeTick: number | null;
-  plantedTick: number;
-  x: number;
-  y: number;
-};
 
 export function renderBombOverlays(
   layer: Container,
@@ -25,6 +17,11 @@ export function renderBombOverlays(
   const bombState = resolveActiveBombState(replay, round, currentTick);
   if (bombState) {
     drawBombStateOverlay(layer, replay, bombState, currentTick, radarViewport);
+  } else {
+    const droppedBombState = resolveDroppedBombState(round, currentTick);
+    if (droppedBombState) {
+      drawDroppedBombOverlay(layer, replay, droppedBombState, currentTick, radarViewport);
+    }
   }
 
   for (const bombEvent of round.bombEvents) {
@@ -148,68 +145,48 @@ function drawBombStateOverlay(
   layer.addChild(marker);
 }
 
-function resolveActiveBombState(replay: Replay, round: Round, currentTick: number): ActiveBombState | null {
-  const plantedEvents = round.bombEvents.filter((event) => event.type === "planted" && event.tick <= currentTick);
-  const planted = plantedEvents[plantedEvents.length - 1];
-  if (!planted || planted.x == null || planted.y == null) {
-    return null;
-  }
+function drawDroppedBombOverlay(
+  layer: Container,
+  replay: Replay,
+  state: DroppedBombState,
+  currentTick: number,
+  radarViewport: RadarViewport,
+) {
+  const point = worldToScreen(replay, radarViewport, state.x, state.y);
+  const pulse = 0.5 + 0.5 * Math.sin((currentTick - state.droppedTick) / 10);
+  const glowRadius = 10.6 + pulse * 1.6;
+  const marker = new Graphics();
 
-  const terminal = round.bombEvents.find(
-    (event) => event.tick > planted.tick && ["defused", "exploded"].includes(event.type),
-  );
-  if (terminal && terminal.tick <= currentTick) {
-    return null;
-  }
+  marker.circle(point.x, point.y, glowRadius + 4.2);
+  marker.fill({ color: 0xffd28a, alpha: 0.06 + pulse * 0.05 });
+  marker.circle(point.x, point.y, glowRadius + 1.5);
+  marker.fill({ color: 0x0b1116, alpha: 0.74 });
+  marker.circle(point.x, point.y, glowRadius + 1.5);
+  marker.stroke({ color: 0x6f5630, width: 1.05, alpha: 0.92 });
+  marker.circle(point.x, point.y, 8.9);
+  marker.stroke({ color: 0x162029, width: 0.9, alpha: 0.88 });
 
-  const bombFlowEvents = round.bombEvents.filter(
-    (event) => event.tick > planted.tick && ["defuse_start", "defuse_abort", "defused"].includes(event.type),
-  );
-
-  let activeDefuseStart: Round["bombEvents"][number] | null = null;
-  for (const event of bombFlowEvents) {
-    if (event.tick > currentTick) {
-      break;
-    }
-
-    if (event.type === "defuse_start") {
-      activeDefuseStart = event;
-      continue;
-    }
-
-    if (event.type === "defuse_abort" || event.type === "defused") {
-      activeDefuseStart = null;
-    }
-  }
-
-  let defuseCompletionTick: number | null = null;
-  if (activeDefuseStart) {
-    const nextBombFlow = bombFlowEvents.find((event) => event.tick > activeDefuseStart.tick);
-    if (nextBombFlow?.type === "defused") {
-      defuseCompletionTick = nextBombFlow.tick;
+  marker.roundRect(point.x - 4.0, point.y - 5.3, 8.0, 10.6, 1.0);
+  marker.fill({ color: 0xf3b259, alpha: 0.98 });
+  marker.roundRect(point.x - 4.0, point.y - 5.3, 8.0, 10.6, 1.0);
+  marker.stroke({ color: 0x12191f, width: 0.92, alpha: 0.98 });
+  marker.roundRect(point.x - 2.05, point.y - 3.05, 4.1, 1.25, 0.24);
+  marker.fill({ color: 0x12191f, alpha: 0.98 });
+  marker.roundRect(point.x - 2.05, point.y - 0.68, 4.1, 4.0, 0.38);
+  marker.stroke({ color: 0x12191f, width: 0.7, alpha: 0.98 });
+  for (const keypadX of [-0.88, 0, 0.88]) {
+    for (const keypadY of [0.1, 1.02, 1.94]) {
+      marker.rect(point.x + keypadX - 0.23, point.y + keypadY - 0.23, 0.46, 0.46);
+      marker.fill({ color: 0x12191f, alpha: 0.98 });
     }
   }
 
-  const explodeEvent = round.bombEvents.find((event) => event.tick > planted.tick && event.type === "exploded");
-  const explodeTick =
-    replayBombExplodeTick(round, replay.match.tickRate, replay.match.bombTimeSeconds, planted.tick) ?? explodeEvent?.tick ?? null;
+  marker.moveTo(point.x - 1.0, point.y - 6.4);
+  marker.lineTo(point.x - 1.0, point.y - 8.0);
+  marker.lineTo(point.x + 1.75, point.y - 8.0);
+  marker.stroke({ color: 0xffefba, width: 0.96, alpha: 0.98 });
 
-  return {
-    defuseCompletionTick,
-    defuseStartTick: activeDefuseStart?.tick ?? null,
-    explodeTick,
-    plantedTick: planted.tick,
-    x: planted.x,
-    y: planted.y,
-  };
-}
-
-function replayBombExplodeTick(round: Round, tickRate: number, bombTimeSeconds: number | null, plantedTick: number) {
-  if (bombTimeSeconds == null || !Number.isFinite(bombTimeSeconds) || bombTimeSeconds <= 0) {
-    return null;
-  }
-
-  return plantedTick + Math.round(bombTimeSeconds * tickRate);
+  layer.addChild(marker);
 }
 
 function drawArcStroke(

@@ -25,7 +25,9 @@ export function resolvePlayerEquipmentState({
   recentUtilityThrow = false,
 }: ResolveEquipmentStateArgs) {
   const activeUtilityKind = utilityKindFromWeaponName(activeWeapon);
-  const displayWeapon = activeWeaponClass === "utility" ? mainWeapon ?? activeWeapon : activeWeapon ?? mainWeapon;
+  const currentWeapon = activeWeapon ?? mainWeapon;
+  const primaryWeapon = mainWeapon ?? activeWeapon;
+  const displayWeapon = activeWeaponClass === "utility" ? mainWeapon ?? activeWeapon : currentWeapon;
 
   let tokenMode: PlayerTokenMode;
   if (recentUtilityThrow || activeWeaponClass === "utility") {
@@ -42,6 +44,8 @@ export function resolvePlayerEquipmentState({
 
   return {
     activeUtilityKind,
+    currentWeapon,
+    primaryWeapon,
     displayWeapon,
     tokenMode,
   };
@@ -72,7 +76,7 @@ export function utilityKindFromWeaponName(weaponName: string | null): UtilityKin
   }
 }
 
-function normalizeWeaponName(weaponName: string | null) {
+export function normalizeWeaponName(weaponName: string | null) {
   if (!weaponName) {
     return null;
   }

@@ -10,10 +10,12 @@ import (
 
 func (s *parseState) registerBombHandlers() {
 	s.parser.RegisterEventHandler(func(e demoevents.BombPickup) {
+		s.lastBombCarrierID = s.ensurePlayer(e.Player)
 		s.appendBombEvent("pickup", e.Player, nil, positionOrBomb(s.parser.GameState().Bomb()))
 	})
 
 	s.parser.RegisterEventHandler(func(e demoevents.BombDropped) {
+		s.lastBombCarrierID = ""
 		s.appendBombEvent("drop", e.Player, nil, positionOrBomb(s.parser.GameState().Bomb()))
 	})
 
@@ -22,6 +24,7 @@ func (s *parseState) registerBombHandlers() {
 	})
 
 	s.parser.RegisterEventHandler(func(e demoevents.BombPlanted) {
+		s.lastBombCarrierID = ""
 		s.appendBombEvent("planted", e.Player, norm.BombSite(e.Site), positionOrBomb(s.parser.GameState().Bomb()))
 	})
 
@@ -34,10 +37,12 @@ func (s *parseState) registerBombHandlers() {
 	})
 
 	s.parser.RegisterEventHandler(func(e demoevents.BombDefused) {
+		s.lastBombCarrierID = ""
 		s.appendBombEvent("defused", e.Player, norm.BombSite(e.Site), positionOrBomb(s.parser.GameState().Bomb()))
 	})
 
 	s.parser.RegisterEventHandler(func(e demoevents.BombExplode) {
+		s.lastBombCarrierID = ""
 		s.appendBombEvent("exploded", e.Player, norm.BombSite(e.Site), positionOrBomb(s.parser.GameState().Bomb()))
 	})
 }
@@ -47,10 +52,16 @@ func (s *parseState) appendBombEvent(eventType string, player *common.Player, si
 		return
 	}
 
+	playerID := nilIfEmpty(s.ensurePlayer(player))
+	if (eventType == "pickup" || eventType == "drop") &&
+		s.currentRound.HasNearbyBombEvent(s.parser.CurrentFrame(), syntheticBombEventTickWindow, eventType, playerID) {
+		return
+	}
+
 	s.currentRound.AppendBombEvent(replay.BombEvent{
 		Tick:     s.parser.CurrentFrame(),
 		Type:     eventType,
-		PlayerID: nilIfEmpty(s.ensurePlayer(player)),
+		PlayerID: playerID,
 		Site:     site,
 		X:        pos.x,
 		Y:        pos.y,

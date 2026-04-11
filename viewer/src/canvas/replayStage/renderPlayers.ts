@@ -98,7 +98,7 @@ export function renderPlayers(
     });
   }
 
-  drawPlayerLabels(eventLayer, livePlayers);
+  drawPlayerLabels(eventLayer, livePlayers, radarViewport);
 }
 
 function drawPlayerLabel(
@@ -109,13 +109,14 @@ function drawPlayerLabel(
   selected: boolean,
   side: "T" | "CT" | null,
   hasBomb: boolean,
+  fontSize: number,
 ) {
   const text = new Text({
     text: displayName,
     style: {
       fill: 0xf2f4f8,
       fontFamily: "IBM Plex Sans, Segoe UI, sans-serif",
-      fontSize: selected ? 9 : 8,
+      fontSize,
       fontWeight: selected ? "700" : "600",
       letterSpacing: 0.15,
     },
@@ -657,16 +658,7 @@ function drawArcStroke(
   marker.arc(centerX, centerY, radius, startAngle, endAngle);
 }
 
-function compactPlayerLabel(name: string, maxLength: number) {
-  if (name.length <= maxLength) {
-    return name;
-  }
-
-  return `${name.slice(0, Math.max(3, maxLength - 1))}...`;
-}
-
-function drawPlayerLabels(layer: Container, livePlayers: LivePlayerEntry[]) {
-  const occupied: Array<{ bottom: number; left: number; right: number; top: number }> = [];
+function drawPlayerLabels(layer: Container, livePlayers: LivePlayerEntry[], radarViewport: RadarViewport) {
   const ordered = [...livePlayers].sort((left, right) => {
     if (left.selected !== right.selected) {
       return left.selected ? -1 : 1;
@@ -680,54 +672,19 @@ function drawPlayerLabels(layer: Container, livePlayers: LivePlayerEntry[]) {
       continue;
     }
 
-    const displayName = compactPlayerLabel(entry.player.displayName, entry.selected ? 12 : 9);
-    const fontSize = entry.selected ? 9 : 8;
+    const displayName = entry.player.displayName;
+    const labelScale = clamp(0.84 + radarViewport.scale * 0.16, 0.84, 1.06);
+    const fontSize = Math.round((entry.selected ? 9 : 8) * labelScale);
     const paddingX = entry.selected ? 6 : 5;
     const labelWidth = estimateLabelWidth(displayName, fontSize) + paddingX * 2;
     const labelHeight = fontSize + 6;
     const markerRadius = entry.selected ? 11 : 8;
-    const positions = [
-      {
-        x: Math.round(entry.point.x - labelWidth / 2),
-        y: Math.round(entry.point.y - markerRadius - labelHeight - 6),
-      },
-      {
-        x: Math.round(entry.point.x - labelWidth / 2),
-        y: Math.round(entry.point.y + markerRadius + 6),
-      },
-    ];
-    if (entry.side === "T") {
-      positions.reverse();
-    }
-
-    const placement =
-      positions.find((candidate) => !intersectsAny(candidate.x, candidate.y, labelWidth, labelHeight, occupied)) ??
-      (entry.selected ? positions[0] : null);
-
-    if (!placement) {
-      continue;
-    }
-
-    drawPlayerLabel(layer, placement.x, placement.y, displayName, entry.selected, entry.side, entry.hasBomb);
-    occupied.push({
-      bottom: placement.y + labelHeight,
-      left: placement.x,
-      right: placement.x + labelWidth,
-      top: placement.y,
-    });
+    const labelX = Math.round(entry.point.x - labelWidth / 2);
+    const labelY = Math.round(entry.point.y + markerRadius + 2);
+    drawPlayerLabel(layer, labelX, labelY, displayName, entry.selected, entry.side, entry.hasBomb, fontSize);
   }
 }
 
 function estimateLabelWidth(label: string, fontSize: number) {
   return Math.max(24, Math.round(label.length * fontSize * 0.58));
-}
-
-function intersectsAny(
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  occupied: Array<{ bottom: number; left: number; right: number; top: number }>,
-) {
-  return occupied.some((entry) => x < entry.right && x + width > entry.left && y < entry.bottom && y + height > entry.top);
 }

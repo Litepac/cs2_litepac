@@ -96,6 +96,39 @@ func ValidateReplay(data replay.Replay) error {
 			}
 		}
 
+		if round.DroppedBombStream != nil {
+			count := len(round.DroppedBombStream.X)
+			if count != len(round.DroppedBombStream.Y) || count != len(round.DroppedBombStream.Z) {
+				return fmt.Errorf("round %d dropped bomb stream array lengths differ", round.RoundNumber)
+			}
+
+			if count == 0 {
+				return fmt.Errorf("round %d dropped bomb stream has no samples", round.RoundNumber)
+			}
+
+			if round.DroppedBombStream.SampleIntervalTicks <= 0 {
+				return fmt.Errorf("round %d dropped bomb stream has non-positive sample interval", round.RoundNumber)
+			}
+
+			if round.DroppedBombStream.SampleOriginTick < round.StartTick || round.DroppedBombStream.SampleOriginTick > effectiveEndTick {
+				return fmt.Errorf(
+					"round %d dropped bomb stream starts at tick %d outside round bounds",
+					round.RoundNumber,
+					round.DroppedBombStream.SampleOriginTick,
+				)
+			}
+
+			lastSampleTick := round.DroppedBombStream.SampleOriginTick + (count-1)*round.DroppedBombStream.SampleIntervalTicks
+			if lastSampleTick > effectiveEndTick {
+				return fmt.Errorf(
+					"round %d dropped bomb stream ends at tick %d after effective round end %d",
+					round.RoundNumber,
+					lastSampleTick,
+					effectiveEndTick,
+				)
+			}
+		}
+
 		for _, utility := range round.UtilityEntities {
 			if utility.StartTick < round.StartTick || utility.StartTick > round.EndTick {
 				return fmt.Errorf("round %d utility %s starts outside round bounds", round.RoundNumber, utility.UtilityID)

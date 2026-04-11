@@ -146,3 +146,62 @@ func TestTrackSmokeDisplacementFromHESkipsInactiveOrDistantSmokes(t *testing.T) 
 		t.Fatalf("expected expired smoke to stay unchanged, got %+v", tracker.byID["smoke-expired"].PhaseEvents)
 	}
 }
+
+func TestInfernoActiveCenterPrefersActiveFires(t *testing.T) {
+	inferno := newInfernoWithFires(t, []bool{true, false})
+
+	pos, activeFireCount := InfernoActiveCenter(inferno)
+
+	if activeFireCount != 1 {
+		t.Fatalf("expected 1 active fire, got %d", activeFireCount)
+	}
+
+	expected := r3.Vector{X: 110, Y: 220, Z: 330}
+	if pos != expected {
+		t.Fatalf("expected active-fire center %+v, got %+v", expected, pos)
+	}
+}
+
+func TestInfernoActiveCenterFallsBackToAllFires(t *testing.T) {
+	inferno := newInfernoWithFires(t, []bool{false, false})
+
+	pos, activeFireCount := InfernoActiveCenter(inferno)
+
+	if activeFireCount != 0 {
+		t.Fatalf("expected 0 active fires, got %d", activeFireCount)
+	}
+
+	expected := r3.Vector{X: 150, Y: 260, Z: 370}
+	if pos != expected {
+		t.Fatalf("expected fallback center %+v, got %+v", expected, pos)
+	}
+}
+
+func newInfernoWithFires(t *testing.T, burning []bool) *common.Inferno {
+	t.Helper()
+
+	entity := new(stfake.Entity)
+	entity.On("ID").Return(88)
+	entity.On("Position").Return(r3.Vector{X: 100, Y: 200, Z: 300})
+	entity.On("PropertyValueMust", "m_fireCount").Return(st.PropertyValue{Any: int32(len(burning))})
+
+	for index, isBurning := range burning {
+		i := index
+		iStr := map[int]string{0: "0000", 1: "0001"}[i]
+		entity.On("PropertyValueMust", "m_bFireIsBurning."+iStr).Return(st.PropertyValue{Any: isBurning})
+		entity.On("Property", "m_firePositions."+iStr).Return(nil)
+
+		if i == 0 {
+			entity.On("PropertyValueMust", "m_fireXDelta."+iStr).Return(st.PropertyValue{Any: int32(10)})
+			entity.On("PropertyValueMust", "m_fireYDelta."+iStr).Return(st.PropertyValue{Any: int32(20)})
+			entity.On("PropertyValueMust", "m_fireZDelta."+iStr).Return(st.PropertyValue{Any: int32(30)})
+			continue
+		}
+
+		entity.On("PropertyValueMust", "m_fireXDelta."+iStr).Return(st.PropertyValue{Any: int32(90)})
+		entity.On("PropertyValueMust", "m_fireYDelta."+iStr).Return(st.PropertyValue{Any: int32(100)})
+		entity.On("PropertyValueMust", "m_fireZDelta."+iStr).Return(st.PropertyValue{Any: int32(110)})
+	}
+
+	return common.NewInferno(nil, entity, nil)
+}

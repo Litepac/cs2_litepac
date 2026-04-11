@@ -11,34 +11,37 @@ import (
 )
 
 type Builder struct {
-	round          replay.Round
-	playerStreams  map[string]*positions.Builder
-	utilityTracker *utility.Tracker
-	ended          bool
+	round             replay.Round
+	playerStreams     map[string]*positions.Builder
+	droppedBombStream *positionStreamBuilder
+	utilityTracker    *utility.Tracker
+	ended             bool
 }
 
 func NewBuilder(roundNumber, startTick int, scoreBefore replay.Score) *Builder {
 	return &Builder{
 		round: replay.Round{
-			RoundNumber:     roundNumber,
-			StartTick:       startTick,
-			FreezeEndTick:   nil,
-			EndTick:         startTick,
-			OfficialEndTick: nil,
-			ScoreBefore:     scoreBefore,
-			ScoreAfter:      scoreBefore,
-			WinnerSide:      nil,
-			EndReason:       nil,
-			PlayerStreams:   []replay.PlayerStream{},
-			BlindEvents:     []replay.BlindEvent{},
-			FireEvents:      []replay.FireEvent{},
-			HurtEvents:      []replay.HurtEvent{},
-			KillEvents:      []replay.KillEvent{},
-			BombEvents:      []replay.BombEvent{},
-			UtilityEntities: []replay.UtilityEntity{},
+			RoundNumber:       roundNumber,
+			StartTick:         startTick,
+			FreezeEndTick:     nil,
+			EndTick:           startTick,
+			OfficialEndTick:   nil,
+			ScoreBefore:       scoreBefore,
+			ScoreAfter:        scoreBefore,
+			WinnerSide:        nil,
+			EndReason:         nil,
+			PlayerStreams:     []replay.PlayerStream{},
+			DroppedBombStream: nil,
+			BlindEvents:       []replay.BlindEvent{},
+			FireEvents:        []replay.FireEvent{},
+			HurtEvents:        []replay.HurtEvent{},
+			KillEvents:        []replay.KillEvent{},
+			BombEvents:        []replay.BombEvent{},
+			UtilityEntities:   []replay.UtilityEntity{},
 		},
-		playerStreams:  map[string]*positions.Builder{},
-		utilityTracker: utility.NewTracker(),
+		playerStreams:     map[string]*positions.Builder{},
+		droppedBombStream: newPositionStreamBuilder(),
+		utilityTracker:    utility.NewTracker(),
 	}
 }
 
@@ -92,6 +95,23 @@ func (b *Builder) AppendBombEvent(event replay.BombEvent) {
 	b.round.BombEvents = append(b.round.BombEvents, event)
 }
 
+func (b *Builder) HasNearbyBombEvent(tick int, maxTickDelta int, eventType string, playerID *string) bool {
+	for index := len(b.round.BombEvents) - 1; index >= 0; index-- {
+		event := b.round.BombEvents[index]
+		if tick-event.Tick > maxTickDelta {
+			return false
+		}
+		if event.Type != eventType {
+			continue
+		}
+		if sameOptionalString(event.PlayerID, playerID) {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (b *Builder) UtilityTracker() *utility.Tracker {
 	return b.utilityTracker
 }
@@ -132,26 +152,30 @@ func (b *Builder) SamplePlayer(
 	}
 
 	stream.Append(positions.Sample{
-		Tick:                tick,
-		X:                   x,
-		Y:                   y,
-		Z:                   z,
-		Yaw:                 yaw,
-		Alive:               alive,
-		HasBomb:             hasBomb,
-		Health:              health,
-		Armor:               armor,
-		Helmet:              hasHelmet,
-		Money:               money,
-		Weapon:              activeWeapon,
-		WeaponClass:         activeWeaponClass,
-		MainWeapon:          mainWeapon,
-		Flashbangs:          flashbangs,
-		Smokes:              smokes,
-		HEGrenades:          heGrenades,
-		FireGrenades:        fireGrenades,
-		Decoys:              decoys,
+		Tick:         tick,
+		X:            x,
+		Y:            y,
+		Z:            z,
+		Yaw:          yaw,
+		Alive:        alive,
+		HasBomb:      hasBomb,
+		Health:       health,
+		Armor:        armor,
+		Helmet:       hasHelmet,
+		Money:        money,
+		Weapon:       activeWeapon,
+		WeaponClass:  activeWeaponClass,
+		MainWeapon:   mainWeapon,
+		Flashbangs:   flashbangs,
+		Smokes:       smokes,
+		HEGrenades:   heGrenades,
+		FireGrenades: fireGrenades,
+		Decoys:       decoys,
 	})
+}
+
+func (b *Builder) SampleDroppedBombPosition(tick int, x, y, z *float64) {
+	b.droppedBombStream.Append(tick, x, y, z)
 }
 
 func (b *Builder) Build(tickRate float64) replay.Round {
@@ -181,7 +205,19 @@ func (b *Builder) Build(tickRate float64) replay.Round {
 	sort.Slice(out.BombEvents, func(i, j int) bool {
 		return out.BombEvents[i].Tick < out.BombEvents[j].Tick
 	})
+	out.DroppedBombStream = b.droppedBombStream.Build()
 	out.UtilityEntities = b.utilityTracker.Build(tickRate)
 
 	return out
+}
+
+func sameOptionalString(left, right *string) bool {
+	switch {
+	case left == nil && right == nil:
+		return true
+	case left == nil || right == nil:
+		return false
+	default:
+		return *left == *right
+	}
 }

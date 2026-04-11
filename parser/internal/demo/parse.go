@@ -68,17 +68,18 @@ func Parse(opts Options) error {
 	state.finalizeOpenRound(parser.CurrentFrame())
 	state.replay.SourceDemo.TickRate = parser.TickRate()
 	state.replay.SourceDemo.TickCount = parser.CurrentFrame()
-	state.replay.SourceDemo.Notes = dedupe(state.notes)
-	bombTimeSeconds := bombTimeSeconds(parser.GameState())
-	if bombTimeSeconds == nil {
-		bombTimeSeconds = inferBombTimeSeconds(state.roundList, parser.TickRate())
+	bombTimeSeconds, bombTimeNote := resolveBombTimeSeconds(parser.GameState(), state.roundList, parser.TickRate())
+	if bombTimeNote != "" {
+		state.notes = append(state.notes, bombTimeNote)
 	}
 	state.replay.Match = replay.Match{
-		MatchID:         nil,
-		TickRate:        parser.TickRate(),
-		TotalRounds:     len(state.roundList),
-		GameMode:        nil,
-		BombTimeSeconds: bombTimeSeconds,
+		MatchID:           nil,
+		TickRate:          parser.TickRate(),
+		TotalRounds:       len(state.roundList),
+		GameMode:          nil,
+		RoundTimeSeconds:  roundTimeSeconds(parser.GameState()),
+		FreezeTimeSeconds: freezeTimeSeconds(parser.GameState()),
+		BombTimeSeconds:   bombTimeSeconds,
 	}
 
 	if state.mapID == "" {
@@ -98,6 +99,8 @@ func Parse(opts Options) error {
 	}
 	state.replay.Teams = orderedTeams(state.teams)
 	state.replay.Players = orderedPlayers(state.players)
+	state.notes = append(state.notes, syntheticPlayerIDWarnings(state.replay.Players)...)
+	state.replay.SourceDemo.Notes = dedupe(state.notes)
 	state.replay.Rounds = state.roundList
 
 	if err := validate.ValidateReplay(state.replay); err != nil {

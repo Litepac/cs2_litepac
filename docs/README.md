@@ -1,6 +1,6 @@
 # Project Docs
 
-Read the planning and design documents in this order:
+Read the design and implementation docs in this order:
 
 1. `docs/01-project-structure.md`
 2. `docs/02-replay-schema.md`
@@ -15,8 +15,13 @@ Read the planning and design documents in this order:
 11. `docs/11-agents-overview.md`
 12. `docs/12-product-surface-principles.md`
 13. `docs/13-advanced-stats-v1.md`
+14. `docs/14-replay-v1-product-spec.md`
 
-Machine-readable schema draft:
+Historical review records:
+
+- `docs/archive/2026-04-claude-review.md`
+
+Machine-readable schema:
 
 - `schema/mastermind.replay.schema.json`
 

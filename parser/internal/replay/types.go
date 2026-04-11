@@ -35,11 +35,13 @@ type SourceDemo struct {
 }
 
 type Match struct {
-	MatchID         *string  `json:"matchId"`
-	TickRate        float64  `json:"tickRate"`
-	TotalRounds     int      `json:"totalRounds"`
-	GameMode        *string  `json:"gameMode"`
-	BombTimeSeconds *float64 `json:"bombTimeSeconds"`
+	MatchID           *string  `json:"matchId"`
+	TickRate          float64  `json:"tickRate"`
+	TotalRounds       int      `json:"totalRounds"`
+	GameMode          *string  `json:"gameMode"`
+	RoundTimeSeconds  *float64 `json:"roundTimeSeconds"`
+	FreezeTimeSeconds *float64 `json:"freezeTimeSeconds"`
+	BombTimeSeconds   *float64 `json:"bombTimeSeconds"`
 }
 
 type Map struct {
@@ -71,22 +73,23 @@ type Player struct {
 }
 
 type Round struct {
-	RoundNumber     int             `json:"roundNumber"`
-	StartTick       int             `json:"startTick"`
-	FreezeEndTick   *int            `json:"freezeEndTick"`
-	EndTick         int             `json:"endTick"`
-	OfficialEndTick *int            `json:"officialEndTick"`
-	ScoreBefore     Score           `json:"scoreBefore"`
-	ScoreAfter      Score           `json:"scoreAfter"`
-	WinnerSide      *string         `json:"winnerSide"`
-	EndReason       *string         `json:"endReason"`
-	PlayerStreams   []PlayerStream  `json:"playerStreams"`
-	BlindEvents     []BlindEvent    `json:"blindEvents"`
-	FireEvents      []FireEvent     `json:"fireEvents"`
-	HurtEvents      []HurtEvent     `json:"hurtEvents"`
-	KillEvents      []KillEvent     `json:"killEvents"`
-	BombEvents      []BombEvent     `json:"bombEvents"`
-	UtilityEntities []UtilityEntity `json:"utilityEntities"`
+	RoundNumber       int             `json:"roundNumber"`
+	StartTick         int             `json:"startTick"`
+	FreezeEndTick     *int            `json:"freezeEndTick"`
+	EndTick           int             `json:"endTick"`
+	OfficialEndTick   *int            `json:"officialEndTick"`
+	ScoreBefore       Score           `json:"scoreBefore"`
+	ScoreAfter        Score           `json:"scoreAfter"`
+	WinnerSide        *string         `json:"winnerSide"`
+	EndReason         *string         `json:"endReason"`
+	PlayerStreams     []PlayerStream  `json:"playerStreams"`
+	DroppedBombStream *Trajectory     `json:"droppedBombStream,omitempty"`
+	BlindEvents       []BlindEvent    `json:"blindEvents"`
+	FireEvents        []FireEvent     `json:"fireEvents"`
+	HurtEvents        []HurtEvent     `json:"hurtEvents"`
+	KillEvents        []KillEvent     `json:"killEvents"`
+	BombEvents        []BombEvent     `json:"bombEvents"`
+	UtilityEntities   []UtilityEntity `json:"utilityEntities"`
 }
 
 type Score struct {

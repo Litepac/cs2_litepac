@@ -23,6 +23,7 @@ func (s *parseState) registerRoundHandlers() {
 
 		s.roundCount++
 		s.currentRound = rounds.NewBuilder(s.roundCount, s.parser.CurrentFrame(), currentScore(s.parser.GameState()))
+		s.lastBombCarrierID = ""
 	})
 
 	s.parser.RegisterEventHandler(func(e demoevents.RoundFreezetimeEnd) {
@@ -81,6 +82,7 @@ func (s *parseState) finalizeOpenRound(endTick int) {
 		})
 	}
 	s.currentRound = nil
+	s.lastBombCarrierID = ""
 }
 
 func currentScore(gs demoinfocs.GameState) replay.Score {

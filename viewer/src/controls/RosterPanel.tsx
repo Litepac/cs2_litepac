@@ -4,6 +4,9 @@ import { normalizeUtilityVisualKind, utilityColorCss, type UtilityVisualKind } f
 import type { Replay, Round } from "../replay/types";
 import { formatWeaponLabel, resolvePlayerEquipmentState, type UtilityKind } from "../replay/weapons";
 import { UtilityIcon } from "./UtilityIcon";
+import { WeaponGlyph } from "./WeaponGlyph";
+import armorIcon from "../assets/icons/cs2-equipment/panorama/images/icons/equipment/armor.svg";
+import helmetIcon from "../assets/icons/cs2-equipment/panorama/images/icons/equipment/helmet.svg";
 
 type Props = {
   replay: Replay;
@@ -13,41 +16,66 @@ type Props = {
   onSelectPlayer: (playerId: string) => void;
 };
 
+type TeamRosterPanelProps = Props & {
+  className?: string;
+  side: "T" | "CT";
+};
+
 type RailIconKind = UtilityVisualKind;
 
 export function RosterPanel({ replay, round, currentTick, selectedPlayerId, onSelectPlayer }: Props) {
-  const snapshots = livePlayersAtTick(replay, round, currentTick);
-  const ctPlayers = snapshots.filter((entry) => entry.side === "CT");
-  const tPlayers = snapshots.filter((entry) => entry.side === "T");
-
   return (
     <aside className="roster-panel">
-      <RosterSection
-        aliveCount={ctPlayers.filter((entry) => entry.alive).length}
-        currentScore={scoreForSide(round, "CT", "before")}
-        finalScore={scoreForSide(round, "CT", "after")}
-        players={ctPlayers}
+      <TeamRosterPanel
+        currentTick={currentTick}
+        onSelectPlayer={onSelectPlayer}
+        replay={replay}
+        round={round}
         selectedPlayerId={selectedPlayerId}
         side="CT"
-        teamLabel={sideTeam(replay, round, "CT")?.displayName ?? "CT Side"}
-        onSelectPlayer={onSelectPlayer}
       />
-      <RosterSection
-        aliveCount={tPlayers.filter((entry) => entry.alive).length}
-        currentScore={scoreForSide(round, "T", "before")}
-        finalScore={scoreForSide(round, "T", "after")}
-        players={tPlayers}
+      <TeamRosterPanel
+        currentTick={currentTick}
+        onSelectPlayer={onSelectPlayer}
+        replay={replay}
+        round={round}
         selectedPlayerId={selectedPlayerId}
         side="T"
-        teamLabel={sideTeam(replay, round, "T")?.displayName ?? "T Side"}
-        onSelectPlayer={onSelectPlayer}
       />
     </aside>
   );
 }
 
+export function TeamRosterPanel({
+  className,
+  replay,
+  round,
+  currentTick,
+  selectedPlayerId,
+  onSelectPlayer,
+  side,
+}: TeamRosterPanelProps) {
+  const snapshots = livePlayersAtTick(replay, round, currentTick);
+  const players = snapshots.filter((entry) => entry.side === side);
+
+  return (
+    <RosterSection
+      aliveCount={players.filter((entry) => entry.alive).length}
+      className={className}
+      currentScore={scoreForSide(round, side, "before")}
+      finalScore={scoreForSide(round, side, "after")}
+      players={players}
+      selectedPlayerId={selectedPlayerId}
+      side={side}
+      teamLabel={sideTeam(replay, round, side)?.displayName ?? `${side} Side`}
+      onSelectPlayer={onSelectPlayer}
+    />
+  );
+}
+
 type SectionProps = {
   aliveCount: number;
+  className?: string;
   currentScore: number;
   finalScore: number;
   players: ReturnType<typeof livePlayersAtTick>;
@@ -66,6 +94,7 @@ type RailIconItem = {
 
 function RosterSection({
   aliveCount,
+  className,
   currentScore,
   finalScore,
   players,
@@ -78,10 +107,9 @@ function RosterSection({
   const aliveLabel = `${aliveCount}/${players.length} alive`;
 
   return (
-    <section className={`roster-card ${sideClass}`}>
+    <section className={["roster-card", sideClass, className].filter(Boolean).join(" ")}>
       <div className="roster-card-header">
         <div className="roster-team-block">
-          <div className="roster-side-label">{side}</div>
           <h2>{teamLabel}</h2>
           <div className="roster-score-caption">{aliveLabel}</div>
         </div>
@@ -99,6 +127,8 @@ function RosterSection({
             activeWeaponClass: player.activeWeaponClass,
             mainWeapon: player.mainWeapon,
           });
+          const primaryWeaponLabel = formatWeaponLabel(equipment.primaryWeapon);
+
           return (
             <button
               key={player.playerId}
@@ -109,15 +139,44 @@ function RosterSection({
               ].filter(Boolean).join(" ")}
               onClick={() => onSelectPlayer(player.playerId)}
             >
-              <span className="roster-player-main">
+                <span className="roster-player-main">
                 <span className="roster-player-header">
-                  <span className="roster-player-name">{player.name}</span>
-                  <span className="roster-player-weapon">{formatWeaponLabel(equipment.displayWeapon)}</span>
+                  <span className="roster-player-identity">
+                    <span className="roster-player-name-row">
+                      <span className="roster-player-name">{player.name}</span>
+                      {!player.alive ? <span className="roster-player-state">dead</span> : null}
+                    </span>
+                    <span className="roster-player-meta">
+                      <span className="roster-player-money">{formatMoney(player.money)}</span>
+                      <span className="roster-player-vitals">
+                        <span className="roster-player-vital">
+                          <span className="roster-player-vital-value">{player.health == null ? "--" : Math.max(0, player.health)}</span>
+                          <span className="roster-player-vital-label">HP</span>
+                        </span>
+                        <span className="roster-player-vital">
+                          <StatusIcon className="roster-status-icon" kind="armor" />
+                          <span className="roster-player-vital-value">{player.armor == null ? "-" : player.armor}</span>
+                        </span>
+                        {player.hasHelmet ? (
+                          <span className="roster-player-vital">
+                            <StatusIcon className="roster-status-icon" kind="helmet" />
+                          </span>
+                        ) : null}
+                      </span>
+                    </span>
+                  </span>
+                  <span className="roster-player-loadout">
+                    <WeaponGlyph
+                      className="roster-player-weapon-glyph"
+                      title={primaryWeaponLabel}
+                      weaponName={equipment.primaryWeapon}
+                    />
+                    <span className="roster-player-weapon-block">
+                      <span className="roster-player-weapon">{primaryWeaponLabel}</span>
+                    </span>
+                  </span>
                 </span>
                 <span className="roster-player-support-row">
-                  <span className="roster-player-meta">
-                    <span className="roster-player-mini-stat">{formatSupportMeta(player)}</span>
-                  </span>
                   <span className="roster-utility-strip" aria-label="Held utility">
                     {heldUtility.length > 0 ? (
                       heldUtility.map((item) => (
@@ -160,22 +219,21 @@ function formatMoney(money: number | null) {
   return `$${money.toLocaleString("en-US")}`;
 }
 
-function formatVitals(player: LivePlayerState) {
-  const health = player.health == null ? "HP-" : `${Math.max(0, player.health)}HP`;
-  const armor = player.armor == null ? "AR-" : `${player.armor}AR`;
-  return player.hasHelmet ? `${health} ${armor} H` : `${health} ${armor}`;
-}
-
-function formatSupportMeta(player: LivePlayerState) {
-  return `${formatMoney(player.money)} ${formatVitals(player)}`;
-}
-
 function healthWidth(player: LivePlayerState) {
   if (player.health == null) {
     return 0;
   }
 
   return Math.min(100, Math.max(0, player.health));
+}
+
+type StatusIconProps = {
+  className?: string;
+  kind: "armor" | "helmet";
+};
+
+function StatusIcon({ className, kind }: StatusIconProps) {
+  return <img alt="" aria-hidden="true" className={className} src={kind === "armor" ? armorIcon : helmetIcon} />;
 }
 
 function utilityInventory(player: LivePlayerState): RailIconItem[] {

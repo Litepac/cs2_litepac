@@ -9,6 +9,9 @@ type StreamEvent =
 
 const parserApiBaseUrl =
   (import.meta.env.VITE_PARSER_API_BASE_URL as string | undefined)?.trim() || "";
+const demoParseTimeoutMs = 5 * 60 * 1000;
+
+type FeedbackContext = Record<string, unknown>;
 
 function parserApiUrl(path: string) {
   return `${parserApiBaseUrl.replace(/\/+$/, "")}${path}`;
@@ -24,6 +27,8 @@ export async function checkParserBridge(): Promise<boolean> {
     return false;
   }
 }
+
+const usageEventOnceKeys = new Set<string>();
 
 export function trackUsageEvent(event: string, details?: Record<string, unknown>) {
   const trimmedEvent = event.trim();
@@ -50,33 +55,79 @@ export function trackUsageEvent(event: string, details?: Record<string, unknown>
   });
 }
 
+export function trackUsageEventOnce(event: string, onceKey: string, details?: Record<string, unknown>) {
+  const normalizedKey = `${event.trim()}::${onceKey.trim()}`;
+  if (!event.trim() || !onceKey.trim() || usageEventOnceKeys.has(normalizedKey)) {
+    return;
+  }
+
+  usageEventOnceKeys.add(normalizedKey);
+  trackUsageEvent(event, details);
+}
+
+export async function submitFeedback(message: string, context?: FeedbackContext) {
+  const response = await fetch(parserApiUrl("/api/feedback"), {
+    body: JSON.stringify({
+      context: {
+        host: window.location.host,
+        path: window.location.pathname,
+        ...(context ?? {}),
+      },
+      message,
+    }),
+    headers: {
+      "Content-Type": "application/json",
+    },
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    throw new Error(await parseParserError(response));
+  }
+}
+
 export async function parseDemoFile(
   file: File,
   options?: { onProgress?: (progress: { roundsParsed: number }) => void; onStage?: (stage: DemoParseStage) => void },
 ): Promise<Replay> {
   const form = new FormData();
   form.append("demo", file, file.name);
+  const abortController = new AbortController();
+  const timeoutId = window.setTimeout(() => {
+    abortController.abort();
+  }, demoParseTimeoutMs);
 
-  options?.onStage?.("upload");
-  const responsePromise = fetch(parserApiUrl("/api/parse-demo"), {
-    method: "POST",
-    body: form,
-  });
-  options?.onStage?.("parser");
-  const response = await responsePromise;
+  try {
+    options?.onStage?.("upload");
+    const responsePromise = fetch(parserApiUrl("/api/parse-demo"), {
+      body: form,
+      method: "POST",
+      signal: abortController.signal,
+    });
+    options?.onStage?.("parser");
+    const response = await responsePromise;
 
-  if (!response.ok) {
-    throw new Error(await parseParserError(response));
+    if (!response.ok) {
+      throw new Error(await parseParserError(response));
+    }
+
+    const parsed = await readParseStream(response, options);
+    options?.onStage?.("validate");
+    const result = validateReplay(parsed);
+    if (!result.ok) {
+      throw new Error(formatReplayErrors(result.errors));
+    }
+
+    return result.replay;
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error(`Demo parsing timed out after ${Math.round(demoParseTimeoutMs / 60000)} minutes.`);
+    }
+
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
   }
-
-  const parsed = await readParseStream(response, options);
-  options?.onStage?.("validate");
-  const result = validateReplay(parsed);
-  if (!result.ok) {
-    throw new Error(formatReplayErrors(result.errors));
-  }
-
-  return result.replay;
 }
 
 async function readParseStream(

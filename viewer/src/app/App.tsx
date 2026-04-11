@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { ReplayStage } from "../canvas/ReplayStage";
+import { FeedbackWidget } from "../controls/FeedbackWidget";
 import { HomePage } from "../controls/HomePage";
 import { KillFeed } from "../controls/KillFeed";
+import { MapHud } from "../controls/MapHud";
 import { MatchesPage } from "../controls/MatchesPage";
 import { ReplayAnalysisPanel } from "../controls/ReplayAnalysisPanel";
-import { RosterPanel } from "../controls/RosterPanel";
+import { TeamRosterPanel } from "../controls/RosterPanel";
 import { ShellTopNav } from "../controls/ShellTopNav";
 import { Sidebar } from "../controls/Sidebar";
 import { StatsPage } from "../controls/StatsPage";
@@ -38,7 +40,7 @@ import {
   type UtilityAtlasSourceFilter,
   type UtilityAtlasTeamFilter,
 } from "../replay/replayAnalysis";
-import { trackUsageEvent } from "../replay/parserBridge";
+import { trackUsageEvent, trackUsageEventOnce } from "../replay/parserBridge";
 import type { UtilityFocus } from "../replay/utilityFilter";
 import { TimelinePanel } from "../timeline/TimelinePanel";
 import { useFixtureCatalog } from "./useFixtureCatalog";
@@ -222,9 +224,19 @@ export function App() {
     [heatmapScope, heatmapSourceFilter, heatmapTeamFilter, replay, replaySideBlocks, roundIndex, selectedPlayerId],
   );
   const heatmapLabel = replay ? heatmapScopeLabel(replay, roundIndex, replaySideBlocks, heatmapScope) : "Round";
+  const feedbackContext = useMemo(
+    () => ({
+      analysisMode: replay ? analysisMode : null,
+      matchId: replay?.sourceDemo.sha256 ?? statsMatchId ?? null,
+      mapName: replay?.map.displayName ?? statsEntry?.summary.mapName ?? null,
+      replayRoundNumber: round?.roundNumber ?? null,
+      shellPage: replay ? "replay" : shellPage,
+    }),
+    [analysisMode, replay, round?.roundNumber, shellPage, statsEntry?.summary.mapName, statsMatchId],
+  );
 
   useEffect(() => {
-    trackUsageEvent("app_opened", {
+    trackUsageEventOnce("app_opened", `${window.location.pathname}:${shellPage}`, {
       shellPage,
     });
   }, []);
@@ -284,14 +296,30 @@ export function App() {
   }
 
   function handleAnalysisModeChange(mode: ReplayAnalysisMode) {
+    if (analysisMode === "positions" && mode !== "positions") {
+      // Manual mode switches should not preserve hidden Position Player compare state.
+      setPositionPlayerSelections([]);
+      setPositionsSourceFilter("all");
+      setPositionsTeamFilter("all");
+    }
+
     setAnalysisMode(mode);
     setLivePlayerContextMode(false);
   }
 
-  function updatePositionPlayerSelections(nextSelections: PositionPlayerSelection[]) {
+  function updatePositionPlayerSelections(nextSelections: PositionPlayerSelection[], focusedPlayerId?: string | null) {
     const normalizedSelections = nextSelections.slice(0, MAX_POSITION_PLAYER_SELECTIONS);
+    const selectedPlayerIds = new Set(normalizedSelections.flatMap((selection) => selection.playerIds));
+    // Compare mode can render multiple ghosts, but live replay focus still tracks one explicit player.
+    const nextSelectedPlayerId =
+      focusedPlayerId && selectedPlayerIds.has(focusedPlayerId)
+        ? focusedPlayerId
+        : selectedPlayerId && selectedPlayerIds.has(selectedPlayerId)
+          ? selectedPlayerId
+          : normalizedSelections[0]?.playerIds[0] ?? null;
+
     setPositionPlayerSelections(normalizedSelections);
-    setSelectedPlayerId(normalizedSelections[0]?.playerIds[0] ?? null);
+    setSelectedPlayerId(nextSelectedPlayerId);
     setPositionsSourceFilter(normalizedSelections.length > 0 ? "selected" : "all");
     setPositionsTeamFilter((currentTeamFilter) => resolvePositionPlayerTeamFilter(normalizedSelections, currentTeamFilter));
   }
@@ -331,7 +359,7 @@ export function App() {
         return;
       }
 
-      updatePositionPlayerSelections([...positionPlayerSelections, { playerIds, side: playerSide }]);
+      updatePositionPlayerSelections([...positionPlayerSelections, { playerIds, side: playerSide }], primaryPlayerId);
       return;
     }
 
@@ -399,7 +427,7 @@ export function App() {
     if (view === "player" && replay && selectedPlayerId != null) {
       const seedSelection = resolvePositionPlayerSelection(replay, roundIndex, selectedPlayerId);
       if (seedSelection) {
-        updatePositionPlayerSelections([seedSelection]);
+        updatePositionPlayerSelections([seedSelection], selectedPlayerId);
       } else {
         updatePositionPlayerSelections([]);
       }
@@ -422,11 +450,9 @@ export function App() {
       Math.max(targetRound.startTick, entry.jumpTick),
     );
 
-    if (entry.throwerPlayerId) {
-      setSelectedPlayerId(entry.throwerPlayerId);
-    }
-    setLivePlayerContextMode(false);
     setAnalysisMode("live");
+    setLivePlayerContextMode(Boolean(entry.throwerPlayerId));
+    setUtilityFocus(resolveUtilityAtlasLiveFocus(entry.utility.kind));
     setSelectedPlayerId(entry.throwerPlayerId);
     setPendingUtilityJump({ roundIndex: entry.roundIndex, tick: targetTick });
     setRoundIndex(entry.roundIndex);
@@ -462,75 +488,89 @@ export function App() {
           <>
             <section className="map-workspace">
               <div className="map-stage-frame">
-                <ReplayAnalysisPanel
-                  analysisMode={analysisMode}
-                  analysisPlayers={analysisPlayers}
-                  heatmapScope={heatmapScope}
-                  heatmapSourceFilter={heatmapSourceFilter}
-                  heatmapTeamFilter={heatmapTeamFilter}
-                  positionsScope={positionsScope}
-                  positionsSourceFilter={positionsSourceFilter}
-                  positionsTeamFilter={positionsTeamFilter}
-                  positionsView={positionsView}
-                  positionPlayerMaxSelections={MAX_POSITION_PLAYER_SELECTIONS}
-                  positionPlayerSelectedKeys={positionPlayerSelectedKeys}
-                  showPositionRoundNumbers={showPositionRoundNumbers}
-                    selectedPlayerId={selectedPlayerId}
-                  selectedPlayerName={selectedPlayerName}
-                  utilityAtlasScope={utilityAtlasScope}
-                  utilityAtlasSourceFilter={utilityAtlasSourceFilter}
-                  utilityAtlasTeamFilter={utilityAtlasTeamFilter}
-                  utilityFocus={utilityFocus}
-                  onSelectAnalysisMode={handleAnalysisModeChange}
-                  onSelectPositionsView={handlePositionsViewChange}
-                  onHeatmapScopeChange={setHeatmapScope}
-                  onHeatmapTeamFilterChange={setHeatmapTeamFilter}
-                  onPositionsScopeChange={setPositionsScope}
-                  onPositionsTeamFilterChange={setPositionsTeamFilter}
-                  onShowPositionRoundNumbersChange={setShowPositionRoundNumbers}
-                  onUtilityAtlasScopeChange={setUtilityAtlasScope}
-                    onUtilityAtlasTeamFilterChange={setUtilityAtlasTeamFilter}
-                  onUtilityFocusChange={setUtilityFocus}
-                  onAnalysisPlayerToggle={handleAnalysisPlayerToggle}
-                  onAnalysisPlayerClear={handleAnalysisPlayerClear}
-                />
-                <ReplayStage
-                  key={`${replay.sourceDemo.fileName}:${round.roundNumber}`}
-                  activeRoundIndex={roundIndex}
-                  analysisMode={analysisMode}
-                  currentTick={playback.renderTick}
-                  heatmapCellSize={heatmapSnapshot.cellSize}
-                  heatmapScope={heatmapScope}
-                  heatmapBuckets={heatmapSnapshot.buckets}
-                  heatmapMaxSampleCount={heatmapSnapshot.maxSampleCount}
-                  livePlayerContextMode={analysisMode === "live" && livePlayerContextMode}
-                  onSelectAtlasEntry={handleUtilityAtlasSelect}
-                  positionPlayerSnapshots={positionPlayerSnapshots}
-                  positionTrailEntries={displayedPositionTrailEntries}
-                  showPositionRoundNumbers={showPositionRoundNumbers}
-                  positionsView={positionsView}
-                  replay={replay}
-                  round={round}
-                  selectedPlayerId={selectedPlayerId}
-                  utilityAtlasEntries={utilityAtlasEntries}
-                  utilityFocus={utilityFocus}
-                  onSelectPositionSnapshot={handleSelectPositionSnapshot}
-                  onSelectPlayer={handleReplayPlayerSelect}
-                />
-                {analysisMode === "live" ? (
-                  <KillFeed currentTick={playback.renderTickRounded} replay={replay} round={round} />
-                ) : null}
-                {analysisMode === "live" ? (
-                  <aside className="right-shell right-shell-overlay">
-                    <RosterPanel
-                      replay={replay}
-                      round={round}
-                      currentTick={playback.renderTickRounded}
+                <div className="map-stage-main">
+                  <ReplayAnalysisPanel
+                    analysisMode={analysisMode}
+                    analysisPlayers={analysisPlayers}
+                    heatmapScope={heatmapScope}
+                    heatmapSourceFilter={heatmapSourceFilter}
+                    heatmapTeamFilter={heatmapTeamFilter}
+                    positionsScope={positionsScope}
+                    positionsSourceFilter={positionsSourceFilter}
+                    positionsTeamFilter={positionsTeamFilter}
+                    positionsView={positionsView}
+                    positionPlayerMaxSelections={MAX_POSITION_PLAYER_SELECTIONS}
+                    positionPlayerSelectedKeys={positionPlayerSelectedKeys}
+                    showPositionRoundNumbers={showPositionRoundNumbers}
                       selectedPlayerId={selectedPlayerId}
-                      onSelectPlayer={handleReplayPlayerSelect}
-                    />
-                  </aside>
-                ) : null}
+                    selectedPlayerName={selectedPlayerName}
+                    utilityAtlasScope={utilityAtlasScope}
+                    utilityAtlasSourceFilter={utilityAtlasSourceFilter}
+                    utilityAtlasTeamFilter={utilityAtlasTeamFilter}
+                    utilityFocus={utilityFocus}
+                    onSelectAnalysisMode={handleAnalysisModeChange}
+                    onSelectPositionsView={handlePositionsViewChange}
+                    onHeatmapScopeChange={setHeatmapScope}
+                    onHeatmapTeamFilterChange={setHeatmapTeamFilter}
+                    onPositionsScopeChange={setPositionsScope}
+                    onPositionsTeamFilterChange={setPositionsTeamFilter}
+                    onShowPositionRoundNumbersChange={setShowPositionRoundNumbers}
+                    onUtilityAtlasScopeChange={setUtilityAtlasScope}
+                      onUtilityAtlasTeamFilterChange={setUtilityAtlasTeamFilter}
+                    onUtilityFocusChange={setUtilityFocus}
+                    onAnalysisPlayerToggle={handleAnalysisPlayerToggle}
+                    onAnalysisPlayerClear={handleAnalysisPlayerClear}
+                  />
+                  <ReplayStage
+                    key={`${replay.sourceDemo.fileName}:${round.roundNumber}`}
+                    activeRoundIndex={roundIndex}
+                    analysisMode={analysisMode}
+                    currentTick={playback.renderTick}
+                    heatmapCellSize={heatmapSnapshot.cellSize}
+                    heatmapScope={heatmapScope}
+                    heatmapBuckets={heatmapSnapshot.buckets}
+                    heatmapMaxSampleCount={heatmapSnapshot.maxSampleCount}
+                    livePlayerContextMode={analysisMode === "live" && livePlayerContextMode}
+                    onSelectAtlasEntry={handleUtilityAtlasSelect}
+                    positionPlayerSnapshots={positionPlayerSnapshots}
+                    positionTrailEntries={displayedPositionTrailEntries}
+                    showPositionRoundNumbers={showPositionRoundNumbers}
+                    positionsView={positionsView}
+                    replay={replay}
+                    round={round}
+                    selectedPlayerId={selectedPlayerId}
+                    utilityAtlasEntries={utilityAtlasEntries}
+                    utilityFocus={utilityFocus}
+                    onSelectPositionSnapshot={handleSelectPositionSnapshot}
+                    onSelectPlayer={handleReplayPlayerSelect}
+                  />
+                  <MapHud currentTick={playback.renderTickRounded} replay={replay} round={round} />
+                  {analysisMode === "live" ? (
+                    <KillFeed currentTick={playback.renderTickRounded} replay={replay} round={round} />
+                  ) : null}
+                  {analysisMode === "live" ? (
+                    <div className="map-stage-team-rosters">
+                      <TeamRosterPanel
+                        className="map-stage-roster map-stage-roster-ct"
+                        currentTick={playback.renderTickRounded}
+                        onSelectPlayer={handleReplayPlayerSelect}
+                        replay={replay}
+                        round={round}
+                        selectedPlayerId={selectedPlayerId}
+                        side="CT"
+                      />
+                      <TeamRosterPanel
+                        className="map-stage-roster map-stage-roster-t"
+                        currentTick={playback.renderTickRounded}
+                        onSelectPlayer={handleReplayPlayerSelect}
+                        replay={replay}
+                        round={round}
+                        selectedPlayerId={selectedPlayerId}
+                        side="T"
+                      />
+                    </div>
+                  ) : null}
+                </div>
               </div>
             </section>
 
@@ -642,6 +682,7 @@ export function App() {
           )
         }
       </main>
+      <FeedbackWidget context={feedbackContext} />
     </div>
   );
 }
@@ -714,4 +755,12 @@ function collectPositionPlayerIdsByNameAndSide(
 function toPositionPlayerRosterSelectionKey(playerIds: string[], side: Side) {
   const normalizedPlayerIds = [...new Set(playerIds)].sort();
   return `${side}:${normalizedPlayerIds.join("|")}`;
+}
+
+function resolveUtilityAtlasLiveFocus(kind: UtilityAtlasEntry["utility"]["kind"]): UtilityFocus {
+  if (kind === "molotov" || kind === "incendiary") {
+    return "fire";
+  }
+
+  return kind;
 }

@@ -11,17 +11,6 @@ export function teamName(replay: Replay, teamId: string | null) {
   return normalizeTeamName(displayName);
 }
 
-export function formatRoundClock(currentTick: number, roundStartTick: number, tickRate: number) {
-  if (!Number.isFinite(tickRate) || tickRate <= 0) {
-    return null;
-  }
-
-  const elapsedSeconds = Math.max(0, Math.floor((currentTick - roundStartTick) / tickRate));
-  const minutes = Math.floor(elapsedSeconds / 60);
-  const seconds = elapsedSeconds % 60;
-  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
-}
-
 export function scoreForSide(round: Round, side: Side, phase: "before" | "after") {
   const score = phase === "before" ? round.scoreBefore : round.scoreAfter;
   return side === "T" ? score.t : score.ct;

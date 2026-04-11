@@ -2,6 +2,8 @@ package demo
 
 import (
 	demoevents "github.com/markus-wa/demoinfocs-golang/v5/pkg/demoinfocs/events"
+
+	"mastermind/parser/internal/utility"
 )
 
 func (s *parseState) registerUtilityHandlers() {
@@ -63,13 +65,15 @@ func (s *parseState) registerUtilityHandlers() {
 
 	s.parser.RegisterEventHandler(func(e demoevents.InfernoStart) {
 		if s.currentRound != nil {
-			s.currentRound.UtilityTracker().TrackInfernoStart(s.parser.CurrentFrame(), e.Inferno, infernoCenter(e.Inferno.Fires()))
+			pos, _ := utility.InfernoActiveCenter(e.Inferno)
+			s.currentRound.UtilityTracker().TrackInfernoStart(s.parser.CurrentFrame(), e.Inferno, pos)
 		}
 	})
 
 	s.parser.RegisterEventHandler(func(e demoevents.InfernoExpired) {
 		if s.currentRound != nil {
-			s.currentRound.UtilityTracker().TrackInfernoExpire(s.parser.CurrentFrame(), e.Inferno, infernoCenter(e.Inferno.Fires()))
+			pos, _ := utility.InfernoActiveCenter(e.Inferno)
+			s.currentRound.UtilityTracker().TrackInfernoExpire(s.parser.CurrentFrame(), e.Inferno, pos)
 		}
 	})
 

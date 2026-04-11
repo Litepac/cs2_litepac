@@ -3,13 +3,24 @@ import { useEffect, useState } from "react";
 
 import { loadReplayURL } from "../replay/loader";
 import type { DemoIngestState } from "../replay/ingestState";
-import { createMatchLibraryEntry, type MatchLibraryEntry, type MatchLibrarySource } from "../replay/matchLibrary";
+import {
+  createMatchLibraryEntry,
+  createMatchLibraryFingerprint,
+  type MatchLibraryEntry,
+  type MatchLibrarySource,
+} from "../replay/matchLibrary";
 import { deleteStoredMatch, listStoredMatches, saveStoredMatch } from "../replay/matchStore";
 import { checkParserBridge, parseDemoFile, trackUsageEvent } from "../replay/parserBridge";
 import type { Replay } from "../replay/types";
 
+export type LoaderIssue = {
+  hint?: string;
+  message: string;
+  title: string;
+};
+
 export function useReplayLoader() {
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<LoaderIssue | null>(null);
   const [demoIngestState, setDemoIngestState] = useState<DemoIngestState | null>(null);
   const [libraryHydrated, setLibraryHydrated] = useState(false);
   const [libraryEntries, setLibraryEntries] = useState<MatchLibraryEntry[]>([]);
@@ -62,7 +73,7 @@ export function useReplayLoader() {
         }
       } catch (storageError) {
         if (!cancelled) {
-          setError(storageError instanceof Error ? storageError.message : String(storageError));
+          setError(normalizeLoaderIssue("storage", storageError));
         }
       } finally {
         if (!cancelled) {
@@ -159,10 +170,10 @@ export function useReplayLoader() {
         sourceSha256: loaded.sourceDemo.sha256,
       });
     } catch (loadError) {
-      const message = loadError instanceof Error ? loadError.message : String(loadError);
-      setError(message);
+      const issue = normalizeLoaderIssue("demo", loadError, parserBridgeAvailable);
+      setError(issue);
       trackUsageEvent("demo_upload_failed", {
-        error: message,
+        error: issue.message,
         fileName: file.name,
         fileSizeBytes: file.size,
       });
@@ -186,7 +197,7 @@ export function useReplayLoader() {
         sourceSha256: loaded.sourceDemo.sha256,
       });
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : String(loadError));
+      setError(normalizeLoaderIssue("fixture", loadError));
     } finally {
       setLoadingSource(null);
     }
@@ -233,37 +244,41 @@ export function useReplayLoader() {
       if (deletingActiveReplay) {
         setActiveReplayId(id);
       }
-      setError(deleteError instanceof Error ? deleteError.message : String(deleteError));
+      setError(normalizeLoaderIssue("delete", deleteError));
     }
   }
 
   async function ingestReplay(loaded: Replay, source: MatchLibrarySource, options: { openViewer: boolean; persist: boolean }) {
+    const fingerprint = createMatchLibraryFingerprint(loaded, source);
+    const duplicates = libraryEntries.filter(
+      (candidate) => createMatchLibraryFingerprint(candidate.replay, candidate.source) === fingerprint,
+    );
+    const existing = duplicates[0] ?? null;
     const entry = createMatchLibraryEntry(loaded, source);
+    const persistedEntry =
+      existing == null
+        ? entry
+        : {
+            ...entry,
+            id: existing.id,
+          };
 
     setLibraryEntries((previous) => {
-      const existingIndex = previous.findIndex((candidate) => candidate.id === entry.id);
-      if (existingIndex === -1) {
-        return [entry, ...previous];
-      }
-
-      const next = previous.slice();
-      const existing = next[existingIndex];
-      next.splice(existingIndex, 1);
-      next.unshift({
-        ...existing,
-        replay: loaded,
-        source,
-        summary: entry.summary,
-      });
-      return next;
+      const next = previous.filter(
+        (candidate) => createMatchLibraryFingerprint(candidate.replay, candidate.source) !== fingerprint,
+      );
+      return [persistedEntry, ...next];
     });
 
     if (options.persist) {
-      await saveStoredMatch(entry);
+      await saveStoredMatch(persistedEntry);
+      for (const duplicate of duplicates.slice(1)) {
+        await deleteStoredMatch(duplicate.id);
+      }
     }
 
     if (options.openViewer) {
-      setActiveReplayId(entry.id);
+      setActiveReplayId(persistedEntry.id);
     } else {
       setActiveReplayId(null);
     }
@@ -310,4 +325,67 @@ async function animateRoundIndexing(roundsTotal: number, onProgress: (roundsInde
 
 function delay(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+function normalizeLoaderIssue(
+  context: "demo" | "delete" | "fixture" | "storage",
+  error: unknown,
+  parserBridgeAvailable?: boolean,
+): LoaderIssue {
+  const rawMessage = error instanceof Error ? error.message.trim() : String(error).trim();
+  const normalized = rawMessage.toLowerCase();
+
+  if (context === "demo") {
+    if (!parserBridgeAvailable || normalized.includes("failed to fetch") || normalized.includes("networkerror")) {
+      return {
+        title: "Local parser unavailable",
+        message: "The viewer could not reach the local parser API.",
+        hint: "Start the local parser path and verify /api/health before uploading again.",
+      };
+    }
+
+    if (normalized.includes("timed out")) {
+      return {
+        title: "Demo ingest timed out",
+        message: rawMessage,
+        hint: "The upload reached the parser, but the replay artifact was not produced in time.",
+      };
+    }
+
+    if (normalized.includes("validation failed")) {
+      return {
+        title: "Canonical replay validation failed",
+        message: rawMessage,
+        hint: "The parser returned a replay artifact, but it did not pass viewer-side schema validation.",
+      };
+    }
+
+    return {
+      title: "Demo ingest failed",
+      message: rawMessage || "The local parser could not turn this demo into a replay artifact.",
+      hint: "Check the parser logs or try the upload again after confirming the local parser is healthy.",
+    };
+  }
+
+  if (context === "fixture") {
+    return {
+      title: "Fixture load failed",
+      message: rawMessage || "The requested fixture replay could not be loaded.",
+      hint: "This only affects the validation fixtures. Uploaded local demos should still work if the parser is healthy.",
+    };
+  }
+
+  if (context === "delete") {
+    return {
+      title: "Local delete failed",
+      message: rawMessage || "The local match entry could not be deleted.",
+      hint: "The library view was rolled back to preserve the stored match.",
+    };
+  }
+
+  return {
+    title: "Local library unavailable",
+    message: rawMessage || "Browser storage could not be read.",
+    hint: "The replay library uses local browser storage. Reload the page and check browser storage permissions if this persists.",
+  };
 }

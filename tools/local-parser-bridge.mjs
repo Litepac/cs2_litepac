@@ -14,9 +14,14 @@ const parserRoot = path.resolve(repoRoot, "parser");
 const parserExe = path.resolve(parserRoot, "fixtureparse.exe");
 const assetsRoot = path.resolve(repoRoot, "assets", "maps");
 const schemaPath = path.resolve(repoRoot, "schema", "mastermind.replay.schema.json");
-const usageLogPath = path.resolve(repoRoot, ".tmp-usage-events.ndjson");
+const feedbackLogPath = path.resolve(repoRoot, "friend-logs", "feedback.ndjson");
+const feedbackReadableLogPath = path.resolve(repoRoot, "friend-logs", "feedback.log");
+const usageLogPath = path.resolve(repoRoot, "friend-logs", "usage.ndjson");
+const usageReadableLogPath = path.resolve(repoRoot, "friend-logs", "usage.log");
 const listenPort = Number(process.env.LITEPAC_PARSER_BRIDGE_PORT || 4318);
 const maxUploadBytes = 2 * 1024 * 1024 * 1024;
+const maxFeedbackBytes = 32 * 1024;
+const maxFeedbackTextLength = 4000;
 const maxUsageEventBytes = 32 * 1024;
 
 await assertParserExecutableAvailable();
@@ -79,6 +84,25 @@ const server = createServer(async (request, response) => {
       await appendUsageEvent(request);
     } catch (error) {
       process.stderr.write(`usage-event logging failed: ${error instanceof Error ? error.message : String(error)}\n`);
+    }
+    response.writeHead(204);
+    response.end();
+    return;
+  }
+
+  if (request.url === "/api/feedback") {
+    if (request.method !== "POST") {
+      writeJson(response, 405, { error: "method not allowed" });
+      return;
+    }
+
+    try {
+      await appendFeedbackSubmission(request);
+    } catch (error) {
+      writeJson(response, 400, {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return;
     }
     response.writeHead(204);
     response.end();
@@ -253,5 +277,93 @@ async function appendUsageEvent(request) {
   };
   const line = `${JSON.stringify(entry)}\n`;
   process.stdout.write(line);
+  await mkdir(path.dirname(usageLogPath), { recursive: true });
   await appendFile(usageLogPath, line, "utf8");
+
+  const localTimestamp = formatLocalTimestamp(entry.timestamp);
+  const pageLabel =
+    typeof entry.details?.path === "string" && entry.details.path.trim()
+      ? entry.details.path.trim()
+      : typeof entry.details?.shellPage === "string" && entry.details.shellPage.trim()
+        ? entry.details.shellPage.trim()
+        : "unknown-page";
+  const mapLabel =
+    typeof entry.details?.mapName === "string" && entry.details.mapName.trim()
+      ? ` | ${entry.details.mapName.trim()}`
+      : "";
+  const matchLabel =
+    typeof entry.details?.matchId === "string" && entry.details.matchId.trim()
+      ? ` | match=${entry.details.matchId.trim()}`
+      : "";
+  const statusLabel =
+    typeof entry.details?.error === "string" && entry.details.error.trim()
+      ? ` | error=${entry.details.error.trim()}`
+      : "";
+  await appendFile(
+    usageReadableLogPath,
+    `[${localTimestamp}] ${entry.event} | ${pageLabel}${mapLabel}${matchLabel}${statusLabel}\n`,
+    "utf8",
+  );
+}
+
+async function appendFeedbackSubmission(request) {
+  const body = await readRequestBody(request, maxFeedbackBytes);
+  const payload = JSON.parse(body.toString("utf8"));
+  const message = typeof payload.message === "string" ? payload.message.trim() : "";
+  if (!message) {
+    throw new Error("feedback message is required");
+  }
+
+  if ([...message].length > maxFeedbackTextLength) {
+    throw new Error("feedback message is too long");
+  }
+
+  const entry = {
+    context: payload.context && typeof payload.context === "object" ? payload.context : undefined,
+    host: request.headers.host || undefined,
+    message,
+    method: request.method,
+    origin: request.headers.origin || undefined,
+    path: request.url,
+    remote: request.socket.remoteAddress || undefined,
+    timestamp: new Date().toISOString(),
+    userAgent: request.headers["user-agent"] || undefined,
+  };
+  const line = `${JSON.stringify(entry)}\n`;
+  process.stdout.write(line);
+  await mkdir(path.dirname(feedbackLogPath), { recursive: true });
+  await appendFile(feedbackLogPath, line, "utf8");
+
+  const localTimestamp = formatLocalTimestamp(entry.timestamp);
+  const pageLabel =
+    typeof entry.context?.shellPage === "string" && entry.context.shellPage.trim()
+      ? entry.context.shellPage.trim()
+      : "unknown-page";
+  const mapLabel =
+    typeof entry.context?.mapName === "string" && entry.context.mapName.trim()
+      ? ` | ${entry.context.mapName.trim()}`
+      : "";
+  const roundLabel =
+    typeof entry.context?.replayRoundNumber === "number"
+      ? ` | R${entry.context.replayRoundNumber}`
+      : "";
+  await appendFile(
+    feedbackReadableLogPath,
+    `[${localTimestamp}] ${pageLabel}${mapLabel}${roundLabel}\n${entry.message}\n\n`,
+    "utf8",
+  );
+}
+
+function formatLocalTimestamp(timestamp) {
+  if (typeof timestamp !== "string" || !timestamp.trim()) {
+    return "unknown-time";
+  }
+
+  const parsed = new Date(timestamp);
+  if (Number.isNaN(parsed.getTime())) {
+    return timestamp;
+  }
+
+  const pad = (value) => String(value).padStart(2, "0");
+  return `${parsed.getFullYear()}-${pad(parsed.getMonth() + 1)}-${pad(parsed.getDate())} ${pad(parsed.getHours())}:${pad(parsed.getMinutes())}:${pad(parsed.getSeconds())}`;
 }

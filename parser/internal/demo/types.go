@@ -35,6 +35,7 @@ type parseState struct {
 	currentRound *rounds.Builder
 	roundList    []replay.Round
 	roundCount   int
+	lastBombCarrierID string
 
 	mapID string
 	notes []string

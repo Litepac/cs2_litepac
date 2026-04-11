@@ -271,11 +271,11 @@ function appendTrailPoint(
   displayStartTick: number,
   displayEndTick: number,
 ) {
-  const sampleIndex = tick - stream.sampleOriginTick;
-  const alive = stream.alive[sampleIndex] ?? false;
-  const x = stream.x[sampleIndex] ?? null;
-  const y = stream.y[sampleIndex] ?? null;
-  const yaw = stream.yaw[sampleIndex] ?? null;
+  const sample = interpolatePlayerStreamSample(stream, tick);
+  const alive = sample?.alive ?? false;
+  const x = sample?.x ?? null;
+  const y = sample?.y ?? null;
+  const yaw = sample?.yaw ?? null;
 
   if (!alive || x == null || y == null) {
     if (currentSegment.length > 1) {

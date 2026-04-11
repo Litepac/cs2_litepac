@@ -2,7 +2,6 @@ import { spawn, type ChildProcess } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig, type Plugin } from "vite";
-import react from "@vitejs/plugin-react-swc";
 
 const rootDir = fileURLToPath(new URL(".", import.meta.url));
 const repoRoot = path.resolve(rootDir, "..");
@@ -25,7 +24,8 @@ function localParserApiPlugin(): Plugin {
         cwd: parserRoot,
         env: {
           ...process.env,
-          LITEPAC_USAGE_LOG: path.resolve(repoRoot, ".tmp-usage-events.ndjson"),
+          LITEPAC_FEEDBACK_LOG: path.resolve(repoRoot, "friend-logs", "feedback.ndjson"),
+          LITEPAC_USAGE_LOG: path.resolve(repoRoot, "friend-logs", "usage.ndjson"),
         },
         stdio: ["ignore", "pipe", "pipe"],
         windowsHide: true,
@@ -66,7 +66,7 @@ function localParserApiPlugin(): Plugin {
 }
 
 export default defineConfig(({ command }) => ({
-  plugins: [react(), ...(command === "serve" ? [localParserApiPlugin()] : [])],
+  plugins: [...(command === "serve" && process.env.LITEPAC_SKIP_LOCAL_PARSER_API !== "1" ? [localParserApiPlugin()] : [])],
   publicDir: path.resolve(repoRoot, "assets"),
   server: {
     allowedHosts: [".trycloudflare.com"],

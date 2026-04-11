@@ -107,6 +107,8 @@ Match-level timing and identity facts:
 - `tickRate`
 - `totalRounds`
 - optional `gameMode`
+- optional `roundTimeSeconds` when the parser can read round length from game rules
+- optional `freezeTimeSeconds` when the parser can read freeze time from game rules
 - optional `bombTimeSeconds` when the parser can read the planted C4 timer from game rules
 
 ### `rounds`
@@ -118,6 +120,7 @@ Each round contains:
 - round boundary ticks
 - winner side and end reason if confidently known
 - per-player side assignment and position stream
+- optional dropped-bomb ground position stream while the bomb is lying on the map uncarried
 - blinded-player events
 - fire events
 - hurt events
@@ -218,6 +221,8 @@ Bomb events cover:
 - defuse abort
 - defused
 - exploded
+
+Rounds may also carry an optional `droppedBombStream` with sampled bomb world positions while the bomb is on the ground and not carried. This is separate from discrete bomb events because the bomb can still slide or settle between a `drop` and a later `pickup`, and the viewer should not have to infer that movement from one stale event position.
 
 ### Utility
 

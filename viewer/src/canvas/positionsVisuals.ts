@@ -171,53 +171,41 @@ export function drawPositionPlayerSnapshotVisual(
   halo.stroke({ color: baseColor, alpha: haloAlpha, width: active ? 1.8 : 1.2 });
   snapshotLayer.addChild(halo);
 
-  if (selectedPlayerFocus && active) {
-    drawPositionPlayerNameLabel(snapshotLayer, snapshot, screenPoint.x, screenPoint.y, baseColor, options?.showRoundNumber ?? false);
-    return;
-  }
-
-  if (options?.showRoundNumber) {
-    const roundLabel = new Text({
-      text: `${snapshot.displayRoundNumber}`,
-      style: {
-        fill: 0xf3f7fa,
-        fontFamily: "JetBrains Mono, Fira Code, monospace",
-        fontSize: 8,
-        fontWeight: "800",
-      },
-    });
-    roundLabel.resolution = 2;
-    roundLabel.roundPixels = true;
-    roundLabel.x = Math.round(screenPoint.x + 8);
-    roundLabel.y = Math.round(screenPoint.y - 6);
-
-    const labelBg = new Graphics();
-    labelBg.roundRect(roundLabel.x - 3, roundLabel.y - 1, roundLabel.width + 6, roundLabel.height + 2, 3);
-    labelBg.fill({ color: 0x091219, alpha: active ? 0.82 : selectedPlayerFocus ? 0.58 : 0.46 });
-    labelBg.stroke({ color: baseColor, alpha: active ? 0.5 : selectedPlayerFocus ? 0.3 : 0.18, width: 0.8 });
-    roundLabel.alpha = active ? 0.98 : selectedPlayerFocus ? 0.78 : 0.56;
-    snapshotLayer.addChild(labelBg);
-    snapshotLayer.addChild(roundLabel);
-  }
+  drawPositionPlayerNameLabel(
+    snapshotLayer,
+    snapshot,
+    radarViewport,
+    screenPoint.x,
+    screenPoint.y,
+    baseColor,
+    active,
+    selectedPlayerFocus,
+    options?.showRoundNumber ?? false,
+  );
 }
 
 function drawPositionPlayerNameLabel(
   layer: Container,
   snapshot: PositionPlayerSnapshot,
+  radarViewport: RadarViewport,
   anchorX: number,
   anchorY: number,
   baseColor: number,
+  active: boolean,
+  selectedPlayerFocus: boolean,
   showRoundNumber: boolean,
 ) {
-  const labelText = showRoundNumber
-    ? `${compactPlayerLabel(snapshot.playerName, 11)}  R${snapshot.displayRoundNumber}`
-    : compactPlayerLabel(snapshot.playerName, 14);
+  const labelScale = clampNumber(0.84 + radarViewport.scale * 0.16, 0.86, 1.12);
+  const fontSize = Math.round(clampNumber(8 * labelScale, 8, 10));
+  const paddingX = Math.round(clampNumber(5 * labelScale, 4, 6));
+  const paddingY = Math.round(clampNumber(2 * labelScale, 2, 3));
+  const labelText = showRoundNumber ? `${snapshot.playerName}  R${snapshot.displayRoundNumber}` : snapshot.playerName;
   const label = new Text({
     text: labelText,
     style: {
       fill: 0xf3f7fa,
       fontFamily: "IBM Plex Sans, Segoe UI, sans-serif",
-      fontSize: 8,
+      fontSize,
       fontWeight: "700",
       letterSpacing: 0.12,
     },
@@ -225,19 +213,21 @@ function drawPositionPlayerNameLabel(
   label.resolution = 2;
   label.roundPixels = true;
 
-  const paddingX = 5;
-  const paddingY = 2;
   const labelX = Math.round(anchorX - label.width / 2);
-  const labelY = Math.round(anchorY + 12);
+  const labelY = Math.round(anchorY + 11);
+  const labelAlpha = active ? 0.96 : selectedPlayerFocus ? 0.8 : 0.7;
+  const strokeAlpha = active ? 0.48 : selectedPlayerFocus ? 0.34 : 0.22;
+  const fillAlpha = active ? 0.84 : selectedPlayerFocus ? 0.74 : 0.64;
 
   const labelBg = new Graphics();
   labelBg.roundRect(labelX - paddingX, labelY - paddingY, label.width + paddingX * 2, label.height + paddingY * 2, 3);
-  labelBg.fill({ color: 0x091219, alpha: 0.8 });
-  labelBg.stroke({ color: baseColor, alpha: 0.42, width: 0.8 });
+  labelBg.fill({ color: 0x091219, alpha: fillAlpha });
+  labelBg.stroke({ color: baseColor, alpha: strokeAlpha, width: 0.8 });
   layer.addChild(labelBg);
 
   label.x = labelX;
   label.y = labelY - 1;
+  label.alpha = labelAlpha;
   layer.addChild(label);
 }
 
@@ -330,10 +320,6 @@ function isScreenPointVisible(point: { x: number; y: number }, radarViewport: Ra
   );
 }
 
-function compactPlayerLabel(name: string, maxLength: number) {
-  if (name.length <= maxLength) {
-    return name;
-  }
-
-  return `${name.slice(0, Math.max(3, maxLength - 1))}...`;
+function clampNumber(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
 }

@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -70,6 +71,9 @@ func writeUsageEventLog(entry usageEventLogEntry) error {
 	if usageLogPath == "" {
 		return nil
 	}
+	if err := os.MkdirAll(filepath.Dir(usageLogPath), 0o755); err != nil {
+		return fmt.Errorf("create usage log directory: %w", err)
+	}
 
 	file, err := os.OpenFile(usageLogPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
@@ -79,6 +83,45 @@ func writeUsageEventLog(entry usageEventLogEntry) error {
 
 	if _, err := file.WriteString(line); err != nil {
 		return fmt.Errorf("write usage log: %w", err)
+	}
+
+	readableLogPath := strings.TrimSuffix(usageLogPath, ".ndjson") + ".log"
+	readableFile, err := os.OpenFile(readableLogPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	if err != nil {
+		return fmt.Errorf("open readable usage log: %w", err)
+	}
+	defer readableFile.Close()
+
+	localTimestamp := time.Now().Format("2006-01-02 15:04:05")
+	if parsedTimestamp, err := time.Parse(time.RFC3339Nano, entry.Timestamp); err == nil {
+		localTimestamp = parsedTimestamp.Local().Format("2006-01-02 15:04:05")
+	}
+
+	pageLabel := "unknown-page"
+	if shellPage, ok := entry.Details["shellPage"].(string); ok && strings.TrimSpace(shellPage) != "" {
+		pageLabel = strings.TrimSpace(shellPage)
+	}
+	if pathName, ok := entry.Details["path"].(string); ok && strings.TrimSpace(pathName) != "" {
+		pageLabel = strings.TrimSpace(pathName)
+	}
+
+	mapLabel := ""
+	if mapName, ok := entry.Details["mapName"].(string); ok && strings.TrimSpace(mapName) != "" {
+		mapLabel = fmt.Sprintf(" | %s", strings.TrimSpace(mapName))
+	}
+
+	matchLabel := ""
+	if matchID, ok := entry.Details["matchId"].(string); ok && strings.TrimSpace(matchID) != "" {
+		matchLabel = fmt.Sprintf(" | match=%s", strings.TrimSpace(matchID))
+	}
+
+	statusLabel := ""
+	if errorText, ok := entry.Details["error"].(string); ok && strings.TrimSpace(errorText) != "" {
+		statusLabel = fmt.Sprintf(" | error=%s", strings.TrimSpace(errorText))
+	}
+
+	if _, err := fmt.Fprintf(readableFile, "[%s] %s | %s%s%s%s\n", localTimestamp, entry.Event, pageLabel, mapLabel, matchLabel, statusLabel); err != nil {
+		return fmt.Errorf("write readable usage log: %w", err)
 	}
 
 	return nil

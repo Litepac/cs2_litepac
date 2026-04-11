@@ -5,6 +5,10 @@ import { worldToScreen } from "../../maps/transform";
 import type { Replay, Round } from "../../replay/types";
 import { HURT_BURST_GAP_TICKS, RECENT_HURT_WINDOW_TICKS, RECENT_KILL_WINDOW_TICKS } from "./constants";
 
+const KILL_MARKER_CT_COLOR = 0x56b3ff;
+const KILL_MARKER_T_COLOR = 0xf2a64b;
+const KILL_MARKER_NEUTRAL_COLOR = 0xd8e1e8;
+
 type HurtBurst = {
   armorDamageTaken: number;
   attackerPlayerId: string | null;
@@ -34,18 +38,19 @@ export function renderCombatOverlays(
   }
 
   for (const killEvent of round.killEvents) {
-    drawKillEvent(layer, replay, killEvent, currentTick, radarViewport);
+    drawKillEvent(layer, replay, round, killEvent, currentTick, radarViewport);
   }
 }
 
 function drawKillEvent(
   layer: Container,
   replay: Replay,
+  round: Round,
   event: Round["killEvents"][number],
   currentTick: number,
   radarViewport: RadarViewport,
 ) {
-  if (event.tick > currentTick || currentTick - event.tick > RECENT_KILL_WINDOW_TICKS) {
+  if (event.tick > currentTick) {
     return;
   }
 
@@ -53,14 +58,21 @@ function drawKillEvent(
     return;
   }
 
-  const ageRatio = 1 - (currentTick - event.tick) / RECENT_KILL_WINDOW_TICKS;
+  const side = resolvePlayerSide(round, event.victimPlayerId);
+  const color =
+    side === "CT" ? KILL_MARKER_CT_COLOR : side === "T" ? KILL_MARKER_T_COLOR : KILL_MARKER_NEUTRAL_COLOR;
   const point = worldToScreen(replay, radarViewport, event.victimX, event.victimY);
   const marker = new Graphics();
-  marker.moveTo(point.x - 8, point.y - 8);
-  marker.lineTo(point.x + 8, point.y + 8);
-  marker.moveTo(point.x + 8, point.y - 8);
-  marker.lineTo(point.x - 8, point.y + 8);
-  marker.stroke({ color: 0xff7b72, width: 3, alpha: 0.32 + ageRatio * 0.6 });
+  marker.moveTo(point.x - 5.5, point.y - 5.5);
+  marker.lineTo(point.x + 5.5, point.y + 5.5);
+  marker.moveTo(point.x + 5.5, point.y - 5.5);
+  marker.lineTo(point.x - 5.5, point.y + 5.5);
+  marker.stroke({ color: 0x050b10, width: 3.2, alpha: 0.22, cap: "round", join: "round" });
+  marker.moveTo(point.x - 5.5, point.y - 5.5);
+  marker.lineTo(point.x + 5.5, point.y + 5.5);
+  marker.moveTo(point.x + 5.5, point.y - 5.5);
+  marker.lineTo(point.x - 5.5, point.y + 5.5);
+  marker.stroke({ color, width: 1.65, alpha: 0.48, cap: "round", join: "round" });
   layer.addChild(marker);
 }
 

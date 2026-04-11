@@ -72,6 +72,23 @@ func Serve(opts Options) error {
 		}
 		w.WriteHeader(http.StatusNoContent)
 	})
+	mux.HandleFunc("/api/feedback", func(w http.ResponseWriter, r *http.Request) {
+		allowCORS(w)
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		if r.Method != http.MethodPost {
+			writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
+			return
+		}
+
+		if err := appendFeedbackSubmission(r); err != nil {
+			writeJSONError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	})
 
 	addr := opts.ListenAddr
 	if strings.TrimSpace(addr) == "" {

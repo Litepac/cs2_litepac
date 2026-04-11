@@ -44,14 +44,17 @@ export function createRadarViewport(
   const safeCropTop = clamp(cropTop, 0, safeImageHeight - 1);
   const safeCropWidth = clamp(cropWidth, 1, safeImageWidth - safeCropLeft);
   const safeCropHeight = clamp(cropHeight, 1, safeImageHeight - safeCropTop);
-  const leftPadding = clamp(Math.round(viewportWidth * 0.02), 12, 32);
-  const rightPadding = clamp(Math.round(viewportWidth * 0.13), 44, 180);
-  const topPadding = clamp(Math.round(viewportHeight * 0.018), 10, 28);
-  const bottomPadding = clamp(Math.round(viewportHeight * 0.02), 12, 32);
+  // The replay shell gives the roster its own column, but the map still needs
+  // a stable fit with a little breathing room for the top HUD and analysis
+  // panel. Favor a complete fit over edge clipping.
+  const leftPadding = clamp(Math.round(viewportWidth * 0.006), 3, 10);
+  const rightPadding = clamp(Math.round(viewportWidth * 0.008), 6, 18);
+  const topPadding = clamp(Math.round(viewportHeight * 0.026), 14, 30);
+  const bottomPadding = clamp(Math.round(viewportHeight * 0.01), 5, 14);
   const fitWidth = Math.max(1, viewportWidth - leftPadding - rightPadding);
   const fitHeight = Math.max(1, viewportHeight - topPadding - bottomPadding);
   const fitScale = Math.min(fitWidth / safeCropWidth, fitHeight / safeCropHeight);
-  const scale = fitScale * 1.01;
+  const scale = fitScale * 0.998;
   const scaledWidth = safeCropWidth * scale;
   const scaledHeight = safeCropHeight * scale;
 

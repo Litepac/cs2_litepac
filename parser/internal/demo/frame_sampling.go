@@ -29,8 +29,16 @@ func (s *parseState) registerFrameSamplingHandlers() {
 		}
 
 		bombCarrierID := ""
-		if bomb := gs.Bomb(); bomb != nil && bomb.Carrier != nil {
+		bomb := gs.Bomb()
+		if bomb != nil && bomb.Carrier != nil {
 			bombCarrierID = s.ensurePlayer(bomb.Carrier)
+		}
+		s.reconcileBombCarrierTransition(s.parser.CurrentFrame(), bomb, bombCarrierID)
+		if bomb != nil && bombCarrierID == "" {
+			pos := positionOrBomb(bomb)
+			s.currentRound.SampleDroppedBombPosition(s.parser.CurrentFrame(), pos.x, pos.y, pos.z)
+		} else {
+			s.currentRound.SampleDroppedBombPosition(s.parser.CurrentFrame(), nil, nil, nil)
 		}
 
 		for _, player := range gs.Participants().All() {
@@ -161,21 +169,4 @@ func livePlayerSnapshot(player *common.Player) livePlayerState {
 		fireGrenades:      fireGrenades,
 		decoys:            decoys,
 	}
-}
-
-func infernoCenter(fires common.Fires) r3.Vector {
-	list := fires.List()
-	if len(list) == 0 {
-		return r3.Vector{}
-	}
-
-	var sum r3.Vector
-	for _, fire := range list {
-		sum.X += fire.X
-		sum.Y += fire.Y
-		sum.Z += fire.Z
-	}
-
-	count := float64(len(list))
-	return r3.Vector{X: sum.X / count, Y: sum.Y / count, Z: sum.Z / count}
 }

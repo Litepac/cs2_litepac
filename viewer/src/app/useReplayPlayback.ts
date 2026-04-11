@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { formatRoundClock } from "../replay/derived";
+import { resolveRoundTimer } from "../replay/roundTimer";
 import type { Replay } from "../replay/types";
 import { clampTick, resolveInitialRoundTick, resolveVisibleRoundEndTick } from "./replaySession";
 
@@ -19,7 +19,6 @@ export function useReplayPlayback(
   const initialRoundTick = round ? resolveInitialRoundTick(round) : 0;
   const effectiveRoundEndTick = round ? resolveVisibleRoundEndTick(round) : 0;
   const renderTick = round ? clampTick(displayTick, round.startTick, effectiveRoundEndTick) : 0;
-  const clockStartTick = round ? (showFreezeTime ? round.startTick : initialRoundTick) : 0;
 
   useEffect(() => {
     if (!round) {
@@ -67,7 +66,8 @@ export function useReplayPlayback(
 
   const tick = Math.round(displayTick);
   const renderTickRounded = Math.round(renderTick);
-  const roundClock = replay && round ? formatRoundClock(tick, clockStartTick, replay.match.tickRate) : null;
+  const roundTimer = replay && round ? resolveRoundTimer(replay, round, tick) : null;
+  const roundClock = roundTimer?.display ?? null;
 
   function togglePlayback() {
     if (!round) {

@@ -175,6 +175,12 @@
           "type": "integer",
           "minimum": 0
         },
+        "roundTimeSeconds": {
+          "$ref": "#/$defs/nullableNumber"
+        },
+        "freezeTimeSeconds": {
+          "$ref": "#/$defs/nullableNumber"
+        },
         "bombTimeSeconds": {
           "$ref": "#/$defs/nullableNumber"
         },
@@ -851,6 +857,16 @@
           "items": {
             "$ref": "#/$defs/playerStream"
           }
+        },
+        "droppedBombStream": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/trajectory"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "blindEvents": {
           "type": "array",

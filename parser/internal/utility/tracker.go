@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"math"
 	"sort"
-	"strings"
 
 	"github.com/golang/geo/r3"
 	common "github.com/markus-wa/demoinfocs-golang/v5/pkg/demoinfocs/common"
 
 	norm "mastermind/parser/internal/events"
+	"mastermind/parser/internal/playerids"
 	"mastermind/parser/internal/replay"
 )
 
@@ -251,7 +251,7 @@ func (t *Tracker) SyncInfernos(tick int, infernos map[int]*common.Inferno) {
 			continue
 		}
 
-		pos, activeFireCount := infernoActiveCenter(inferno)
+		pos, activeFireCount := InfernoActiveCenter(inferno)
 		t.lastInfernoPosByUtility[entry.UtilityID] = pos
 
 		if entry.DetonateTick == nil {
@@ -392,18 +392,7 @@ func (t *Tracker) byInferno(inferno *common.Inferno) *replay.UtilityEntity {
 	}
 
 	thrower := inferno.Thrower()
-	var throwerID string
-	if thrower != nil {
-		if thrower.SteamID64 > 0 {
-			throwerID = fmt.Sprintf("steam:%d", thrower.SteamID64)
-		} else {
-			name := strings.TrimSpace(strings.ToLower(thrower.Name))
-			name = strings.ReplaceAll(name, " ", "-")
-			if name != "" {
-				throwerID = fmt.Sprintf("player:%s:%d", name, thrower.UserID)
-			}
-		}
-	}
+	throwerID := playerids.Stable(thrower)
 
 	var candidate *replay.UtilityEntity
 	for _, entry := range t.byID {
@@ -489,7 +478,10 @@ func hasRecentSmokeDisplacement(entry *replay.UtilityEntity, tick int, durationT
 	return false
 }
 
-func infernoActiveCenter(inferno *common.Inferno) (r3.Vector, int) {
+// InfernoActiveCenter returns the active-fires-first center point plus the number of active fires.
+// When no fires are still burning, it falls back to the full inferno footprint so event-driven
+// expire handling and frame-sync handling use the same last-known center.
+func InfernoActiveCenter(inferno *common.Inferno) (r3.Vector, int) {
 	if inferno == nil {
 		return r3.Vector{}, 0
 	}

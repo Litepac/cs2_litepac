@@ -18,6 +18,8 @@ export type Replay = {
     matchId: string | null;
     tickRate: number;
     totalRounds: number;
+    roundTimeSeconds?: number | null;
+    freezeTimeSeconds?: number | null;
     bombTimeSeconds: number | null;
     gameMode: string | null;
   };
@@ -58,6 +60,13 @@ export type Round = {
   winnerSide: "T" | "CT" | null;
   endReason: string | null;
   playerStreams: PlayerStream[];
+  droppedBombStream?: {
+    sampleOriginTick: number;
+    sampleIntervalTicks: number;
+    x: Array<number | null>;
+    y: Array<number | null>;
+    z: Array<number | null>;
+  } | null;
   blindEvents: BlindEvent[];
   fireEvents: FireEvent[];
   hurtEvents: HurtEvent[];

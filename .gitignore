@@ -7,9 +7,12 @@ parser/replayinspect.exe
 viewer/node_modules/
 viewer/dist/
 viewer/*.log
+viewer-*.log
+viewer-dev*.log
 viewer/*.png
 viewer/*.tsbuildinfo
 parser/*.log
+parser-*.log
 parser/.cache/
 testdata/demos/*.dem
 testdata/replays/*.json
@@ -17,5 +20,14 @@ assets/fixtures/*.json
 tmp-*.log
 .tmp-*.log
 .tmp-*.ndjson
+.tmp-bridge-*.log
+.tmp-viewer-*.log
+.tmp-chrome-profile/
+*~
+*.bak
+*.orig
+*.old
+friend-logs/
 .vscode/
 docs/perf/traces/*.json
+parser/replayinspect.exe

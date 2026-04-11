@@ -2,10 +2,10 @@ package demo
 
 import (
 	"fmt"
-	"strings"
 
 	common "github.com/markus-wa/demoinfocs-golang/v5/pkg/demoinfocs/common"
 
+	"mastermind/parser/internal/playerids"
 	"mastermind/parser/internal/replay"
 )
 
@@ -23,7 +23,7 @@ func (s *parseState) ensurePlayer(player *common.Player) string {
 		s.ensureTeam(player.TeamState)
 	}
 
-	playerID := stablePlayerID(player)
+	playerID := playerids.Stable(player)
 	if _, ok := s.players[playerID]; ok {
 		return playerID
 	}
@@ -71,24 +71,6 @@ func (s *parseState) ensureTeam(team *common.TeamState) string {
 	}
 
 	return teamID
-}
-
-func stablePlayerID(player *common.Player) string {
-	if player == nil {
-		return ""
-	}
-
-	if player.SteamID64 > 0 {
-		return fmt.Sprintf("steam:%d", player.SteamID64)
-	}
-
-	name := strings.TrimSpace(strings.ToLower(player.Name))
-	name = strings.ReplaceAll(name, " ", "-")
-	if name == "" {
-		name = "unknown"
-	}
-
-	return fmt.Sprintf("player:%s:%d", name, player.UserID)
 }
 
 func teamID(team *common.TeamState) string {

@@ -60,6 +60,30 @@ func TestValidateReplayRejectsIncompleteEventPositions(t *testing.T) {
 		data.Rounds[0].BombEvents[1].Site = replay.String("A")
 		assertEventValidationErrorContains(t, ValidateReplay(data), "bomb event pickup at tick 21 should not carry a site")
 	})
+
+	t.Run("dropped bomb stream array lengths must match", func(t *testing.T) {
+		data := replayWithEventFixtures()
+		data.Rounds[0].DroppedBombStream = &replay.Trajectory{
+			SampleOriginTick:    22,
+			SampleIntervalTicks: 1,
+			X:                   []*float64{replay.Float64(1)},
+			Y:                   []*float64{},
+			Z:                   []*float64{replay.Float64(3)},
+		}
+		assertEventValidationErrorContains(t, ValidateReplay(data), "dropped bomb stream array lengths differ")
+	})
+
+	t.Run("dropped bomb stream must stay in round bounds", func(t *testing.T) {
+		data := replayWithEventFixtures()
+		data.Rounds[0].DroppedBombStream = &replay.Trajectory{
+			SampleOriginTick:    99,
+			SampleIntervalTicks: 1,
+			X:                   []*float64{replay.Float64(1), replay.Float64(2), replay.Float64(3)},
+			Y:                   []*float64{replay.Float64(1), replay.Float64(2), replay.Float64(3)},
+			Z:                   []*float64{replay.Float64(1), replay.Float64(2), replay.Float64(3)},
+		}
+		assertEventValidationErrorContains(t, ValidateReplay(data), "dropped bomb stream ends at tick 101 after effective round end 100")
+	})
 }
 
 func replayWithEventFixtures() replay.Replay {

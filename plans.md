@@ -41,6 +41,7 @@ Planning note:
 
 ## Done
 ### Recent Done
+- Completed alpha readiness cleanup slice 3: extracted the replay drawing toolbar, left mode rail, and roster column into focused `replay-map-first` components while leaving replay parser state, map rendering, and timeline logic unchanged; verified with the viewer production build.
 - Completed alpha readiness cleanup slice 2: removed provably unreachable CSS for retired Matches V2 and old replay shell wrappers from `viewer/src/app/app.css`, cutting the file from about 12.8k lines to about 11.9k lines and the built global CSS from 205.10 kB to 188.28 kB before the broader CSS split; verified with the viewer production build.
 - Completed alpha readiness cleanup slice 1: retired inactive legacy Home / Matches V2 / old replay layout components from active source, removed the Matches shell upload DOM lookup in favor of a direct input ref, added `docs/16-alpha-qa-checklist.md`, updated stale docs references, and verified with viewer build plus parser tests.
 - Completed the repo readiness audit pass for domain/alpha preparation: captured the key hosted-ingest, server-persistence, API-hardening, validation, bundle/CSS, and legacy-runtime findings in `docs/15-domain-alpha-readiness.md`; also fixed two small frontend risks by making replay shortcuts ignore focused interactive controls and giving the Feedback panel dialog-style focus/Escape behavior.

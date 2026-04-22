@@ -3,7 +3,7 @@ import { useEffect, useState, type PointerEvent as ReactPointerEvent } from "rea
 import { ReplayStage } from "../canvas/ReplayStage";
 import { scoreForSide, sideTeam, type Side } from "../replay/derived";
 import type { HeatmapScope, HeatmapSnapshot, HeatmapSourceFilter, HeatmapTeamFilter } from "../replay/heatmapAnalysis";
-import { livePlayersAtTick, type LivePlayerState } from "../replay/live";
+import { livePlayersAtTick } from "../replay/live";
 import type {
   PositionPlayerSnapshot,
   PositionTrailEntry,
@@ -23,12 +23,12 @@ import { resolveRoundTimer } from "../replay/roundTimer";
 import type { Replay, Round } from "../replay/types";
 import type { TimelineEventItem } from "../replay/timeline";
 import type { UtilityFocus } from "../replay/utilityFilter";
-import { normalizeUtilityVisualKind, utilityColorCss, type UtilityVisualKind } from "../replay/utilityPresentation";
-import { formatWeaponLabel, resolvePlayerEquipmentState, type UtilityKind } from "../replay/weapons";
 import { EquipmentIcon } from "./EquipmentIcon";
 import { KillFeed } from "./KillFeed";
+import { ReplayDrawingToolbar, type StageToolMode } from "./replay-map-first/ReplayDrawingToolbar";
+import { ReplayModeRail } from "./replay-map-first/ReplayModeRail";
+import { ReplayRosterColumn } from "./replay-map-first/ReplayRosterColumn";
 import { UtilityIcon } from "./UtilityIcon";
-import { WeaponGlyph } from "./WeaponGlyph";
 import "./ReplayMapFirstPage.css";
 
 type AnalysisPanelPlayer = {
@@ -62,8 +62,6 @@ type DrawingStroke = {
   id: number;
   points: DrawingPoint[];
 };
-
-type StageToolMode = "move" | "draw";
 
 type Props = {
   activeRoundIndex: number;
@@ -284,7 +282,7 @@ export function ReplayMapFirstPage({
 
   return (
     <div className="dr-mapfirst-page">
-      <ModeRail
+      <ReplayModeRail
         analysisMode={analysisMode}
         onOpenHome={onOpenHome}
         onOpenMatches={onOpenMatches}
@@ -318,7 +316,7 @@ export function ReplayMapFirstPage({
           onSelectPlayer={onReplayPlayerSelect}
         />
 
-        <DrawingToolbar
+        <ReplayDrawingToolbar
           mode={stageToolMode}
           hasDrawings={drawingStrokes.length > 0}
           onClear={() => {
@@ -373,7 +371,7 @@ export function ReplayMapFirstPage({
         {liveMode ? <KillFeed currentTick={playback.renderTickRounded} replay={replay} round={round} /> : null}
 
         <aside className="dr-mapfirst-roster-rail dr-mapfirst-roster-rail-ct" aria-label={`${ctTeam?.displayName ?? "CT"} roster`}>
-          <RosterColumn
+          <ReplayRosterColumn
             players={ctPlayers}
             selectedPlayerId={selectedPlayerId}
             side="CT"
@@ -382,7 +380,7 @@ export function ReplayMapFirstPage({
           />
         </aside>
         <aside className="dr-mapfirst-roster-rail dr-mapfirst-roster-rail-t" aria-label={`${tTeam?.displayName ?? "T"} roster`}>
-          <RosterColumn
+          <ReplayRosterColumn
             players={tPlayers}
             selectedPlayerId={selectedPlayerId}
             side="T"
@@ -439,82 +437,6 @@ export function ReplayMapFirstPage({
         ) : null}
       </section>
     </div>
-  );
-}
-
-type DrawingToolbarProps = {
-  hasDrawings: boolean;
-  mode: StageToolMode;
-  onClear: () => void;
-  onSelectDraw: () => void;
-  onSelectMove: () => void;
-};
-
-function DrawingToolbar({ hasDrawings, mode, onClear, onSelectDraw, onSelectMove }: DrawingToolbarProps) {
-  return (
-    <div className="dr-mapfirst-drawing-toolbar" aria-label="Map drawing tools">
-      <button
-        aria-label="Moving mode"
-        className={mode === "move" ? "dr-mapfirst-tool-button dr-mapfirst-tool-button-active" : "dr-mapfirst-tool-button"}
-        onClick={onSelectMove}
-        title="Moving mode (M)"
-        type="button"
-      >
-        <HandIcon />
-        <kbd>M</kbd>
-      </button>
-      <button
-        aria-label="Drawing mode"
-        className={mode === "draw" ? "dr-mapfirst-tool-button dr-mapfirst-tool-button-active" : "dr-mapfirst-tool-button"}
-        onClick={onSelectDraw}
-        title="Drawing mode (D)"
-        type="button"
-      >
-        <PencilIcon />
-        <kbd>D</kbd>
-      </button>
-      <button
-        aria-label="Clear drawing"
-        className="dr-mapfirst-tool-button"
-        disabled={!hasDrawings}
-        onClick={onClear}
-        title="Clear drawing (C)"
-        type="button"
-      >
-        <ClearIcon />
-        <kbd>C</kbd>
-      </button>
-    </div>
-  );
-}
-
-function HandIcon() {
-  return (
-    <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
-      <path d="M7 11V7.5a1.5 1.5 0 0 1 3 0V11" />
-      <path d="M10 11V5.5a1.5 1.5 0 0 1 3 0V11" />
-      <path d="M13 11V7a1.5 1.5 0 0 1 3 0v5" />
-      <path d="M16 12.5V10a1.5 1.5 0 0 1 3 0v3.5c0 4.5-2.5 7-7 7h-.8c-2.5 0-4.1-1.1-5.4-3.1L3.6 14a1.5 1.5 0 0 1 2.5-1.7L8 15" />
-    </svg>
-  );
-}
-
-function PencilIcon() {
-  return (
-    <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
-      <path d="m4 16 9.8-9.8 4 4L8 20H4v-4Z" />
-      <path d="m12.5 7.5 4 4" />
-      <path d="m15 5 1.1-1.1a1.7 1.7 0 0 1 2.4 0l1.6 1.6a1.7 1.7 0 0 1 0 2.4L19 9" />
-    </svg>
-  );
-}
-
-function ClearIcon() {
-  return (
-    <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
-      <path d="M5 5 19 19" />
-      <path d="M19 5 5 19" />
-    </svg>
   );
 }
 
@@ -577,14 +499,6 @@ type ReplayDockProps = {
   onUtilityFocusChange: (focus: UtilityFocus) => void;
 };
 
-const MODE_OPTIONS: Array<{ label: string; mode: ReplayAnalysisMode; positionsView?: PositionsView }> = [
-  { label: "Live", mode: "live" },
-  { label: "Utility", mode: "utilityAtlas" },
-  { label: "Paths", mode: "positions", positionsView: "paths" },
-  { label: "Player", mode: "positions", positionsView: "player" },
-  { label: "Heatmap", mode: "heatmap" },
-];
-
 const SPEEDS = [0.5, 1, 2];
 const TEAM_FILTERS: Array<{ label: string; value: "all" | Side }> = [
   { label: "All", value: "all" },
@@ -622,53 +536,6 @@ type PresentedTimelineMarker = {
   percent: number;
   presentation: TimelineMarkerPresentation;
 };
-
-type ModeRailProps = {
-  analysisMode: ReplayAnalysisMode;
-  onOpenHome: () => void;
-  onOpenMatches: () => void;
-  positionsView: PositionsView;
-  onSelectAnalysisMode: (mode: ReplayAnalysisMode) => void;
-  onSelectPositionsView: (view: PositionsView) => void;
-};
-
-function ModeRail({ analysisMode, onOpenHome, onOpenMatches, positionsView, onSelectAnalysisMode, onSelectPositionsView }: ModeRailProps) {
-  return (
-    <nav className="dr-mapfirst-mode-rail" aria-label="Replay mode">
-      <div className="dr-mapfirst-mode-brand">
-        <img src="/DemoRead_Logo.png" alt="DemoRead" decoding="async" />
-      </div>
-      <div className="dr-mapfirst-shell-rail-list" aria-label="Product navigation">
-        <button className="dr-mapfirst-rail-button dr-mapfirst-shell-button" onClick={onOpenHome} type="button">
-          Home
-        </button>
-        <button className="dr-mapfirst-rail-button dr-mapfirst-shell-button" onClick={onOpenMatches} type="button">
-          Matches
-        </button>
-      </div>
-      <div className="dr-mapfirst-mode-rail-list">
-        {MODE_OPTIONS.map((entry) => {
-          const active = analysisMode === entry.mode && (entry.mode !== "positions" || entry.positionsView === positionsView);
-          return (
-            <button
-              key={`${entry.mode}-${entry.positionsView ?? "default"}`}
-              className={active ? "dr-mapfirst-rail-button dr-mapfirst-rail-button-active" : "dr-mapfirst-rail-button"}
-              onClick={() => {
-                onSelectAnalysisMode(entry.mode);
-                if (entry.positionsView) {
-                  onSelectPositionsView(entry.positionsView);
-                }
-              }}
-              type="button"
-            >
-              {entry.label}
-            </button>
-          );
-        })}
-      </div>
-    </nav>
-  );
-}
 
 function ReplayDock({
   activeRoundIndex,
@@ -995,179 +862,6 @@ function formatElapsed(seconds: number) {
   const minutes = Math.floor(wholeSeconds / 60);
   const remainingSeconds = wholeSeconds % 60;
   return `${minutes}:${String(remainingSeconds).padStart(2, "0")}`;
-}
-
-type RosterColumnProps = {
-  players: LivePlayerState[];
-  selectedPlayerId: string | null;
-  side: Side;
-  teamLabel: string;
-  onSelectPlayer: (playerId: string) => void;
-};
-
-function RosterColumn({ players, selectedPlayerId, side, teamLabel, onSelectPlayer }: RosterColumnProps) {
-  return (
-    <section className={`dr-mapfirst-roster-column dr-mapfirst-roster-column-${side.toLowerCase()}`} aria-label={`${teamLabel} roster`}>
-      <header className="dr-mapfirst-roster-header">
-        <div>
-          <span>{side}</span>
-          <strong>{teamLabel}</strong>
-        </div>
-        <small>{players.filter((entry) => entry.alive).length} / {players.length}</small>
-      </header>
-      <div className="dr-mapfirst-roster-list">
-        {players.map((player) => {
-          const equipment = resolvePlayerEquipmentState({
-            activeWeapon: player.activeWeapon,
-            activeWeaponClass: player.activeWeaponClass,
-            mainWeapon: player.mainWeapon,
-          });
-          const utility = utilityInventory(player);
-          const weaponSlots = playerWeaponSlots(equipment.primaryWeapon, equipment.currentWeapon);
-
-          return (
-            <button
-              key={player.playerId}
-              className={[
-                "dr-mapfirst-player-chip",
-                `dr-mapfirst-player-chip-${side.toLowerCase()}`,
-                player.alive ? "" : "dr-mapfirst-player-chip-dead",
-                selectedPlayerId === player.playerId ? "dr-mapfirst-player-chip-active" : "",
-              ].filter(Boolean).join(" ")}
-              onClick={() => onSelectPlayer(player.playerId)}
-              type="button"
-            >
-              <span className="dr-mapfirst-player-main">
-                <span className="dr-mapfirst-player-name">{player.name}</span>
-                <span className="dr-mapfirst-player-money">{formatMoney(player.money)}</span>
-              </span>
-              <span className="dr-mapfirst-player-loadout">
-                {weaponSlots.map((slot) => (
-                  <span key={`${slot.type}:${slot.weaponName ?? "unknown"}`} className={`dr-mapfirst-weapon-slot dr-mapfirst-weapon-slot-${slot.type}`}>
-                    <WeaponGlyph className="dr-mapfirst-weapon-glyph" title={slot.label} weaponName={slot.weaponName} />
-                    <span>{slot.label}</span>
-                  </span>
-                ))}
-              </span>
-              <span className="dr-mapfirst-player-meta">
-                <span>{player.health == null ? "--" : Math.max(0, player.health)} HP</span>
-                {player.armor && player.armor > 0 ? (
-                  <span className="dr-mapfirst-equipment-item" title={`${player.armor} armor`}>
-                    <EquipmentIcon className="dr-mapfirst-equipment-icon" kind="kevlar" title="Armor" />
-                    {player.armor}
-                  </span>
-                ) : null}
-                {player.hasHelmet ? (
-                  <span className="dr-mapfirst-equipment-item" title="Helmet">
-                    <EquipmentIcon className="dr-mapfirst-equipment-icon" kind="helmet" title="Helmet" />
-                  </span>
-                ) : null}
-              </span>
-              <span className="dr-mapfirst-utility-row" aria-label="Held utility">
-                {utility.map((item) => (
-                  <span
-                    key={item.kind}
-                    className={item.active ? "dr-mapfirst-utility-item dr-mapfirst-utility-item-active" : "dr-mapfirst-utility-item"}
-                    style={{ color: utilityColorCss(item.kind) }}
-                    title={item.title}
-                  >
-                    <UtilityIcon className="dr-mapfirst-utility-icon" kind={item.kind} title={item.title} />
-                    {item.count > 1 ? <span>{item.count}</span> : null}
-                  </span>
-                ))}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
-type RailIconItem = {
-  active: boolean;
-  count: number;
-  kind: UtilityVisualKind;
-  title: string;
-};
-
-function formatMoney(money: number | null) {
-  if (money == null) {
-    return "$-";
-  }
-
-  return `$${money.toLocaleString("en-US")}`;
-}
-
-function playerWeaponSlots(primaryWeapon: string | null, currentWeapon: string | null) {
-  const slots = [];
-  if (primaryWeapon) {
-    slots.push({
-      label: formatWeaponLabel(primaryWeapon),
-      type: "primary",
-      weaponName: primaryWeapon,
-    });
-  }
-
-  if (currentWeapon && currentWeapon !== primaryWeapon) {
-    slots.push({
-      label: formatWeaponLabel(currentWeapon),
-      type: "active",
-      weaponName: currentWeapon,
-    });
-  }
-
-  if (slots.length === 0) {
-    slots.push({
-      label: "--",
-      type: "unknown",
-      weaponName: null,
-    });
-  }
-
-  return slots;
-}
-
-function utilityInventory(player: LivePlayerState): RailIconItem[] {
-  const activeUtilityKind = resolvePlayerEquipmentState({
-    activeWeapon: player.activeWeapon,
-    activeWeaponClass: player.activeWeaponClass,
-    mainWeapon: player.mainWeapon,
-  }).activeUtilityKind;
-  const capacities: Array<{ count: number | null; kind: UtilityKind; label: string; slots: number }> = [
-    { count: player.flashbangs, kind: "flashbang", label: "Flashbang", slots: 2 },
-    { count: player.smokes, kind: "smoke", label: "Smoke", slots: 1 },
-    { count: player.heGrenades, kind: "hegrenade", label: "HE grenade", slots: 1 },
-    { count: player.fireGrenades, kind: "molotov", label: "Molotov / incendiary", slots: 1 },
-    { count: player.decoys, kind: "decoy", label: "Decoy", slots: 1 },
-  ];
-
-  const utility = capacities
-    .map((entry) => ({
-      active:
-        (entry.kind === "molotov"
-          ? activeUtilityKind === "molotov" || activeUtilityKind === "incendiary"
-          : activeUtilityKind === entry.kind) && (entry.count ?? 0) > 0,
-      count: Math.min(entry.slots, Math.max(0, entry.count ?? 0)),
-      kind: normalizeUtilityVisualKind(entry.kind) ?? "fire",
-      title: `${entry.label}${(entry.count ?? 0) > 1 ? ` x${Math.min(entry.slots, Math.max(0, entry.count ?? 0))}` : ""}`,
-    }))
-    .filter((entry) => entry.count > 0)
-    .sort((left, right) => Number(right.active) - Number(left.active));
-
-  if (!player.hasBomb) {
-    return utility;
-  }
-
-  return [
-    ...utility,
-    {
-      active: false,
-      count: 1,
-      kind: "bomb",
-      title: "Bomb",
-    },
-  ];
 }
 
 function resolveModeLabel(analysisMode: ReplayAnalysisMode, positionsView: PositionsView, livePlayerContextMode: boolean) {

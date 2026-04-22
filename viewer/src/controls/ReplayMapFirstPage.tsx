@@ -26,6 +26,7 @@ import type { UtilityFocus } from "../replay/utilityFilter";
 import { EquipmentIcon } from "./EquipmentIcon";
 import { KillFeed } from "./KillFeed";
 import { ReplayDrawingToolbar, type StageToolMode } from "./replay-map-first/ReplayDrawingToolbar";
+import { ReplayHud } from "./replay-map-first/ReplayHud";
 import { ReplayModeRail } from "./replay-map-first/ReplayModeRail";
 import { ReplayRosterColumn } from "./replay-map-first/ReplayRosterColumn";
 import { UtilityIcon } from "./UtilityIcon";
@@ -347,26 +348,20 @@ export function ReplayMapFirstPage({
           ))}
         </svg>
 
-        <header className="dr-mapfirst-hud" aria-label="Replay status">
-          <div className="dr-mapfirst-hud-team dr-mapfirst-hud-team-ct">
-            <strong>{ctTeam?.displayName ?? "CT"}</strong>
-            <small>{ctPlayers.filter((entry) => entry.alive).length} / {ctPlayers.length} alive</small>
-          </div>
-          <div className="dr-mapfirst-hud-center">
-            <span>{replay.map.displayName} / Round {round.roundNumber}</span>
-            <b>{timer?.display ?? playback.roundClock ?? "--:--"}</b>
-            <strong>
-              <span className="dr-mapfirst-hud-score-ct">{ctScore}</span>
-              <span>-</span>
-              <span className="dr-mapfirst-hud-score-t">{tScore}</span>
-            </strong>
-            <small>{resolveModeLabel(analysisMode, positionsView, livePlayerContextMode)}</small>
-          </div>
-          <div className="dr-mapfirst-hud-team dr-mapfirst-hud-team-t">
-            <strong>{tTeam?.displayName ?? "T"}</strong>
-            <small>{tPlayers.filter((entry) => entry.alive).length} / {tPlayers.length} alive</small>
-          </div>
-        </header>
+        <ReplayHud
+          ctAlive={ctPlayers.filter((entry) => entry.alive).length}
+          ctScore={ctScore}
+          ctTeamName={ctTeam?.displayName ?? "CT"}
+          ctTotal={ctPlayers.length}
+          mapName={replay.map.displayName}
+          modeLabel={resolveModeLabel(analysisMode, positionsView, livePlayerContextMode)}
+          roundNumber={round.roundNumber}
+          tAlive={tPlayers.filter((entry) => entry.alive).length}
+          tScore={tScore}
+          tTeamName={tTeam?.displayName ?? "T"}
+          tTotal={tPlayers.length}
+          timerDisplay={timer?.display ?? playback.roundClock ?? "--:--"}
+        />
 
         {liveMode ? <KillFeed currentTick={playback.renderTickRounded} replay={replay} round={round} /> : null}
 

@@ -16,6 +16,7 @@ Read the design and implementation docs in this order:
 12. `docs/12-product-surface-principles.md`
 13. `docs/13-advanced-stats-v1.md`
 14. `docs/14-replay-v1-product-spec.md`
+15. `docs/15-domain-alpha-readiness.md`
 
 Historical review records:
 

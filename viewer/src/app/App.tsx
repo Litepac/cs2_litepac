@@ -1,15 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { ReplayStage } from "../canvas/ReplayStage";
-import { FeedbackWidget } from "../controls/FeedbackWidget";
 import { HomePage } from "../controls/HomePage";
-import { KillFeed } from "../controls/KillFeed";
-import { MapHud } from "../controls/MapHud";
+import { LegacyHomePage } from "../controls/LegacyHomePage";
 import { MatchesPage } from "../controls/MatchesPage";
-import { ReplayAnalysisPanel } from "../controls/ReplayAnalysisPanel";
-import { TeamRosterPanel } from "../controls/RosterPanel";
+import { MatchesPageV2 } from "../controls/MatchesPageV2";
+import { ReplayMapFirstPage } from "../controls/ReplayMapFirstPage";
 import { ShellTopNav } from "../controls/ShellTopNav";
-import { Sidebar } from "../controls/Sidebar";
 import { StatsPage } from "../controls/StatsPage";
 import {
   collectHeatmapSnapshot,
@@ -42,7 +38,6 @@ import {
 } from "../replay/replayAnalysis";
 import { trackUsageEvent, trackUsageEventOnce } from "../replay/parserBridge";
 import type { UtilityFocus } from "../replay/utilityFilter";
-import { TimelinePanel } from "../timeline/TimelinePanel";
 import { useFixtureCatalog } from "./useFixtureCatalog";
 import { useReplayLoader } from "./useReplayLoader";
 import { useReplayPlayback } from "./useReplayPlayback";
@@ -52,6 +47,7 @@ const MAX_POSITION_PLAYER_SELECTIONS = 3;
 
 export function App() {
   const fixtures = useFixtureCatalog();
+  const [shellPage, setShellPage] = useState<"home" | "home-original" | "matches" | "matches-v2" | "stats">("home");
   const {
     closeReplay,
     demoIngestState,
@@ -64,12 +60,13 @@ export function App() {
     onFixtureLoad,
     openReplay,
     parserBridgeAvailable,
+    parserBridgeHealth,
     replay,
     roundIndex,
     selectedPlayerId,
     setRoundIndex,
     setSelectedPlayerId,
-  } = useReplayLoader();
+  } = useReplayLoader(shellPage !== "home");
   const [utilityFocus, setUtilityFocus] = useState<UtilityFocus>("all");
   const [showFreezeTime, setShowFreezeTime] = useState(false);
   const [analysisMode, setAnalysisMode] = useState<ReplayAnalysisMode>("live");
@@ -81,6 +78,8 @@ export function App() {
   const [positionsSourceFilter, setPositionsSourceFilter] = useState<PositionsSourceFilter>("all");
   const [positionsView, setPositionsView] = useState<PositionsView>("paths");
   const [positionPlayerSelections, setPositionPlayerSelections] = useState<PositionPlayerSelection[]>([]);
+  const [positionPlayerBroadCompareEnabled, setPositionPlayerBroadCompareEnabled] = useState(false);
+  const [positionPlayerCompareEnabled, setPositionPlayerCompareEnabled] = useState(false);
   const [showPositionRoundNumbers, setShowPositionRoundNumbers] = useState(false);
   const [heatmapScope, setHeatmapScope] = useState<HeatmapScope>("round");
   const [heatmapTeamFilter, setHeatmapTeamFilter] = useState<HeatmapTeamFilter>("all");
@@ -88,7 +87,6 @@ export function App() {
   const [livePlayerContextMode, setLivePlayerContextMode] = useState(false);
   const [pendingUtilityJump, setPendingUtilityJump] = useState<{ roundIndex: number; tick: number } | null>(null);
   const [pendingPositionJump, setPendingPositionJump] = useState<{ roundIndex: number; tick: number } | null>(null);
-  const [shellPage, setShellPage] = useState<"home" | "matches" | "stats">("home");
   const [statsMatchId, setStatsMatchId] = useState<string | null>(null);
 
   const round = replay?.rounds[roundIndex] ?? null;
@@ -200,17 +198,43 @@ export function App() {
     return positionTrailEntries;
   }, [positionTrailEntries, positionsView, selectedPlayerId]);
   const positionPlayerSnapshots = useMemo(
-    () =>
-      replay
-        ? collectPositionPlayerSnapshots(
-            replay,
-            positionsView === "player" && positionsSourceFilter === "selected" ? positionPlayerSelections : [],
-            positionsTeamFilter,
-            positionsComparisonOffsetTicks,
-            showFreezeTime,
-          )
-        : [],
-    [positionPlayerSelections, positionsComparisonOffsetTicks, positionsSourceFilter, positionsTeamFilter, positionsView, replay, showFreezeTime],
+    () => {
+      if (!replay || positionsView !== "player") {
+        return [];
+      }
+
+      if (positionsSourceFilter === "selected") {
+        return collectPositionPlayerSnapshots(
+          replay,
+          positionPlayerSelections,
+          positionsTeamFilter,
+          positionsComparisonOffsetTicks,
+          showFreezeTime,
+        );
+      }
+
+      if (!positionPlayerBroadCompareEnabled) {
+        return [];
+      }
+
+      return collectPositionPlayerSnapshots(
+        replay,
+        [],
+        positionsTeamFilter,
+        positionsComparisonOffsetTicks,
+        showFreezeTime,
+      );
+    },
+    [
+      positionPlayerBroadCompareEnabled,
+      positionPlayerSelections,
+      positionsComparisonOffsetTicks,
+      positionsSourceFilter,
+      positionsTeamFilter,
+      positionsView,
+      replay,
+      showFreezeTime,
+    ],
   );
   const heatmapSnapshot = useMemo(
     () =>
@@ -248,6 +272,8 @@ export function App() {
     if (selectedPlayerId == null && positionsSourceFilter === "selected") {
       setPositionsSourceFilter("all");
       setPositionPlayerSelections([]);
+      setPositionPlayerBroadCompareEnabled(false);
+      setPositionPlayerCompareEnabled(false);
     }
     if (selectedPlayerId == null && heatmapSourceFilter === "selected") {
       setHeatmapSourceFilter("all");
@@ -299,6 +325,8 @@ export function App() {
     if (analysisMode === "positions" && mode !== "positions") {
       // Manual mode switches should not preserve hidden Position Player compare state.
       setPositionPlayerSelections([]);
+      setPositionPlayerBroadCompareEnabled(false);
+      setPositionPlayerCompareEnabled(false);
       setPositionsSourceFilter("all");
       setPositionsTeamFilter("all");
     }
@@ -319,9 +347,40 @@ export function App() {
           : normalizedSelections[0]?.playerIds[0] ?? null;
 
     setPositionPlayerSelections(normalizedSelections);
+    setPositionPlayerBroadCompareEnabled(false);
+    if (normalizedSelections.length === 0) {
+      setPositionPlayerCompareEnabled(false);
+    }
     setSelectedPlayerId(nextSelectedPlayerId);
     setPositionsSourceFilter(normalizedSelections.length > 0 ? "selected" : "all");
     setPositionsTeamFilter((currentTeamFilter) => resolvePositionPlayerTeamFilter(normalizedSelections, currentTeamFilter));
+  }
+
+  function handleEnablePositionPlayerBroadCompare() {
+    setLivePlayerContextMode(false);
+    setPositionPlayerSelections([]);
+    setPositionPlayerBroadCompareEnabled(true);
+    setPositionPlayerCompareEnabled(false);
+    setSelectedPlayerId(null);
+    setPositionsSourceFilter("all");
+    setPositionsTeamFilter("all");
+  }
+
+  function handleEnablePositionPlayerCompare() {
+    if (positionsView !== "player" || positionPlayerSelections.length === 0) {
+      return;
+    }
+
+    setLivePlayerContextMode(false);
+    setPositionPlayerBroadCompareEnabled(false);
+    setPositionPlayerCompareEnabled(true);
+  }
+
+  function handleDisablePositionPlayerCompare() {
+    if (positionPlayerSelections.length > 1) {
+      updatePositionPlayerSelections(positionPlayerSelections.slice(0, 1));
+    }
+    setPositionPlayerCompareEnabled(false);
   }
 
   function handleReplayPlayerSelect(playerId: string) {
@@ -354,12 +413,23 @@ export function App() {
       const toggleKey = toPositionPlayerRosterSelectionKey(playerIds, playerSide);
       const selectedKeys = new Set(positionPlayerSelectedKeys);
 
-      if (selectedKeys.has(toggleKey)) {
-        updatePositionPlayerSelections(positionPlayerSelections.filter((player) => toPositionPlayerRosterSelectionKey(player.playerIds, player.side) !== toggleKey));
+      if (positionPlayerCompareEnabled) {
+        if (selectedKeys.has(toggleKey)) {
+          updatePositionPlayerSelections(positionPlayerSelections.filter((player) => toPositionPlayerRosterSelectionKey(player.playerIds, player.side) !== toggleKey));
+          return;
+        }
+
+        updatePositionPlayerSelections([...positionPlayerSelections, { playerIds, side: playerSide }], primaryPlayerId);
         return;
       }
 
-      updatePositionPlayerSelections([...positionPlayerSelections, { playerIds, side: playerSide }], primaryPlayerId);
+      if (selectedKeys.has(toggleKey)) {
+        updatePositionPlayerSelections([]);
+        return;
+      }
+
+      updatePositionPlayerSelections([{ playerIds, side: playerSide }], primaryPlayerId);
+      setPositionPlayerCompareEnabled(false);
       return;
     }
 
@@ -405,6 +475,7 @@ export function App() {
   function handleAnalysisPlayerClear() {
     setLivePlayerContextMode(false);
     if (analysisMode === "positions" && positionsView === "player") {
+      setPositionPlayerBroadCompareEnabled(false);
       updatePositionPlayerSelections([]);
       return;
     }
@@ -428,15 +499,25 @@ export function App() {
       const seedSelection = resolvePositionPlayerSelection(replay, roundIndex, selectedPlayerId);
       if (seedSelection) {
         updatePositionPlayerSelections([seedSelection], selectedPlayerId);
+        setPositionPlayerCompareEnabled(false);
       } else {
         updatePositionPlayerSelections([]);
+        setPositionPlayerBroadCompareEnabled(false);
+        setPositionPlayerCompareEnabled(false);
       }
       return;
     }
 
     if (view === "paths") {
       setPositionPlayerSelections([]);
+      setPositionPlayerBroadCompareEnabled(false);
+      setPositionPlayerCompareEnabled(false);
+      return;
     }
+
+    setPositionPlayerSelections([]);
+    setPositionPlayerBroadCompareEnabled(false);
+    setPositionPlayerCompareEnabled(false);
   }
 
   function handleUtilityAtlasSelect(entry: UtilityAtlasEntry) {
@@ -470,153 +551,97 @@ export function App() {
     setPendingPositionJump({ roundIndex: snapshot.roundIndex, tick: snapshot.targetTick });
   }
 
-  const showSidebar = replay != null;
-
   return (
-    <div className={`sky-shell ${!replay ? `sky-shell-${shellPage}` : "sky-shell-replay"}`}>
-      {showSidebar ? (
-        <Sidebar
-          onSelectShellPage={(page) => {
-            closeReplay();
-            setShellPage(page);
-          }}
-        />
-      ) : null}
-
-      <main className={`viewer-shell ${replay ? "viewer-shell-replay" : `viewer-shell-${shellPage}`}`}>
+    <div className={replay ? "dr-replay-app" : `sky-shell sky-shell-${shellPage}`}>
+      <main className={replay ? "dr-replay-app-main" : `viewer-shell viewer-shell-${shellPage}`}>
         {replay && round ? (
-          <>
-            <section className="map-workspace">
-              <div className="map-stage-frame">
-                <div className="map-stage-main">
-                  <ReplayAnalysisPanel
-                    analysisMode={analysisMode}
-                    analysisPlayers={analysisPlayers}
-                    heatmapScope={heatmapScope}
-                    heatmapSourceFilter={heatmapSourceFilter}
-                    heatmapTeamFilter={heatmapTeamFilter}
-                    positionsScope={positionsScope}
-                    positionsSourceFilter={positionsSourceFilter}
-                    positionsTeamFilter={positionsTeamFilter}
-                    positionsView={positionsView}
-                    positionPlayerMaxSelections={MAX_POSITION_PLAYER_SELECTIONS}
-                    positionPlayerSelectedKeys={positionPlayerSelectedKeys}
-                    showPositionRoundNumbers={showPositionRoundNumbers}
-                      selectedPlayerId={selectedPlayerId}
-                    selectedPlayerName={selectedPlayerName}
-                    utilityAtlasScope={utilityAtlasScope}
-                    utilityAtlasSourceFilter={utilityAtlasSourceFilter}
-                    utilityAtlasTeamFilter={utilityAtlasTeamFilter}
-                    utilityFocus={utilityFocus}
-                    onSelectAnalysisMode={handleAnalysisModeChange}
-                    onSelectPositionsView={handlePositionsViewChange}
-                    onHeatmapScopeChange={setHeatmapScope}
-                    onHeatmapTeamFilterChange={setHeatmapTeamFilter}
-                    onPositionsScopeChange={setPositionsScope}
-                    onPositionsTeamFilterChange={setPositionsTeamFilter}
-                    onShowPositionRoundNumbersChange={setShowPositionRoundNumbers}
-                    onUtilityAtlasScopeChange={setUtilityAtlasScope}
-                      onUtilityAtlasTeamFilterChange={setUtilityAtlasTeamFilter}
-                    onUtilityFocusChange={setUtilityFocus}
-                    onAnalysisPlayerToggle={handleAnalysisPlayerToggle}
-                    onAnalysisPlayerClear={handleAnalysisPlayerClear}
-                  />
-                  <ReplayStage
-                    key={`${replay.sourceDemo.fileName}:${round.roundNumber}`}
-                    activeRoundIndex={roundIndex}
-                    analysisMode={analysisMode}
-                    currentTick={playback.renderTick}
-                    heatmapCellSize={heatmapSnapshot.cellSize}
-                    heatmapScope={heatmapScope}
-                    heatmapBuckets={heatmapSnapshot.buckets}
-                    heatmapMaxSampleCount={heatmapSnapshot.maxSampleCount}
-                    livePlayerContextMode={analysisMode === "live" && livePlayerContextMode}
-                    onSelectAtlasEntry={handleUtilityAtlasSelect}
-                    positionPlayerSnapshots={positionPlayerSnapshots}
-                    positionTrailEntries={displayedPositionTrailEntries}
-                    showPositionRoundNumbers={showPositionRoundNumbers}
-                    positionsView={positionsView}
-                    replay={replay}
-                    round={round}
-                    selectedPlayerId={selectedPlayerId}
-                    utilityAtlasEntries={utilityAtlasEntries}
-                    utilityFocus={utilityFocus}
-                    onSelectPositionSnapshot={handleSelectPositionSnapshot}
-                    onSelectPlayer={handleReplayPlayerSelect}
-                  />
-                  <MapHud currentTick={playback.renderTickRounded} replay={replay} round={round} />
-                  {analysisMode === "live" ? (
-                    <KillFeed currentTick={playback.renderTickRounded} replay={replay} round={round} />
-                  ) : null}
-                  {analysisMode === "live" ? (
-                    <div className="map-stage-team-rosters">
-                      <TeamRosterPanel
-                        className="map-stage-roster map-stage-roster-ct"
-                        currentTick={playback.renderTickRounded}
-                        onSelectPlayer={handleReplayPlayerSelect}
-                        replay={replay}
-                        round={round}
-                        selectedPlayerId={selectedPlayerId}
-                        side="CT"
-                      />
-                      <TeamRosterPanel
-                        className="map-stage-roster map-stage-roster-t"
-                        currentTick={playback.renderTickRounded}
-                        onSelectPlayer={handleReplayPlayerSelect}
-                        replay={replay}
-                        round={round}
-                        selectedPlayerId={selectedPlayerId}
-                        side="T"
-                      />
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-            </section>
-
-            <TimelinePanel
-              activeRoundIndex={roundIndex}
-              analysisMode={analysisMode}
-              currentTick={playback.tick}
-              heatmapLabel={heatmapLabel}
-              heatmapScope={heatmapScope}
-              heatmapSnapshot={heatmapSnapshot}
-              initialRoundTick={playback.initialRoundTick}
-              livePlayerContextMode={analysisMode === "live" && livePlayerContextMode}
-              replay={replay}
-              markers={timelineMarkers}
-              playing={playback.playing}
-              roundClock={playback.roundClock}
-              round={round}
-              rounds={replay.rounds}
-              showFreezeTime={showFreezeTime}
-              speed={playback.speed}
-              tick={playback.tick}
-              tickRate={replay.match.tickRate}
-              positionPlayerSnapshots={positionPlayerSnapshots}
-              positionPlayerSelectedCount={positionPlayerSelections.length}
-              positionTrailEntries={positionTrailEntries}
-              positionsLabel={positionsLabel}
-              positionsTeamFilter={positionsTeamFilter}
-              positionsView={positionsView}
-              utilityAtlasEntries={utilityAtlasEntries}
-              utilityAtlasLabel={utilityAtlasLabel}
-              utilityFocus={utilityFocus}
-              onSelectRound={setRoundIndex}
-              onPlayToggle={playback.togglePlayback}
-              onReset={playback.resetPlayback}
-              onSpeedChange={playback.setSpeed}
-              onShowFreezeTimeChange={setShowFreezeTime}
-              onTickChange={playback.changeTick}
-              onUtilityFocusChange={setUtilityFocus}
-              selectedPlayerId={selectedPlayerId}
-              selectedPlayerName={selectedPlayerName}
-            />
-          </>
+          <ReplayMapFirstPage
+            activeRoundIndex={roundIndex}
+            analysisMode={analysisMode}
+            analysisPlayers={analysisPlayers}
+            displayedPositionTrailEntries={displayedPositionTrailEntries}
+            heatmapLabel={heatmapLabel}
+            heatmapScope={heatmapScope}
+            heatmapSnapshot={heatmapSnapshot}
+            heatmapSourceFilter={heatmapSourceFilter}
+            heatmapTeamFilter={heatmapTeamFilter}
+            livePlayerContextMode={livePlayerContextMode}
+            markers={timelineMarkers}
+            playback={playback}
+            positionPlayerBroadCompareEnabled={positionPlayerBroadCompareEnabled}
+            positionPlayerCompareEnabled={positionPlayerCompareEnabled}
+            positionPlayerMaxSelections={MAX_POSITION_PLAYER_SELECTIONS}
+            positionPlayerSelectedCount={positionPlayerSelections.length}
+            positionPlayerSelectedKeys={positionPlayerSelectedKeys}
+            positionPlayerSnapshots={positionPlayerSnapshots}
+            positionTrailEntries={positionTrailEntries}
+            positionsLabel={positionsLabel}
+            positionsScope={positionsScope}
+            positionsSourceFilter={positionsSourceFilter}
+            positionsTeamFilter={positionsTeamFilter}
+            positionsView={positionsView}
+            replay={replay}
+            round={round}
+            selectedPlayerId={selectedPlayerId}
+            selectedPlayerName={selectedPlayerName}
+            showFreezeTime={showFreezeTime}
+            showPositionRoundNumbers={showPositionRoundNumbers}
+            utilityAtlasEntries={utilityAtlasEntries}
+            utilityAtlasLabel={utilityAtlasLabel}
+            utilityAtlasScope={utilityAtlasScope}
+            utilityAtlasSourceFilter={utilityAtlasSourceFilter}
+            utilityAtlasTeamFilter={utilityAtlasTeamFilter}
+            utilityFocus={utilityFocus}
+            onAnalysisPlayerClear={handleAnalysisPlayerClear}
+            onAnalysisPlayerToggle={handleAnalysisPlayerToggle}
+            onDisablePositionPlayerCompare={handleDisablePositionPlayerCompare}
+            onEnablePositionPlayerBroadCompare={handleEnablePositionPlayerBroadCompare}
+            onEnablePositionPlayerCompare={handleEnablePositionPlayerCompare}
+            onHeatmapScopeChange={setHeatmapScope}
+            onHeatmapTeamFilterChange={setHeatmapTeamFilter}
+            onOpenHome={() => {
+              closeReplay();
+              setShellPage("home");
+            }}
+            onOpenMatches={() => {
+              closeReplay();
+              setShellPage("matches");
+            }}
+            onPositionsScopeChange={setPositionsScope}
+            onPositionsTeamFilterChange={setPositionsTeamFilter}
+            onReplayPlayerSelect={handleReplayPlayerSelect}
+            onSelectAnalysisMode={handleAnalysisModeChange}
+            onSelectAtlasEntry={handleUtilityAtlasSelect}
+            onSelectPositionSnapshot={handleSelectPositionSnapshot}
+            onSelectPositionsView={handlePositionsViewChange}
+            onSelectRound={setRoundIndex}
+            onShowFreezeTimeChange={setShowFreezeTime}
+            onShowPositionRoundNumbersChange={setShowPositionRoundNumbers}
+            onUtilityAtlasScopeChange={setUtilityAtlasScope}
+            onUtilityAtlasTeamFilterChange={setUtilityAtlasTeamFilter}
+            onUtilityFocusChange={setUtilityFocus}
+          />
         ) : shellPage === "home" ? (
+            <section className="home-surface home-surface-landing">
+              <ShellTopNav
+                actionLabel="Open Matches"
+                feedbackContext={feedbackContext}
+                localMatchCount={0}
+                onAction={() => setShellPage("matches")}
+                onOpenHome={() => setShellPage("home")}
+                onOpenMatches={() => setShellPage("matches")}
+                parserBridgeAvailable={false}
+                shellPage={shellPage}
+              />
+              <HomePage
+                onOpenMatches={() => setShellPage("matches")}
+              />
+            </section>
+          ) : shellPage === "home-original" ? (
             <section className="home-surface">
               <ShellTopNav
                 actionLabel={libraryEntries.length > 0 ? "Open Matches" : "Start Local Review"}
+                feedbackContext={feedbackContext}
                 localMatchCount={libraryEntries.length}
                 onAction={() => setShellPage("matches")}
                 onOpenHome={() => setShellPage("home")}
@@ -624,7 +649,7 @@ export function App() {
                 parserBridgeAvailable={parserBridgeAvailable}
                 shellPage={shellPage}
               />
-              <HomePage
+              <LegacyHomePage
                 latestMatch={libraryEntries[0] ?? null}
                 localMatchCount={libraryEntries.length}
                 onOpenMatches={() => setShellPage("matches")}
@@ -634,7 +659,13 @@ export function App() {
           ) : shellPage === "matches" ? (
             <section className="matches-surface">
               <ShellTopNav
+                actionDisabled={loadingSource != null || !parserBridgeAvailable}
+                actionLabel={parserBridgeAvailable ? "Upload Demo" : "Parser Offline"}
+                feedbackContext={feedbackContext}
                 localMatchCount={libraryEntries.length}
+                onAction={() => {
+                  document.getElementById("matches-redline-upload-input")?.click();
+                }}
                 onOpenHome={() => setShellPage("home")}
                 onOpenMatches={() => setShellPage("matches")}
                 parserBridgeAvailable={parserBridgeAvailable}
@@ -653,11 +684,38 @@ export function App() {
                 onFixtureLoad={onFixtureLoad}
                 onOpenMatch={handleOpenMatch}
                 onOpenStats={handleOpenStats}
+                parserBridgeHealth={parserBridgeHealth}
+              />
+            </section>
+          ) : shellPage === "matches-v2" ? (
+            <section className="matches-surface matches-surface-v2">
+              <ShellTopNav
+                feedbackContext={feedbackContext}
+                localMatchCount={libraryEntries.length}
+                onOpenHome={() => setShellPage("home")}
+                onOpenMatches={() => setShellPage("matches")}
+                parserBridgeAvailable={parserBridgeAvailable}
+                shellPage={shellPage}
+              />
+              <MatchesPageV2
+                demoIngestState={demoIngestState}
+                error={error}
+                fixtures={fixtures}
+                libraryHydrated={libraryHydrated}
+                matches={libraryEntries}
+                loadingSource={loadingSource}
+                parserBridgeAvailable={parserBridgeAvailable}
+                onDemoFileChange={handleDemoFileChange}
+                onDeleteMatch={deleteReplay}
+                onFixtureLoad={onFixtureLoad}
+                onOpenMatch={handleOpenMatch}
+                onOpenStats={handleOpenStats}
               />
             </section>
           ) : (
             <section className="matches-surface stats-surface">
               <ShellTopNav
+                feedbackContext={feedbackContext}
                 localMatchCount={libraryEntries.length}
                 onOpenHome={() => setShellPage("home")}
                 onOpenMatches={() => setShellPage("matches")}
@@ -682,7 +740,6 @@ export function App() {
           )
         }
       </main>
-      <FeedbackWidget context={feedbackContext} />
     </div>
   );
 }

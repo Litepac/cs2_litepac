@@ -2,8 +2,15 @@ import { validateReplay } from "./schema";
 import type { Replay } from "./types";
 
 export type DemoParseStage = "upload" | "parser" | "validate";
+export type ParserBridgeHealth = {
+  available: boolean;
+  bridge?: string;
+  error?: string;
+  mode?: string;
+  service?: string;
+};
 type StreamEvent =
-  | { type: "progress"; roundsParsed?: number }
+  | { type: "progress"; roundsParsed?: number; roundsTotal?: number }
   | { type: "result"; replay: unknown }
   | { type: "error"; error?: string };
 
@@ -18,13 +25,28 @@ function parserApiUrl(path: string) {
 }
 
 export async function checkParserBridge(): Promise<boolean> {
+  return (await getParserBridgeHealth()).available;
+}
+
+export async function getParserBridgeHealth(): Promise<ParserBridgeHealth> {
   try {
     const response = await fetch(`${parserApiUrl("/api/health")}?ts=${Date.now()}`, {
       cache: "no-store",
     });
-    return response.ok;
+
+    const payload = (await response.json().catch(() => null)) as
+      | { bridge?: unknown; error?: unknown; mode?: unknown; service?: unknown }
+      | null;
+
+    return {
+      available: response.ok,
+      bridge: typeof payload?.bridge === "string" ? payload.bridge : undefined,
+      error: typeof payload?.error === "string" ? payload.error : undefined,
+      mode: typeof payload?.mode === "string" ? payload.mode : undefined,
+      service: typeof payload?.service === "string" ? payload.service : undefined,
+    };
   } catch {
-    return false;
+    return { available: false };
   }
 }
 
@@ -88,7 +110,7 @@ export async function submitFeedback(message: string, context?: FeedbackContext)
 
 export async function parseDemoFile(
   file: File,
-  options?: { onProgress?: (progress: { roundsParsed: number }) => void; onStage?: (stage: DemoParseStage) => void },
+  options?: { onProgress?: (progress: { roundsParsed: number; roundsTotal?: number }) => void; onStage?: (stage: DemoParseStage) => void },
 ): Promise<Replay> {
   const form = new FormData();
   form.append("demo", file, file.name);
@@ -99,18 +121,17 @@ export async function parseDemoFile(
 
   try {
     options?.onStage?.("upload");
-    const responsePromise = fetch(parserApiUrl("/api/parse-demo"), {
+    const response = await fetch(parserApiUrl("/api/parse-demo"), {
       body: form,
       method: "POST",
       signal: abortController.signal,
     });
-    options?.onStage?.("parser");
-    const response = await responsePromise;
 
     if (!response.ok) {
       throw new Error(await parseParserError(response));
     }
 
+    options?.onStage?.("parser");
     const parsed = await readParseStream(response, options);
     options?.onStage?.("validate");
     const result = validateReplay(parsed);
@@ -132,7 +153,7 @@ export async function parseDemoFile(
 
 async function readParseStream(
   response: Response,
-  options?: { onProgress?: (progress: { roundsParsed: number }) => void; onStage?: (stage: DemoParseStage) => void },
+  options?: { onProgress?: (progress: { roundsParsed: number; roundsTotal?: number }) => void; onStage?: (stage: DemoParseStage) => void },
 ) {
   if (response.body == null) {
     return (await response.json()) as unknown;
@@ -182,22 +203,27 @@ async function readParseStream(
 function consumeStreamLine(
   line: string,
   currentReplay: unknown,
-  options?: { onProgress?: (progress: { roundsParsed: number }) => void; onStage?: (stage: DemoParseStage) => void },
+  options?: { onProgress?: (progress: { roundsParsed: number; roundsTotal?: number }) => void; onStage?: (stage: DemoParseStage) => void },
 ) {
   const parsed = JSON.parse(line) as StreamEvent | Record<string, unknown>;
 
   if (isReplayPayload(parsed)) {
+    emitReplayRoundProgress(parsed, options);
     return parsed;
   }
 
   const event = parsed as StreamEvent;
   if (event.type === "progress" && typeof event.roundsParsed === "number") {
     options?.onStage?.("parser");
-    options?.onProgress?.({ roundsParsed: event.roundsParsed });
+    options?.onProgress?.({
+      roundsParsed: event.roundsParsed,
+      roundsTotal: typeof event.roundsTotal === "number" ? event.roundsTotal : undefined,
+    });
     return currentReplay;
   }
 
   if (event.type === "result") {
+    emitReplayRoundProgress(event.replay, options);
     return event.replay;
   }
 
@@ -206,6 +232,22 @@ function consumeStreamLine(
   }
 
   return currentReplay;
+}
+
+function emitReplayRoundProgress(
+  replay: unknown,
+  options?: { onProgress?: (progress: { roundsParsed: number; roundsTotal?: number }) => void },
+) {
+  if (replay == null || typeof replay !== "object") {
+    return;
+  }
+
+  const rounds = (replay as { rounds?: unknown }).rounds;
+  if (!Array.isArray(rounds)) {
+    return;
+  }
+
+  options?.onProgress?.({ roundsParsed: rounds.length, roundsTotal: rounds.length });
 }
 
 function isReplayPayload(value: unknown): value is Record<string, unknown> {

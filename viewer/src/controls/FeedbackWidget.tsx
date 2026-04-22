@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 
 import { submitFeedback, trackUsageEvent } from "../replay/parserBridge";
 
@@ -9,10 +9,19 @@ type Props = {
 type FeedbackStatus = "idle" | "sending" | "sent" | "error";
 
 export function FeedbackWidget({ context }: Props) {
+  const titleId = useId();
+  const launchButtonRef = useRef<HTMLButtonElement | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [message, setMessage] = useState("");
   const [panelOpen, setPanelOpen] = useState(false);
   const [status, setStatus] = useState<FeedbackStatus>("idle");
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (panelOpen) {
+      textareaRef.current?.focus();
+    }
+  }, [panelOpen]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -48,28 +57,49 @@ export function FeedbackWidget({ context }: Props) {
     }
   }
 
-  function togglePanel() {
-    const nextOpen = !panelOpen;
-    setPanelOpen(nextOpen);
+  function openPanel() {
+    setPanelOpen(true);
+    trackUsageEvent("feedback_opened", context);
+  }
 
-    if (nextOpen) {
-      trackUsageEvent("feedback_opened", context);
+  function closePanel() {
+    setPanelOpen(false);
+    setError(null);
+    setStatus("idle");
+    window.setTimeout(() => launchButtonRef.current?.focus(), 0);
+  }
+
+  function togglePanel() {
+    if (panelOpen) {
+      closePanel();
     } else {
-      setError(null);
-      setStatus("idle");
+      openPanel();
+    }
+  }
+
+  function handlePanelKeyDown(event: KeyboardEvent<HTMLFormElement>) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closePanel();
     }
   }
 
   return (
     <div className={`feedback-widget ${panelOpen ? "feedback-widget-open" : ""}`}>
       {panelOpen ? (
-        <form className="feedback-panel" onSubmit={handleSubmit}>
+        <form
+          aria-labelledby={titleId}
+          className="feedback-panel"
+          onKeyDown={handlePanelKeyDown}
+          onSubmit={handleSubmit}
+          role="dialog"
+        >
           <div className="feedback-panel-head">
             <div>
               <p className="eyebrow">Feedback</p>
-              <h2>Send a note</h2>
+              <h2 id={titleId}>Send a note</h2>
             </div>
-            <button className="feedback-close-button" onClick={togglePanel} type="button">
+            <button className="feedback-close-button" onClick={closePanel} type="button">
               Close
             </button>
           </div>
@@ -77,6 +107,7 @@ export function FeedbackWidget({ context }: Props) {
           <label className="feedback-field">
             <span>What feels wrong, missing, or good?</span>
             <textarea
+              ref={textareaRef}
               maxLength={4000}
               onChange={(event) => {
                 setMessage(event.target.value);
@@ -118,7 +149,13 @@ export function FeedbackWidget({ context }: Props) {
         </form>
       ) : null}
 
-      <button className="feedback-launch-button" onClick={togglePanel} type="button">
+      <button
+        ref={launchButtonRef}
+        aria-expanded={panelOpen}
+        className="feedback-launch-button"
+        onClick={togglePanel}
+        type="button"
+      >
         Feedback
       </button>
     </div>

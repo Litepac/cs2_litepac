@@ -27,6 +27,8 @@ That conflicts with this project's canonical contract:
 - Keep the right-side team rail compact and information-first.
 - Keep utility visuals calm and readable rather than debug-heavy.
 - Keep renderer concerns separate from replay extraction concerns.
+- Treat multi-round position tools as pattern-finders, not generic overview clutter: external tools like Noesis and team-analysis suites push positions toward repeated movement/strategy discovery, round filtering, and quick jump-back into concrete replay examples.
+- Keep player-position study narrow and legible: selected-player timing/pattern study should be the primary workflow, while broad all-player compare should stay explicit and secondary.
 
 ## Architectural Boundary For This Repo
 Parser owns:

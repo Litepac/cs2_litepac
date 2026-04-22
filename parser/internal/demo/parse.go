@@ -42,12 +42,13 @@ func Parse(opts Options) error {
 	defer parser.Close()
 
 	state := &parseState{
-		parser:   parser,
-		replay:   replay.NewReplay(),
-		notes:    []string{},
-		players:  map[string]playerRef{},
-		teams:    map[string]teamRef{},
-		progress: opts.Progress,
+		parser:         parser,
+		replay:         replay.NewReplay(),
+		notes:          []string{},
+		players:        map[string]playerRef{},
+		teams:          map[string]teamRef{},
+		expectedRounds: opts.ExpectedRounds,
+		progress:       opts.Progress,
 	}
 
 	state.replay.SourceDemo = replay.SourceDemo{

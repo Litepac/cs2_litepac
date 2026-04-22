@@ -51,13 +51,18 @@ type Props = {
 };
 
 export function WeaponGlyph({ className, title, weaponName }: Props) {
-  return <img alt="" aria-hidden="true" className={className} src={weaponIconSrc(weaponName)} title={title} />;
+  const iconSrc = weaponIconSrc(weaponName);
+  if (!iconSrc) {
+    return null;
+  }
+
+  return <img alt="" aria-hidden="true" className={className} src={iconSrc} title={title} />;
 }
 
 function weaponIconSrc(weaponName: string | null) {
   const normalized = normalizeWeaponName(weaponName);
   if (!normalized) {
-    return m4a1Icon;
+    return null;
   }
 
   if (
@@ -78,9 +83,12 @@ function weaponIconSrc(weaponName: string | null) {
     cz75a: cz75aIcon,
     cz75auto: cz75aIcon,
     deagle: deagleIcon,
+    deserteagle: deagleIcon,
     decoy: decoyIcon,
+    dualberettas: eliteIcon,
     elite: eliteIcon,
     famas: famasIcon,
+    five7: fivesevenIcon,
     fiveseven: fivesevenIcon,
     flashbang: flashbangIcon,
     g3sg1: g3sg1Icon,
@@ -91,8 +99,10 @@ function weaponIconSrc(weaponName: string | null) {
     hkp2000: hkp2000Icon,
     incgrenade: incgrenadeIcon,
     incendiarygrenade: incgrenadeIcon,
+    incendiary: incgrenadeIcon,
     m249: m249Icon,
     m4a1: m4a1Icon,
+    m4a4: m4a1Icon,
     m4a1s: m4a1SilencerIcon,
     m4a1silencer: m4a1SilencerIcon,
     m4a1silenceroff: m4a1SilencerIcon,
@@ -107,6 +117,7 @@ function weaponIconSrc(weaponName: string | null) {
     p2000: p2000Icon,
     p250: p250Icon,
     p90: p90Icon,
+    r8revolver: revolverIcon,
     revolver: revolverIcon,
     sawedoff: sawedoffIcon,
     scar20: scar20Icon,
@@ -119,8 +130,9 @@ function weaponIconSrc(weaponName: string | null) {
     usp: uspSilencerIcon,
     usps: uspSilencerIcon,
     uspsilencer: uspSilencerIcon,
+    uspsilenceroff: uspSilencerIcon,
     xm1014: xm1014Icon,
   };
 
-  return icons[normalized] ?? m4a1Icon;
+  return icons[normalized] ?? null;
 }

@@ -28,6 +28,7 @@ type Props = {
   tick: number;
   tickRate: number;
   positionPlayerSnapshots: PositionPlayerSnapshot[];
+  positionPlayerBroadCompareEnabled: boolean;
   positionPlayerSelectedCount: number;
   positionTrailEntries: PositionTrailEntry[];
   positionsLabel: string;
@@ -77,6 +78,7 @@ export function TimelinePanel({
   tick,
   tickRate,
   positionPlayerSnapshots,
+  positionPlayerBroadCompareEnabled,
   positionPlayerSelectedCount,
   positionTrailEntries,
   positionsLabel,
@@ -133,6 +135,7 @@ export function TimelinePanel({
         heatmapSnapshot,
         positionsLabel,
         positionsSnapshotCount,
+        positionPlayerBroadCompareEnabled,
         positionsTeamFilter,
         positionsPlayerCount,
         positionsRoundCount,
@@ -165,39 +168,47 @@ export function TimelinePanel({
   return (
     <section className="timeline-shell timeline-shell-operator">
       <div className="timeline-round-nav">
-        <button
-          className="timeline-chevron"
-          disabled={activeRoundIndex <= 0}
-          onClick={() => onSelectRound(Math.max(0, activeRoundIndex - 1))}
-        >
-          {"<"}
-        </button>
-        <div className="timeline-round-strip" ref={rowRef}>
-          {rounds.map((entry, index) => (
-            <button
-              key={entry.roundNumber}
-              ref={(element) => {
-                buttonRefs.current[index] = element;
-              }}
-              className={[
-                "timeline-round-chip",
-                index === activeRoundIndex ? "timeline-round-chip-active" : "",
-                entry.winnerSide === "CT" ? "timeline-round-chip-ct" : "",
-                entry.winnerSide === "T" ? "timeline-round-chip-t" : "",
-              ].filter(Boolean).join(" ")}
-              onClick={() => onSelectRound(index)}
-            >
-              {index + 1}
-            </button>
-          ))}
+        <div className="timeline-round-identity">
+          <span>Round timeline</span>
+          <strong>Round {displayedRoundNumber}</strong>
+          <small>{replay.map.displayName}</small>
         </div>
-        <button
-          className="timeline-chevron"
-          disabled={activeRoundIndex >= rounds.length - 1}
-          onClick={() => onSelectRound(Math.min(rounds.length - 1, activeRoundIndex + 1))}
-        >
-          {">"}
-        </button>
+
+        <div className="timeline-round-nav-controls">
+          <button
+            className="timeline-chevron"
+            disabled={activeRoundIndex <= 0}
+            onClick={() => onSelectRound(Math.max(0, activeRoundIndex - 1))}
+          >
+            {"<"}
+          </button>
+          <div className="timeline-round-strip" ref={rowRef}>
+            {rounds.map((entry, index) => (
+              <button
+                key={entry.roundNumber}
+                ref={(element) => {
+                  buttonRefs.current[index] = element;
+                }}
+                className={[
+                  "timeline-round-chip",
+                  index === activeRoundIndex ? "timeline-round-chip-active" : "",
+                  entry.winnerSide === "CT" ? "timeline-round-chip-ct" : "",
+                  entry.winnerSide === "T" ? "timeline-round-chip-t" : "",
+                ].filter(Boolean).join(" ")}
+                onClick={() => onSelectRound(index)}
+              >
+                {index + 1}
+              </button>
+            ))}
+          </div>
+          <button
+            className="timeline-chevron"
+            disabled={activeRoundIndex >= rounds.length - 1}
+            onClick={() => onSelectRound(Math.min(rounds.length - 1, activeRoundIndex + 1))}
+          >
+            {">"}
+          </button>
+        </div>
       </div>
 
       <div className="timeline-main-dock">
@@ -237,6 +248,16 @@ export function TimelinePanel({
           ) : (
             <div className="timeline-transport-row">
               <div className="timeline-track-shell">
+                <div className="timeline-phase-layer" aria-hidden="true">
+                  {phases.map((phase) => (
+                    <span
+                      key={`${phase.kind}-${phase.startTick}-${phase.endTick}`}
+                      className={`timeline-phase-band timeline-phase-band-${phase.kind}`}
+                      style={timelinePhaseStyle(phase, displayStartTick, range)}
+                    />
+                  ))}
+                </div>
+
                 <div className="timeline-guide-layer" aria-hidden="true">
                   {secondMarkers.map((marker) => (
                     <span
@@ -350,9 +371,6 @@ export function TimelinePanel({
 
                 {useReplayTransport ? (
                   <>
-                    <button className="timeline-play-button timeline-play-button-inline" onClick={onPlayToggle}>
-                      {playing ? "Pause" : "Play"}
-                    </button>
                     <div className="timeline-segmented-row timeline-segmented-row-speed">
                       {SPEEDS.map((entry) => (
                         <button
@@ -424,6 +442,20 @@ function timelineMarkerStyle(
   return {
     left,
     backgroundColor: utilityColorCss(utilityKind),
+  };
+}
+
+function timelinePhaseStyle(
+  phase: RoundPhase,
+  displayStartTick: number,
+  range: number,
+): CSSProperties {
+  const left = clamp(((phase.startTick - displayStartTick) / range) * 100, 0, 100);
+  const right = clamp(((phase.endTick - displayStartTick) / range) * 100, 0, 100);
+
+  return {
+    left: `${left}%`,
+    width: `${Math.max(0, right - left)}%`,
   };
 }
 
@@ -507,6 +539,7 @@ type AnalysisDescriptorInput = {
   heatmapSnapshot: HeatmapSnapshot;
   positionsLabel: string;
   positionsSnapshotCount: number;
+  positionPlayerBroadCompareEnabled: boolean;
   positionsTeamFilter: PositionsTeamFilter;
   positionsPlayerCount: number;
   positionsRoundCount: number;
@@ -536,6 +569,7 @@ function resolveAnalysisDescriptor({
   heatmapSnapshot,
   positionsLabel,
   positionsSnapshotCount,
+  positionPlayerBroadCompareEnabled,
   positionsTeamFilter,
   positionsPlayerCount,
   positionsRoundCount,
@@ -582,30 +616,47 @@ function resolveAnalysisDescriptor({
       positionsView === "player"
         ? positionPlayerSelectedCount > 1
           ? "A capped compare set of player replay tokens aligned to the same moment from the main replay timeline across all matching rounds."
-          : "Selected-player replay tokens aligned to the same moment from the main replay timeline across all matching rounds."
+          : selectedPlayerId != null
+            ? "Selected-player replay tokens aligned to the same moment from the main replay timeline across all matching rounds."
+            : positionPlayerBroadCompareEnabled
+              ? "All-player replay tokens aligned to the same moment from the main replay timeline as a secondary broad-compare overview."
+              : "Choose one player from the analysis panel to study same-moment positions across matching rounds."
         : "Alive player routes sampled after freeze time across the selected replay scope.",
     label: positionsView === "player" ? `${positionsPlayerScopeLabel} · ${roundClock ?? "--:--"}` : positionsLabel,
     meta: positionsView === "player"
       ? positionPlayerSelectedCount > 1
         ? `${positionPlayerSelectedCount} players`
-        : "player snapshot"
+        : selectedPlayerId != null
+          ? "player snapshot"
+          : positionPlayerBroadCompareEnabled
+            ? "broad compare"
+            : "pick one player"
       : `${positionsPlayerCount} players`,
     summary:
       positionsView === "player"
-        ? `${selectedPlayerId ? "Selected player" : "All players"} across ${positionsPlayerScopeLabel.toLowerCase()} rounds · ${positionsSnapshotCount} visible snapshots`
+        ? selectedPlayerId != null || positionPlayerSelectedCount > 0
+          ? `${positionPlayerSelectedCount > 1 ? `${positionPlayerSelectedCount} selected players` : "Selected player"} across ${positionsPlayerScopeLabel.toLowerCase()} rounds · ${positionsSnapshotCount} visible snapshots`
+          : positionPlayerBroadCompareEnabled
+            ? `Broad compare across ${positionsPlayerScopeLabel.toLowerCase()} rounds · ${positionsSnapshotCount} visible snapshots`
+            : `Select one player to start a same-moment study across ${positionsPlayerScopeLabel.toLowerCase()} rounds`
         : `${positionsPlayerCount} player${positionsPlayerCount === 1 ? "" : "s"} across ${roundCountLabel}${selectedPlayerId ? " - selected focus" : ""}`,
     title: positionsView === "player" ? "Position Player" : "Position Paths",
   };
 
   if (positionsView === "player") {
     descriptor.label = `${positionsPlayerScopeLabel} - ${roundClock ?? "--:--"}`;
-    descriptor.summary = `${formatPositionPlayerScopeSummary(positionPlayerSelectedCount, selectedPlayerId != null)} across ${positionsPlayerScopeLabel.toLowerCase()} rounds - ${positionsSnapshotCount} visible snapshots`;
+    descriptor.summary =
+      selectedPlayerId != null || positionPlayerSelectedCount > 0
+        ? `${formatPositionPlayerScopeSummary(positionPlayerSelectedCount, selectedPlayerId != null, positionPlayerBroadCompareEnabled)} across ${positionsPlayerScopeLabel.toLowerCase()} rounds - ${positionsSnapshotCount} visible snapshots`
+        : positionPlayerBroadCompareEnabled
+          ? `Broad compare across ${positionsPlayerScopeLabel.toLowerCase()} rounds - ${positionsSnapshotCount} visible snapshots`
+          : `Select one player to start a same-moment study across ${positionsPlayerScopeLabel.toLowerCase()} rounds`;
   }
 
   return descriptor;
 }
 
-function formatPositionPlayerScopeSummary(selectedCount: number, hasSelectedPlayer: boolean) {
+function formatPositionPlayerScopeSummary(selectedCount: number, hasSelectedPlayer: boolean, broadCompareEnabled: boolean) {
   if (selectedCount > 1) {
     return `${selectedCount} selected players`;
   }
@@ -614,5 +665,5 @@ function formatPositionPlayerScopeSummary(selectedCount: number, hasSelectedPlay
     return "Selected player";
   }
 
-  return "All players";
+  return broadCompareEnabled ? "Broad compare" : "Choose player";
 }

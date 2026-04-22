@@ -10,33 +10,40 @@ import {
   type MatchLibrarySource,
 } from "../replay/matchLibrary";
 import { deleteStoredMatch, listStoredMatches, saveStoredMatch } from "../replay/matchStore";
-import { checkParserBridge, parseDemoFile, trackUsageEvent } from "../replay/parserBridge";
+import { getParserBridgeHealth, parseDemoFile, trackUsageEvent, type ParserBridgeHealth } from "../replay/parserBridge";
 import type { Replay } from "../replay/types";
 
 export type LoaderIssue = {
+  context: "demo" | "delete" | "fixture" | "storage";
   hint?: string;
   message: string;
   title: string;
 };
 
-export function useReplayLoader() {
+export function useReplayLoader(enabled = true) {
   const [error, setError] = useState<LoaderIssue | null>(null);
   const [demoIngestState, setDemoIngestState] = useState<DemoIngestState | null>(null);
   const [libraryHydrated, setLibraryHydrated] = useState(false);
   const [libraryEntries, setLibraryEntries] = useState<MatchLibraryEntry[]>([]);
   const [loadingSource, setLoadingSource] = useState<"demo" | "fixture" | "replay" | null>(null);
   const [parserBridgeAvailable, setParserBridgeAvailable] = useState(false);
+  const [parserBridgeHealth, setParserBridgeHealth] = useState<ParserBridgeHealth>({ available: false });
   const [roundIndex, setRoundIndex] = useState(0);
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [activeReplayId, setActiveReplayId] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
     let cancelled = false;
 
     async function refreshParserBridge() {
-      const available = await checkParserBridge();
+      const health = await getParserBridgeHealth();
       if (!cancelled) {
-        setParserBridgeAvailable(available);
+        setParserBridgeHealth(health);
+        setParserBridgeAvailable(health.available);
       }
     }
 
@@ -60,9 +67,13 @@ export function useReplayLoader() {
       window.removeEventListener("focus", refreshParserBridge);
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-  }, []);
+  }, [enabled]);
 
   useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
     let cancelled = false;
 
     async function hydrateLibrary() {
@@ -87,7 +98,7 @@ export function useReplayLoader() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [enabled]);
 
   const replay = libraryEntries.find((entry) => entry.id === activeReplayId)?.replay ?? null;
 
@@ -113,13 +124,14 @@ export function useReplayLoader() {
         step: "upload",
       });
       const loaded = await parseDemoFile(file, {
-        onProgress: ({ roundsParsed }) => {
+        onProgress: ({ roundsParsed, roundsTotal }) => {
           setDemoIngestState((previous) =>
             previous == null
               ? null
               : {
                   ...previous,
                   roundsIndexed: roundsParsed,
+                  roundsTotal: roundsTotal ?? previous.roundsTotal,
                   step: "parser",
                 },
           );
@@ -169,6 +181,7 @@ export function useReplayLoader() {
         roundCount: loaded.rounds.length,
         sourceSha256: loaded.sourceDemo.sha256,
       });
+      await delay(1200);
     } catch (loadError) {
       const issue = normalizeLoaderIssue("demo", loadError, parserBridgeAvailable);
       setError(issue);
@@ -301,6 +314,7 @@ export function useReplayLoader() {
     onFixtureLoad,
     openReplay,
     parserBridgeAvailable,
+    parserBridgeHealth,
     replay,
     roundIndex,
     selectedPlayerId,
@@ -338,6 +352,7 @@ function normalizeLoaderIssue(
   if (context === "demo") {
     if (!parserBridgeAvailable || normalized.includes("failed to fetch") || normalized.includes("networkerror")) {
       return {
+        context,
         title: "Local parser unavailable",
         message: "The viewer could not reach the local parser API.",
         hint: "Start the local parser path and verify /api/health before uploading again.",
@@ -346,14 +361,43 @@ function normalizeLoaderIssue(
 
     if (normalized.includes("timed out")) {
       return {
+        context,
         title: "Demo ingest timed out",
         message: rawMessage,
         hint: "The upload reached the parser, but the replay artifact was not produced in time.",
       };
     }
 
+    if (normalized.includes("maxbuffer")) {
+      return {
+        context,
+        title: "Fallback parser bridge could not finish",
+        message: "The fallback bridge hit its parser process output limit before the replay artifact was ready.",
+        hint: "Use the Go parser API path when available, or check the fallback bridge logs before retrying.",
+      };
+    }
+
+    if (normalized.includes("programkontrol") || normalized.includes("application control")) {
+      return {
+        context,
+        title: "Local parser blocked by Windows",
+        message: "Windows Application Control blocked the fallback parser executable.",
+        hint: "Use the Go parser API path or allow the parser binary before uploading demos again.",
+      };
+    }
+
+    if (normalized.includes("fixtureparse.exe")) {
+      return {
+        context,
+        title: "Fallback parser executable missing",
+        message: rawMessage,
+        hint: "Build the fallback parser binary or start the Go parser API path before uploading again.",
+      };
+    }
+
     if (normalized.includes("validation failed")) {
       return {
+        context,
         title: "Canonical replay validation failed",
         message: rawMessage,
         hint: "The parser returned a replay artifact, but it did not pass viewer-side schema validation.",
@@ -361,6 +405,7 @@ function normalizeLoaderIssue(
     }
 
     return {
+      context,
       title: "Demo ingest failed",
       message: rawMessage || "The local parser could not turn this demo into a replay artifact.",
       hint: "Check the parser logs or try the upload again after confirming the local parser is healthy.",
@@ -369,6 +414,7 @@ function normalizeLoaderIssue(
 
   if (context === "fixture") {
     return {
+      context,
       title: "Fixture load failed",
       message: rawMessage || "The requested fixture replay could not be loaded.",
       hint: "This only affects the validation fixtures. Uploaded local demos should still work if the parser is healthy.",
@@ -377,6 +423,7 @@ function normalizeLoaderIssue(
 
   if (context === "delete") {
     return {
+      context,
       title: "Local delete failed",
       message: rawMessage || "The local match entry could not be deleted.",
       hint: "The library view was rolled back to preserve the stored match.",
@@ -384,6 +431,7 @@ function normalizeLoaderIssue(
   }
 
   return {
+    context,
     title: "Local library unavailable",
     message: rawMessage || "Browser storage could not be read.",
     hint: "The replay library uses local browser storage. Reload the page and check browser storage permissions if this persists.",

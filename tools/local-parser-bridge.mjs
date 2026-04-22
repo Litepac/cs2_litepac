@@ -1,5 +1,5 @@
 import { constants as fsConstants } from "node:fs";
-import { execFile } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import { createServer } from "node:http";
 import { access, appendFile, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -23,8 +23,14 @@ const maxUploadBytes = 2 * 1024 * 1024 * 1024;
 const maxFeedbackBytes = 32 * 1024;
 const maxFeedbackTextLength = 4000;
 const maxUsageEventBytes = 32 * 1024;
+const parserRuntimeHealthTtlMs = 30_000;
+let parserRuntimeHealth = {
+  checkedAt: 0,
+  error: "parser runtime has not been checked yet",
+  ok: false,
+};
 
-await assertParserExecutableAvailable();
+await refreshParserRuntimeHealth();
 
 const server = createServer(async (request, response) => {
   applyCors(response);
@@ -41,10 +47,13 @@ const server = createServer(async (request, response) => {
       return;
     }
 
-    writeJson(response, 200, {
-      ok: true,
+    const runtime = await getParserRuntimeHealth();
+    writeJson(response, runtime.ok ? 200 : 503, {
+      mode: "node-bridge",
+      ok: runtime.ok,
       service: "mastermind-parser-api",
       bridge: "node-fixtureparse",
+      ...(runtime.ok ? {} : { error: runtime.error }),
     });
     return;
   }
@@ -117,7 +126,7 @@ server.listen(listenPort, "127.0.0.1", () => {
 });
 
 async function parseDemoUpload(request, response) {
-  await assertParserExecutableAvailable();
+  await assertParserExecutableRunnable();
 
   const contentType = request.headers["content-type"] ?? "";
   const boundary = parseBoundary(contentType);
@@ -145,7 +154,7 @@ async function parseDemoUpload(request, response) {
     await mkdir(demoDir, { recursive: true });
     await mkdir(outDir, { recursive: true });
     await writeFile(demoPath, upload.bytes);
-    await execFileAsync(parserExe, [
+    await runParserWithProgress([
       "-demo-dir",
       demoDir,
       "-out-dir",
@@ -154,11 +163,8 @@ async function parseDemoUpload(request, response) {
       assetsRoot,
       "-schema",
       schemaPath,
-    ], {
-      cwd: parserRoot,
-      maxBuffer: 16 * 1024 * 1024,
-      windowsHide: true,
-    });
+      "-progress-ndjson",
+    ], response);
 
     const replayRaw = (await readFile(replayPath, "utf8")).trim();
     if (!replayRaw) {
@@ -175,6 +181,90 @@ async function parseDemoUpload(request, response) {
   }
 }
 
+function runParserWithProgress(args, response) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(parserExe, args, {
+      cwd: parserRoot,
+      stdio: ["ignore", "pipe", "pipe"],
+      windowsHide: true,
+    });
+    let stdoutBuffer = "";
+    let stderr = "";
+    let settled = false;
+
+    child.stdout?.setEncoding("utf8");
+    child.stdout?.on("data", (chunk) => {
+      stdoutBuffer += chunk;
+      let newlineIndex = stdoutBuffer.indexOf("\n");
+      while (newlineIndex >= 0) {
+        const line = stdoutBuffer.slice(0, newlineIndex).trim();
+        stdoutBuffer = stdoutBuffer.slice(newlineIndex + 1);
+        forwardParserProgressLine(line, response);
+        newlineIndex = stdoutBuffer.indexOf("\n");
+      }
+    });
+
+    child.stderr?.setEncoding("utf8");
+    child.stderr?.on("data", (chunk) => {
+      stderr += chunk;
+    });
+
+    child.once("error", (error) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      reject(error);
+    });
+
+    child.once("exit", (code, signal) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+
+      const trailing = stdoutBuffer.trim();
+      if (trailing) {
+        forwardParserProgressLine(trailing, response);
+      }
+
+      if (code === 0) {
+        resolve();
+        return;
+      }
+
+      const reason = signal ? `signal ${signal}` : `exit code ${code ?? "unknown"}`;
+      reject(new Error((stderr.trim() || `fallback parser exited with ${reason}`).trim()));
+    });
+  });
+}
+
+function forwardParserProgressLine(line, response) {
+  if (!line) {
+    return;
+  }
+
+  let payload;
+  try {
+    payload = JSON.parse(line);
+  } catch {
+    process.stdout.write(`${line}\n`);
+    return;
+  }
+
+  if (
+    payload?.type === "progress" &&
+    Number.isFinite(payload.roundsParsed) &&
+    (payload.roundsTotal == null || Number.isFinite(payload.roundsTotal))
+  ) {
+    response.write(`${JSON.stringify({
+      type: "progress",
+      roundsParsed: payload.roundsParsed,
+      ...(payload.roundsTotal != null ? { roundsTotal: payload.roundsTotal } : {}),
+    })}\n`);
+  }
+}
+
 async function assertParserExecutableAvailable() {
   try {
     await access(parserExe, fsConstants.X_OK);
@@ -183,6 +273,56 @@ async function assertParserExecutableAvailable() {
       `fallback parser bridge requires ${path.relative(repoRoot, parserExe)}; build it with: cd parser && go build -o fixtureparse.exe .\\cmd\\fixtureparse`,
     );
   }
+}
+
+async function assertParserExecutableRunnable() {
+  const runtime = await getParserRuntimeHealth();
+  if (!runtime.ok) {
+    throw new Error(runtime.error);
+  }
+}
+
+async function getParserRuntimeHealth() {
+  if (Date.now() - parserRuntimeHealth.checkedAt > parserRuntimeHealthTtlMs) {
+    return refreshParserRuntimeHealth();
+  }
+
+  return parserRuntimeHealth;
+}
+
+async function refreshParserRuntimeHealth() {
+  try {
+    await assertParserExecutableAvailable();
+    await execFileAsync(parserExe, ["-h"], {
+      cwd: parserRoot,
+      maxBuffer: 128 * 1024,
+      timeout: 5000,
+      windowsHide: true,
+    });
+    parserRuntimeHealth = {
+      checkedAt: Date.now(),
+      error: "",
+      ok: true,
+    };
+  } catch (error) {
+    parserRuntimeHealth = {
+      checkedAt: Date.now(),
+      error: formatParserRuntimeError(error),
+      ok: false,
+    };
+    process.stderr.write(`parser runtime health failed: ${parserRuntimeHealth.error}\n`);
+  }
+
+  return parserRuntimeHealth;
+}
+
+function formatParserRuntimeError(error) {
+  const message = error instanceof Error ? error.message : String(error);
+  if (message.toLowerCase().includes("programkontrol") || message.toLowerCase().includes("application control")) {
+    return `Windows Application Control blocked ${path.relative(repoRoot, parserExe)}. Use the Go parser API path or allow the parser binary before uploading demos.`;
+  }
+
+  return message || `Unable to run ${path.relative(repoRoot, parserExe)}.`;
 }
 
 function applyCors(response) {

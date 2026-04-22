@@ -39,6 +39,7 @@ Minimum bar:
 - selecting a player clearly emphasizes that player in live replay
 - non-selected players remain useful context without overpowering the selected player
 - `Position Player` lets the user compare where that player is at the same relative moment across rounds
+- `Position Player` should be selected-player-first; broad all-player comparison is secondary and should be explicit rather than the default state
 - selecting one player in `Position Player` shows only that player unless an explicit context mode is introduced
 - CT / T / All filtering works for both broad comparison and selected-player comparison
 - clicking a cross-round token jumps into the correct round and tick in live replay
@@ -61,6 +62,7 @@ Minimum bar:
 
 - `Position Paths` answers "what routes were taken?"
 - `Position Player` answers "where is this player at this same relative moment across rounds?"
+- `Position Player` is for repeated player tendencies and timing study, then a jump back into one concrete round
 - `Utility Atlas` answers "what utility was thrown from where to where?"
 - `Heatmap` remains a supporting occupancy/hotspot layer, not the main hero mode
 - each analysis mode is clearly separate, parser-backed, and jump-linked back into live replay where that is analytically useful
@@ -121,12 +123,14 @@ Current gap:
 
 - broad All Players comparison, selected-player isolation, side filtering, round-number labels, click-to-round jumps, and snapshot/live alignment have all had issues recently and still need direct browser validation against real fixtures
 - the mode is structurally separate from `Position Paths`, but it still does not yet feel like the strongest movement-analysis workflow in the product
+- the feature should now be judged primarily as a selected-player timing/pattern study tool, not as a broad all-player inspection surface
 
 Likely next actions:
 
 - validate `Position Player` on Mirage, Inferno, Overpass, and Ancient fixtures with one side-swapping player and one stable-side player
 - keep route lines in `Position Paths` unchanged while tuning `Position Player` tokens, labels, jump behavior, and context handling
 - add focused fixture-backed regression checks around snapshot extraction and jump targets
+- keep broad compare explicit and secondary so the user is pushed toward one-player study by default
 
 ### Priority 2: Live replay player focus is useful, but not yet a full player-study workflow
 Current gap:

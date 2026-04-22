@@ -1,9 +1,10 @@
-import { useMemo, useState, type ChangeEvent, type KeyboardEvent, type MouseEvent } from "react";
+import { useMemo, useState, type ChangeEvent, type MouseEvent } from "react";
 
+import type { LoaderIssue } from "../app/useReplayLoader";
 import type { FixtureIndex } from "../replay/fixtures";
 import type { DemoIngestState } from "../replay/ingestState";
 import type { MatchLibraryEntry } from "../replay/matchLibrary";
-import type { LoaderIssue } from "../app/useReplayLoader";
+import type { ParserBridgeHealth } from "../replay/parserBridge";
 import { IngestTracker } from "./IngestTracker";
 
 type Props = {
@@ -14,6 +15,7 @@ type Props = {
   matches: MatchLibraryEntry[];
   loadingSource: "demo" | "fixture" | "replay" | null;
   parserBridgeAvailable: boolean;
+  parserBridgeHealth: ParserBridgeHealth;
   onDemoFileChange: (event: ChangeEvent<HTMLInputElement>) => void | Promise<void>;
   onDeleteMatch: (id: string) => void | Promise<void>;
   onFixtureLoad: (fileName: string) => void | Promise<void>;
@@ -29,6 +31,7 @@ export function MatchesPage({
   matches,
   loadingSource,
   parserBridgeAvailable,
+  parserBridgeHealth,
   onDemoFileChange,
   onDeleteMatch,
   onFixtureLoad,
@@ -71,47 +74,112 @@ export function MatchesPage({
     });
   }, [mapFilter, matches, query]);
 
+  const filtersActive = query.trim().length > 0 || mapFilter !== "all";
   const libraryStatus = !libraryHydrated
-    ? "Hydrating your local match library"
+    ? "Hydrating local library"
     : filteredMatches.length === 0
-      ? query || mapFilter !== "all"
+      ? filtersActive
         ? "No matches match the current filters"
         : "No matches yet"
       : `${filteredMatches.length} match${filteredMatches.length === 1 ? "" : "es"}`;
+  const loadingLabel =
+    loadingSource && demoIngestState == null
+      ? `Loading ${loadingSource === "demo" ? "demo" : loadingSource}...`
+      : null;
   const uploadDisabled = loadingSource != null || !parserBridgeAvailable;
-  const showParserOfflineNotice = !parserBridgeAvailable && demoIngestState == null;
+  const ingestError = error?.context === "demo" ? error : null;
+  const showParserOfflineNotice = !parserBridgeAvailable && demoIngestState == null && ingestError == null;
+  const savedMatchLabel = libraryHydrated ? `${matches.length} saved` : "Hydrating";
+  const visibleMatchLabel = libraryHydrated ? `${filteredMatches.length} visible` : "Loading";
+  const mapCountLabel = libraryHydrated ? `${maps.length} map${maps.length === 1 ? "" : "s"}` : "Loading";
+  const parserModeLabel = parserBridgeHealth.mode === "go-api"
+    ? "Go parser"
+    : parserBridgeHealth.mode === "node-bridge"
+    ? "Fallback bridge"
+    : !parserBridgeAvailable && parserBridgeHealth.bridge
+    ? "Fallback blocked"
+    : parserBridgeHealth.bridge
+    ? "Fallback bridge"
+    : parserBridgeHealth.service
+      ? "Go parser"
+      : parserBridgeAvailable
+        ? "Parser online"
+        : "Parser offline";
+  const parserStatusCopy = parserBridgeAvailable
+    ? parserModeLabel
+    : parserBridgeHealth.error || "Upload disabled until the parser returns.";
+
+  function clearFilters() {
+    setQuery("");
+    setMapFilter("all");
+  }
 
   return (
-    <section className="matches-page matches-page-library">
-      <header className="matches-library-header-shell">
-        <div className="matches-library-heading">
-          <div className="eyebrow">Matches</div>
+    <section className="matches-page matches-page-library matches-page-redline">
+      <header className="matches-redline-header">
+        <div className="matches-redline-heading">
+          <span className="matches-redline-kicker">Local match library</span>
           <h1>Matches</h1>
-          <p>{libraryHydrated ? "Local demo library." : "Loading your local demo library."}</p>
+          <p>Upload local CS2 demos, then open a clean 2D review when the parser-backed replay is ready.</p>
         </div>
 
-        <label
-          className={`matches-upload-button ${uploadDisabled ? "matches-upload-button-disabled" : ""}`}
-          aria-disabled={uploadDisabled}
-        >
-          <span>Upload Demo</span>
-          <small>{parserBridgeAvailable ? "Parser-backed local ingest" : "Upload unavailable while parser is offline"}</small>
-          <input type="file" accept=".dem" onChange={onDemoFileChange} disabled={uploadDisabled} />
-        </label>
+        <div className="matches-redline-header-panel" aria-label="Match library actions and status">
+          <label
+            className={`matches-redline-upload ${uploadDisabled ? "matches-redline-upload-disabled" : ""}`}
+            aria-disabled={uploadDisabled}
+          >
+            <span>
+              Upload Demo <small aria-hidden="true">{"->"}</small>
+            </span>
+            <small>{parserBridgeAvailable ? "Parser-backed local ingest" : "Parser offline"}</small>
+            <input
+              id="matches-redline-upload-input"
+              type="file"
+              accept=".dem"
+              onChange={onDemoFileChange}
+              disabled={uploadDisabled}
+            />
+          </label>
+
+          <section className="matches-redline-header-status">
+            <span className="matches-redline-kicker">Current state</span>
+            <strong>{loadingLabel ?? libraryStatus}</strong>
+            <p>{parserStatusCopy}</p>
+          </section>
+
+          <section className="matches-redline-header-metrics" aria-label="Library metrics">
+            <div>
+              <span>Saved</span>
+              <strong>{savedMatchLabel}</strong>
+            </div>
+            <div>
+              <span>Visible</span>
+              <strong>{visibleMatchLabel}</strong>
+            </div>
+            <div>
+              <span>Maps</span>
+              <strong>{mapCountLabel}</strong>
+            </div>
+            <div>
+              <span>Parser</span>
+              <strong>{parserBridgeAvailable ? parserModeLabel : parserBridgeHealth.bridge ? "Blocked" : "Offline"}</strong>
+            </div>
+          </section>
+        </div>
       </header>
 
-      <div className="matches-toolbar">
-        <label className="matches-toolbar-control matches-toolbar-search">
+      <section className="matches-redline-controls" aria-label="Match library controls">
+        <label className="matches-redline-control matches-redline-search">
           <span>Search</span>
           <input
             type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Map, team, or source"
+            placeholder="Map, team, player, or source"
           />
         </label>
 
-        <label className="matches-toolbar-control">
+        <label className="matches-redline-control">
           <span>Map</span>
           <select value={mapFilter} onChange={(event) => setMapFilter(event.target.value)}>
             <option value="all">All maps</option>
@@ -123,30 +191,30 @@ export function MatchesPage({
           </select>
         </label>
 
-        <div className="matches-toolbar-meta">
-          <strong>{libraryStatus}</strong>
-          <span>
-            {loadingSource && demoIngestState == null
-              ? `Loading ${loadingSource === "demo" ? "demo" : loadingSource}...`
-              : parserBridgeAvailable
-                ? "Local ingest bridge online"
-                : "Local parser offline"}
-          </span>
-        </div>
-      </div>
+        <button
+          type="button"
+          className="matches-redline-clear"
+          onClick={clearFilters}
+          disabled={!filtersActive}
+        >
+          Clear filters
+        </button>
+      </section>
 
-      {demoIngestState ? <IngestTracker state={demoIngestState} /> : null}
+      {demoIngestState || ingestError ? <IngestTracker issue={ingestError} state={demoIngestState} /> : null}
       {showParserOfflineNotice ? (
-        <section className="matches-notice matches-notice-warning">
+        <section className="matches-redline-notice matches-redline-notice-warning">
           <div>
             <strong>Local parser offline</strong>
             <p>Uploads are disabled until the local parser API responds again.</p>
           </div>
-          <small>Start the local parser path, then verify <code>/api/health</code>.</small>
+          <small>
+            Start the local parser path, then verify <code>/api/health</code>.
+          </small>
         </section>
       ) : null}
-      {error ? (
-        <section className="matches-notice matches-notice-error">
+      {error && error.context !== "demo" ? (
+        <section className="matches-redline-notice matches-redline-notice-error">
           <div>
             <strong>{error.title}</strong>
             <p>{error.message}</p>
@@ -155,142 +223,138 @@ export function MatchesPage({
         </section>
       ) : null}
 
-      <section className="match-library match-library-primary">
-        <div className="match-library-header">
+      <section className="matches-redline-library" aria-labelledby="matches-redline-library-heading">
+        <div className="matches-redline-library-head">
           <div>
-            <div className="card-title">Library</div>
-            <strong>{libraryStatus}</strong>
+            <span className="matches-redline-kicker">Reviewable demos</span>
+            <h2 id="matches-redline-library-heading">{libraryStatus}</h2>
           </div>
-          <span>Map, uploaded time, who played, result, and open action only</span>
+          <p>Map, teams, score, uploaded time, and direct replay actions.</p>
         </div>
 
         {!libraryHydrated ? (
-          <div className="match-library-empty">
+          <div className="matches-redline-empty">
             <strong>Loading local match library</strong>
             <p>Reading saved matches from browser storage before the library opens.</p>
           </div>
         ) : filteredMatches.length > 0 ? (
-          <div className="match-table">
-            <div className="match-table-head">
+          <div className="matches-redline-table">
+            <div className="matches-redline-table-head" aria-hidden="true">
               <span>Match</span>
-              <span>Times</span>
               <span>Teams</span>
-              <span>Result & actions</span>
+              <span>Score</span>
+              <span>Time</span>
+              <span>Actions</span>
             </div>
 
             {filteredMatches.map((entry) => (
-              <div
+              <article
                 key={entry.id}
-                className={`match-row match-row-openable match-row-${winnerAccent(entry.summary.teamAResult, entry.summary.teamBResult)}`}
-                role="button"
-                tabIndex={loadingSource != null ? -1 : 0}
-                aria-label={`Open ${entry.summary.mapName} replay`}
-                onClick={() => {
-                  if (loadingSource == null) {
-                    onOpenMatch(entry.id);
-                  }
-                }}
-                onKeyDown={(event) => handleMatchRowKeyDown(event, loadingSource != null, () => onOpenMatch(entry.id))}
+                className={`matches-redline-row matches-redline-row-${winnerAccent(entry.summary.teamAResult, entry.summary.teamBResult)}`}
               >
-                <span className="match-cell match-map-cell">
-                  <span className="match-map-copy">
-                    <strong>{entry.summary.mapName}</strong>
-                    <small>{entry.replay.map.mapId}</small>
-                  </span>
-                </span>
+                <div className="matches-redline-row-map">
+                  <span>{entry.replay.map.mapId}</span>
+                  <strong>{entry.summary.mapName}</strong>
+                  <small>{entry.summary.sourceLabel}</small>
+                </div>
 
-                <span className="match-cell match-date-cell">
+                <div className="matches-redline-row-teams">
+                  <div className="matches-redline-team">
+                    <strong className={`matches-redline-team-name matches-redline-team-name-${entry.summary.teamAResult}`}>
+                      {entry.summary.teamAName}
+                    </strong>
+                    <small>{entry.summary.teamAPlayersLabel}</small>
+                  </div>
+                  <span className="matches-redline-versus">vs</span>
+                  <div className="matches-redline-team">
+                    <strong className={`matches-redline-team-name matches-redline-team-name-${entry.summary.teamBResult}`}>
+                      {entry.summary.teamBName}
+                    </strong>
+                    <small>{entry.summary.teamBPlayersLabel}</small>
+                  </div>
+                </div>
+
+                <div className="matches-redline-score">
+                  <span>{entry.summary.winnerTeamName ? `${entry.summary.winnerTeamName} won` : "Match draw"}</span>
+                  <strong>
+                    {entry.summary.teamAScore}
+                    <small>-</small>
+                    {entry.summary.teamBScore}
+                  </strong>
+                </div>
+
+                <div className="matches-redline-time">
                   {entry.summary.playedLabel ? (
-                    <span className="match-time-pair">
+                    <span>
                       <small>{entry.summary.playedStatusLabel}</small>
                       <strong>{entry.summary.playedLabel}</strong>
                     </span>
                   ) : null}
-                  <span className="match-time-pair" title={entry.summary.sourceLabel}>
+                  <span>
                     <small>{entry.summary.addedStatusLabel}</small>
                     <strong>{entry.summary.addedLabel}</strong>
                   </span>
-                </span>
+                </div>
 
-                <span className="match-cell match-teams-cell">
-                  <span className="match-team-block">
-                    <strong className={`match-team-name match-team-name-${entry.summary.teamAResult}`}>{entry.summary.teamAName}</strong>
-                    <span className="match-team-roster">{entry.summary.teamAPlayersLabel}</span>
-                  </span>
-                  <small className="match-team-divider">vs</small>
-                  <span className="match-team-block">
-                    <strong className={`match-team-name match-team-name-${entry.summary.teamBResult}`}>{entry.summary.teamBName}</strong>
-                    <span className="match-team-roster">{entry.summary.teamBPlayersLabel}</span>
-                  </span>
-                </span>
-
-                <span className="match-cell match-outcome-cell">
-                  <span className={`match-score-cell match-score-cell-${winnerAccent(entry.summary.teamAResult, entry.summary.teamBResult)}`}>
-                    <span className="match-score-label">
-                      {entry.summary.winnerTeamName ? `${entry.summary.winnerTeamName} won` : "Match draw"}
-                    </span>
-                    <span className="match-score-line">
-                      <strong className={`match-score-token match-score-token-${entry.summary.teamAResult}`}>{entry.summary.teamAScore}</strong>
-                      <small>-</small>
-                      <strong className={`match-score-token match-score-token-${entry.summary.teamBResult}`}>{entry.summary.teamBScore}</strong>
-                    </span>
-                  </span>
-
-                  <span className="match-action-cell">
-                    <button
-                      type="button"
-                      className="match-action-button"
-                      onClick={(event) => handleActionClick(event, () => onOpenStats(entry.id))}
-                      disabled={loadingSource != null}
-                    >
-                      Stats
-                    </button>
-                    <button
-                      type="button"
-                      className="match-action-button match-action-button-open"
-                      onClick={(event) => handleActionClick(event, () => onOpenMatch(entry.id))}
-                      disabled={loadingSource != null}
-                    >
-                      Open
-                    </button>
-                    <button
-                      type="button"
-                      className="match-action-button match-action-button-delete"
-                      onClick={(event) => handleActionClick(event, () => void onDeleteMatch(entry.id))}
-                      disabled={loadingSource != null}
-                    >
-                      Delete
-                    </button>
-                  </span>
-                </span>
-              </div>
+                <div className="matches-redline-actions">
+                  <button
+                    type="button"
+                    className="matches-redline-action matches-redline-action-secondary"
+                    onClick={(event) => handleActionClick(event, () => onOpenStats(entry.id))}
+                    disabled={loadingSource != null}
+                  >
+                    Stats
+                  </button>
+                  <button
+                    type="button"
+                    className="matches-redline-action matches-redline-action-primary"
+                    onClick={(event) => handleActionClick(event, () => onOpenMatch(entry.id))}
+                    disabled={loadingSource != null}
+                  >
+                    Open
+                  </button>
+                  <button
+                    type="button"
+                    className="matches-redline-action matches-redline-action-danger"
+                    onClick={(event) => handleActionClick(event, () => void onDeleteMatch(entry.id))}
+                    disabled={loadingSource != null}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </article>
             ))}
           </div>
         ) : (
-          <div className="match-library-empty">
-            <strong>{query || mapFilter !== "all" ? "No matches match the current filters" : "No local matches yet"}</strong>
+          <div className="matches-redline-empty">
+            <strong>{filtersActive ? "No matches match the current filters" : "No local matches yet"}</strong>
             <p>
-              {query || mapFilter !== "all"
-                ? "Adjust the current search or map filter to widen the library results."
+              {filtersActive
+                ? "Clear the current search or map filter to widen the library results."
                 : parserBridgeAvailable
                   ? "Upload a `.dem` to start building the local parser-backed match library."
                   : "Bring the local parser back online first, then upload a `.dem` to build the local match library."}
             </p>
+            {filtersActive ? (
+              <button type="button" className="matches-redline-clear matches-redline-empty-action" onClick={clearFilters}>
+                Clear filters
+              </button>
+            ) : null}
           </div>
         )}
       </section>
 
       {fixtures.length > 0 ? (
-        <details className="matches-secondary-tools">
+        <details className="matches-redline-secondary-tools">
           <summary>
-            <span className="card-title">Secondary Tools</span>
-            <strong>Fixtures & validation</strong>
+            <span className="matches-redline-kicker">Validation fixtures</span>
+            <strong>Parser/replay test demos</strong>
           </summary>
-          <div className="entry-fixture-list matches-fixture-list">
+          <div className="entry-fixture-list matches-redline-fixture-list">
             {fixtures.map((fixture) => (
               <button
                 key={fixture.fileName}
-                className="entry-fixture-item"
+                className="entry-fixture-item matches-redline-fixture-item"
                 onClick={() => void onFixtureLoad(fixture.fileName)}
                 disabled={loadingSource != null}
               >
@@ -320,15 +384,4 @@ function winnerAccent(teamAResult: "win" | "loss" | "draw", teamBResult: "win" |
 function handleActionClick(event: MouseEvent<HTMLButtonElement>, action: () => void) {
   event.stopPropagation();
   action();
-}
-
-function handleMatchRowKeyDown(event: KeyboardEvent<HTMLDivElement>, disabled: boolean, action: () => void) {
-  if (disabled) {
-    return;
-  }
-
-  if (event.key === "Enter" || event.key === " ") {
-    event.preventDefault();
-    action();
-  }
 }

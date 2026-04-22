@@ -36,6 +36,7 @@ func Serve(opts Options) error {
 		}
 
 		writeJSON(w, http.StatusOK, map[string]any{
+			"mode":    "go-api",
 			"ok":      true,
 			"service": "mastermind-parser-api",
 		})
@@ -163,16 +164,35 @@ func parseDemoUpload(w http.ResponseWriter, r *http.Request, opts Options) error
 		return nil
 	}
 
+	roundsTotal, err := demo.CountRounds(demoPath)
+	if err != nil {
+		_ = streamEvent(map[string]any{
+			"type":         "progress",
+			"roundsParsed": 0,
+		})
+	} else if roundsTotal > 0 {
+		_ = streamEvent(map[string]any{
+			"type":         "progress",
+			"roundsParsed": 0,
+			"roundsTotal":  roundsTotal,
+		})
+	}
+
 	if err := demo.Parse(demo.Options{
-		DemoPath:   demoPath,
-		OutputPath: replayPath,
-		SchemaPath: opts.SchemaPath,
-		AssetsRoot: opts.AssetsRoot,
+		DemoPath:       demoPath,
+		OutputPath:     replayPath,
+		SchemaPath:     opts.SchemaPath,
+		AssetsRoot:     opts.AssetsRoot,
+		ExpectedRounds: roundsTotal,
 		Progress: func(progress demo.ParseProgress) {
-			_ = streamEvent(map[string]any{
+			payload := map[string]any{
 				"type":         "progress",
 				"roundsParsed": progress.RoundsParsed,
-			})
+			}
+			if progress.RoundsTotal > 0 {
+				payload["roundsTotal"] = progress.RoundsTotal
+			}
+			_ = streamEvent(payload)
 		},
 	}); err != nil {
 		_ = streamEvent(map[string]any{

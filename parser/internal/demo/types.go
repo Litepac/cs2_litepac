@@ -8,15 +8,17 @@ import (
 )
 
 type Options struct {
-	DemoPath   string
-	OutputPath string
-	SchemaPath string
-	AssetsRoot string
-	Progress   func(ParseProgress)
+	DemoPath       string
+	OutputPath     string
+	SchemaPath     string
+	AssetsRoot     string
+	ExpectedRounds int
+	Progress       func(ParseProgress)
 }
 
 type ParseProgress struct {
 	RoundsParsed int
+	RoundsTotal  int
 }
 
 type playerRef struct {
@@ -30,11 +32,12 @@ type teamRef struct {
 }
 
 type parseState struct {
-	parser       demoinfocs.Parser
-	replay       replay.Replay
-	currentRound *rounds.Builder
-	roundList    []replay.Round
-	roundCount   int
+	parser            demoinfocs.Parser
+	replay            replay.Replay
+	currentRound      *rounds.Builder
+	roundList         []replay.Round
+	roundCount        int
+	expectedRounds    int
 	lastBombCarrierID string
 
 	mapID string

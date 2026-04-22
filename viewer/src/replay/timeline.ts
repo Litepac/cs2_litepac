@@ -7,8 +7,10 @@ export type TimelineEventItem = {
   key: string;
   kind: "bomb" | "kill" | "utility";
   label: string;
+  killerSide?: "CT" | "T" | null;
   tick: number;
   utilityKind?: UtilityEntity["kind"];
+  utilitySide?: "CT" | "T" | null;
 };
 
 export type TimelineUtilityWindow = {
@@ -36,6 +38,14 @@ export function buildTimelineMarkers(
     return replay.players.find((player) => player.playerId === playerId)?.displayName ?? playerId;
   };
 
+  const playerSide = (playerId: string | null) => {
+    if (!playerId) {
+      return null;
+    }
+
+    return round.playerStreams.find((stream) => stream.playerId === playerId)?.side ?? null;
+  };
+
 const utilityMarkers = round.utilityEntities
     .map((utility) => {
       if (!utilityMatchesFocus(utility.kind, utilityFocus)) {
@@ -53,6 +63,7 @@ const utilityMarkers = round.utilityEntities
         label: `${playerName(utility.throwerPlayerId)}: ${utilityLabel(utility.kind)}`,
         tick,
         utilityKind: utility.kind,
+        utilitySide: playerSide(utility.throwerPlayerId),
       } satisfies TimelineEventItem;
     })
     .filter(isPresent);
@@ -71,6 +82,7 @@ const utilityMarkers = round.utilityEntities
     ...round.killEvents.map((event) => ({
       key: `kill-${event.tick}-${event.victimPlayerId}`,
       kind: "kill" as const,
+      killerSide: playerSide(event.killerPlayerId),
       label: `${playerName(event.killerPlayerId)} -> ${playerName(event.victimPlayerId)} (${event.weaponName})`,
       tick: event.tick,
     })),

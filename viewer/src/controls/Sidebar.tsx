@@ -8,8 +8,8 @@ export function Sidebar({ onSelectShellPage }: Props) {
       <div className="replay-sidebar-layout">
         <section className="replay-rail-global">
           <button className="replay-rail-brand-button replay-rail-brand-button-global" onClick={() => onSelectShellPage("home")}>
-            <span className="replay-rail-brand-mark">&gt;_</span>
-            <strong>MM</strong>
+            <img className="replay-rail-brand-logo" src="/DR Icon.png" alt="DemoRead" decoding="async" />
+            <strong>DR</strong>
           </button>
 
           <div className="replay-rail-global-nav">

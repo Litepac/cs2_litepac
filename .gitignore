@@ -20,6 +20,7 @@ assets/fixtures/*.json
 tmp-*.log
 .tmp-*.log
 .tmp-*.ndjson
+.tmp-*.txt
 .tmp-bridge-*.log
 .tmp-viewer-*.log
 .tmp-chrome-profile/

@@ -72,6 +72,11 @@ Maintain `plans.md` with:
 - Done
 - Blocked
 
+Working shape:
+- Keep `In Progress` to one active diagnosis/execution path unless parallel work is genuinely active right now
+- Keep `Planned` as the upcoming queue, not a history dump
+- Keep `Done` at milestone level; use git history for fine-grained iteration churn
+
 For non-trivial tasks:
 - add or update the active diagnosis path before implementation
 - keep checkable, execution-oriented items rather than vague themes

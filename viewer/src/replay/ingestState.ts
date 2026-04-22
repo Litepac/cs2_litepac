@@ -28,16 +28,18 @@ export function demoIngestStepLabel(step: DemoIngestStep) {
 export function demoIngestStatusCopy(state: DemoIngestState) {
   switch (state.step) {
     case "upload":
-      return "Sending demo to the local parser bridge.";
+      return "Sending the local demo to the parser.";
     case "parser":
-      return "Waiting for the parser to emit canonical replay truth. The round rack is warming up before real rounds lock in.";
+      return state.roundsIndexed > 0
+        ? `${state.roundsIndexed}${state.roundsTotal != null ? ` / ${state.roundsTotal}` : ""} parsed round${state.roundsIndexed === 1 ? "" : "s"} detected. Waiting for the replay artifact.`
+        : "The parser accepted the upload. Detecting round structure.";
     case "validate":
-      return "Validating the canonical replay artifact in the viewer.";
+      return "Validating the replay artifact before it enters the library.";
     case "index":
       return state.roundsTotal != null
-        ? `Indexing ${state.roundsTotal} parsed round${state.roundsTotal === 1 ? "" : "s"} into the local match library.`
-        : "Indexing parsed rounds into the local match library.";
+        ? `Indexing ${state.roundsTotal} parsed round${state.roundsTotal === 1 ? "" : "s"} into the match library.`
+        : "Indexing parsed rounds into the match library.";
     case "save":
-      return "Saving the match locally so it survives reloads.";
+      return "Match saved to the local library.";
   }
 }

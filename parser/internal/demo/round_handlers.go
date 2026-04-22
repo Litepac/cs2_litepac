@@ -79,6 +79,7 @@ func (s *parseState) finalizeOpenRound(endTick int) {
 	if s.progress != nil {
 		s.progress(ParseProgress{
 			RoundsParsed: len(s.roundList),
+			RoundsTotal:  s.expectedRounds,
 		})
 	}
 	s.currentRound = nil

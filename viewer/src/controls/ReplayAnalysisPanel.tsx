@@ -32,6 +32,8 @@ type Props = {
   positionsSourceFilter: PositionsSourceFilter;
   positionsTeamFilter: PositionsTeamFilter;
   positionsView: PositionsView;
+  positionPlayerBroadCompareEnabled: boolean;
+  positionPlayerCompareEnabled: boolean;
   positionPlayerMaxSelections: number;
   positionPlayerSelectedKeys: string[];
   showPositionRoundNumbers: boolean;
@@ -53,6 +55,9 @@ type Props = {
   onUtilityFocusChange: (focus: UtilityFocus) => void;
   onAnalysisPlayerToggle: (playerIds: string[], playerSide: Side) => void;
   onAnalysisPlayerClear: () => void;
+  onEnablePositionPlayerCompare: () => void;
+  onEnablePositionPlayerBroadCompare: () => void;
+  onDisablePositionPlayerCompare: () => void;
 };
 
 const ATLAS_SCOPES: Array<{ label: string; value: UtilityAtlasScope }> = [
@@ -98,6 +103,8 @@ export function ReplayAnalysisPanel({
   positionsSourceFilter,
   positionsTeamFilter,
   positionsView,
+  positionPlayerBroadCompareEnabled,
+  positionPlayerCompareEnabled,
   positionPlayerMaxSelections,
   positionPlayerSelectedKeys,
   showPositionRoundNumbers,
@@ -119,6 +126,9 @@ export function ReplayAnalysisPanel({
   onUtilityFocusChange,
   onAnalysisPlayerToggle,
   onAnalysisPlayerClear,
+  onEnablePositionPlayerCompare,
+  onEnablePositionPlayerBroadCompare,
+  onDisablePositionPlayerCompare,
 }: Props) {
   const liveMode = analysisMode === "live";
   const atlasMode = analysisMode === "utilityAtlas";
@@ -126,6 +136,8 @@ export function ReplayAnalysisPanel({
   const positionsMode = analysisMode === "positions";
   const positionPlayerCompareMode = positionsMode && positionsView === "player";
   const positionPlayerSelectedCount = positionPlayerSelectedKeys.length;
+  const positionPlayerBroadCompareActive =
+    positionPlayerCompareMode && positionsSourceFilter === "all" && positionPlayerBroadCompareEnabled;
   const selectedActive =
     atlasMode
       ? selectedPlayerId != null && utilityAtlasSourceFilter === "selected"
@@ -153,12 +165,16 @@ export function ReplayAnalysisPanel({
         : "All-player occupancy across the selected replay scope."
       : positionPlayerCompareMode
         ? selectedActive
-          ? `Use the main replay timeline to compare ${positionPlayerSelectedCount === 1 ? "one movement pattern" : `${positionPlayerSelectedCount} movement patterns`} across matching rounds.`
-          : `Use the main replay timeline to compare all-player replay tokens across CT, T, or all rounds. Select up to ${positionPlayerMaxSelections} players for a cleaner comparison set.`
+          ? positionPlayerCompareEnabled
+            ? `Use compare mode only when you need a direct side-by-side of up to ${positionPlayerMaxSelections} players at the same replay moment.`
+            : `Study where this player appears at the same replay moment across matching rounds, then jump into a concrete round.`
+          : positionPlayerBroadCompareActive
+            ? "Broad compare is a secondary overview. Use it to spot a repeated location, then switch back to one player for a cleaner study."
+            : "Pick one player to study timing and repeated positions across rounds. Broad compare is optional when you need a quick overview."
         : positionsMode
           ? "Compare sampled movement paths across the selected replay scope."
           : null;
-  const resetLabel = "All Players";
+  const resetLabel = positionPlayerCompareMode ? "Clear Study" : "All Players";
   const ctPlayers = analysisPlayers.filter((player) => player.side === "CT");
   const tPlayers = analysisPlayers.filter((player) => player.side === "T");
   const positionPlayerRoster = positionPlayerCompareMode ? buildPositionPlayerRoster(analysisPlayers) : [];
@@ -281,25 +297,59 @@ export function ReplayAnalysisPanel({
               : heatmapMode && selectedActive
                 ? "Player Focus"
                 : positionPlayerCompareMode
-                  ? "Compare"
+                  ? positionPlayerCompareEnabled
+                    ? "Compare Players"
+                    : "Study Player"
                   : "Players"}
           </span>
           {positionPlayerCompareMode ? (
             <span className="replay-analysis-selection-note">
-              {positionPlayerSelectedCount}/{positionPlayerMaxSelections} selected
+              {selectedActive
+                ? `${positionPlayerSelectedCount}/${positionPlayerMaxSelections} selected`
+                : positionPlayerBroadCompareActive
+                  ? "Broad compare"
+                  : "Pick one player"}
             </span>
           ) : null}
-          <button
-            className={selectedActive ? "control-button control-button-active replay-analysis-player-reset" : "control-button replay-analysis-player-reset"}
-            onClick={onAnalysisPlayerClear}
-          >
-            {resetLabel}
-          </button>
+          {positionPlayerCompareMode ? (
+            <>
+              {selectedActive && !positionPlayerBroadCompareActive && !positionPlayerCompareEnabled ? (
+                <button className="control-button replay-analysis-player-reset" onClick={onEnablePositionPlayerCompare}>
+                  Compare Another Player
+                </button>
+              ) : positionPlayerCompareEnabled ? (
+                <button className="control-button replay-analysis-player-reset" onClick={onDisablePositionPlayerCompare}>
+                  Back to Single
+                </button>
+              ) : null}
+              {!positionPlayerCompareEnabled ? (
+                <button
+                  className={positionPlayerBroadCompareActive ? "control-button control-button-active replay-analysis-player-reset" : "control-button replay-analysis-player-reset"}
+                  onClick={onEnablePositionPlayerBroadCompare}
+                >
+                  Broad Compare
+                </button>
+              ) : null}
+              <button
+                className={selectedActive || positionPlayerBroadCompareActive ? "control-button control-button-active replay-analysis-player-reset" : "control-button replay-analysis-player-reset"}
+                onClick={onAnalysisPlayerClear}
+              >
+                {resetLabel}
+              </button>
+            </>
+          ) : (
+            <button
+              className={selectedActive ? "control-button control-button-active replay-analysis-player-reset" : "control-button replay-analysis-player-reset"}
+              onClick={onAnalysisPlayerClear}
+            >
+              {resetLabel}
+            </button>
+          )}
         </div>
 
         {positionPlayerCompareMode ? (
           <PositionPlayerRoster
-            disableUnselected={positionPlayerSelectedCount >= positionPlayerMaxSelections}
+            disableUnselected={positionPlayerCompareEnabled && positionPlayerSelectedCount >= positionPlayerMaxSelections}
             players={positionPlayerRoster}
             selectedPlayerKeys={positionPlayerSelectedKeys}
             selectedTeamFilter={teamValue}
@@ -347,8 +397,12 @@ export function ReplayAnalysisPanel({
             </div>
             <small className="replay-analysis-panel-hint replay-analysis-panel-hint-inline">
               {selectedActive
-                ? "Synced to the main replay timeline. Click any ghost token to jump into that round; the first selected player becomes live focus."
-                : `Synced to the main replay timeline. Use All Players for broad comparison or choose up to ${positionPlayerMaxSelections} players for a tighter comparison set.`}
+                ? positionPlayerCompareEnabled
+                  ? "Synced to the main replay timeline. Compare mode is capped and should stay explicit; click any ghost token to jump into that round."
+                  : "Synced to the main replay timeline. Click any ghost token to jump into that round; the selected player becomes live focus."
+                : positionPlayerBroadCompareActive
+                  ? "Broad compare is only for finding a repeated location quickly. Once you spot something useful, pick one player for a cleaner timing study."
+                  : `Start with one player. Only expand to compare mode when a direct side-by-side is genuinely useful, or use Broad Compare as a secondary overview.`}
             </small>
           </>
         ) : null}

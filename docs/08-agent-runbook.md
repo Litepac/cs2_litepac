@@ -12,6 +12,7 @@ Use it when:
 ## Core Rules
 - Respect `AGENTS.md` first
 - Keep `plans.md` current
+- Treat `plans.md` as an operator file: one active path in `In Progress`, short upcoming queue in `Planned`, and milestone-level history in `Done`
 - Do not add fake replay data to unblock UI work
 - Validate parser output before changing viewer interpretation
 - Prefer localized fixes over broad visual experiments
@@ -26,8 +27,8 @@ Use it when:
 ## Local Startup Rules
 - When the user says "start everything up", start the local viewer/parser first, then start a Cloudflare quick tunnel to `http://127.0.0.1:4173`, and keep the `friend-logs/` tails available if friend-testing activity needs to be observed.
 - Default dev path: run the viewer dev server from `viewer/`. `viewer/vite.config.ts` is expected to spawn the Go parser API from `parser/cmd/mastermind-api`.
-- Fallback path: use `tools/local-parser-bridge.mjs` only if the Go API path is unavailable on the current machine. That bridge serves the same local API surface on `127.0.0.1:4318`, but shells out to `parser/fixtureparse.exe` and only emits an initial `roundsParsed: 0` event before the final result.
-- Before debugging ingest, call `http://127.0.0.1:4318/api/health` and check whether the response is the direct Go API or the fallback Node bridge (`bridge: "node-fixtureparse"`).
+- Fallback path: use `tools/local-parser-bridge.mjs` only if the Go API path is unavailable on the current machine. That bridge serves the same local API surface on `127.0.0.1:4318`, shells out to `parser/fixtureparse.exe`, and should still stream real round progress when `fixtureparse` supports NDJSON progress.
+- Before debugging ingest, call `/api/health` through the active viewer URL and check `mode`: `go-api` is the preferred direct parser runtime, `node-bridge` is the fallback bridge.
 - Do not make a new chat invent a third startup path. If parser startup behavior is wrong, fix or document one of these two paths instead.
 
 ## Commands
@@ -43,10 +44,17 @@ The `dev` script uses Vite's native config loader on this machine. In the ideal 
 ### Start viewer + fallback parser bridge in one command
 ```powershell
 cd viewer
-npm.cmd run dev:bridge
+npm.cmd run dev:local
 ```
 
-Use this on the current machine when Windows Application Control blocks the Go child process. It starts the Node parser bridge on `127.0.0.1:4318`, then starts the viewer with the Go child disabled, so `/api/health` still resolves through the viewer dev server on `127.0.0.1:4173`.
+Use this on the current machine when you want the known-good local launcher. It starts the direct Go API when available and falls back to the Node parser bridge on `127.0.0.1:4318` if needed, so `/api/health` still resolves through the viewer dev server on `127.0.0.1:4173`. `npm.cmd run dev:bridge` remains as a compatibility alias.
+
+### Start localhost from repo root
+```powershell
+.\start-localhost.cmd
+```
+
+Use this as the default operator shortcut on this machine. It clears stale localhost temp logs, opens a dedicated console window, and runs the known-good local path for you without tying up the current shell.
 
 ### Start Cloudflare tunnel for friend testing
 ```powershell
@@ -56,9 +64,16 @@ cd c:\Users\rasmu\Desktop\CS2_Litepac
 
 Cloudflare prints a temporary `trycloudflare.com` URL in that terminal. Expect a new URL each time the quick tunnel is restarted.
 
+Root shortcut:
+```powershell
+.\start-cloudflare.cmd
+```
+
+Run `.\start-localhost.cmd` first, then run this Cloudflare shortcut in a second terminal/window. The shortcut checks that `http://127.0.0.1:4173` is reachable before starting the tunnel and then tells you to copy the printed `https://*.trycloudflare.com` URL.
+
 ### Check parser API identity
 ```powershell
-(Invoke-WebRequest -UseBasicParsing http://127.0.0.1:4318/api/health).Content
+(Invoke-WebRequest -UseBasicParsing http://127.0.0.1:4173/api/health).Content
 ```
 
 ### Watch local tunnel usage events

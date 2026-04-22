@@ -15,6 +15,7 @@ Build a trustworthy CS2 2D replay core with an operator-grade Replay workspace a
 - Replay round switching, playback, player selection, and the live roster are working from parser-backed player streams
 - Utility Atlas, Heatmap, Position Paths, and Position Player exist as parser-backed replay-analysis modes
 - Position Paths is broadly useful, Heatmap is supporting context, and Position Player is the active quality gap
+- Position Player should be treated as selected-player timing/pattern study first; broad all-player comparison is only a secondary overview
 - Map rendering, bomb events, utility events, combat events, and player positions are rendered from real replay output only
 
 ## Viewer Progress
@@ -39,13 +40,13 @@ Build a trustworthy CS2 2D replay core with an operator-grade Replay workspace a
   - bounce/detonation phase markers
 
 ## Known Open Issues
-- `Position Player` still needs stronger validation around broad All Players mode, selected-player isolation, round labels, token click jumps, and snapshot/live alignment
+- `Position Player` still needs stronger validation around selected-player isolation, round labels, token click jumps, snapshot/live alignment, and the explicit broad-compare fallback path
 - Heavy fights can still become visually dense when labels, timers, and utility badges compete
 - Stats role labels are parser-backed and placement-aware, but several maps still need fixture-backed tuning
 - Parser-side utility lifecycle and post-round sampling remain valid follow-up areas if new fixture mismatches appear
 
 ## Next High-Value Steps
-- Make `Position Player` a genuinely useful cross-round movement tool without mixing it into Position Paths or replacing the normal replay timeline
+- Make `Position Player` a genuinely useful selected-player cross-round movement tool without mixing it into Position Paths or replacing the normal replay timeline
 - Add focused fixture/test coverage for replay-analysis snapshot correctness and click-to-round jumps
 - Prune stale planning/doc drift so future chats follow the current parser-startup and replay-analysis path
 - Continue map-by-map role-label validation only from parser-backed staged fixtures

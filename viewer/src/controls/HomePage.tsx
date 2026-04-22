@@ -1,125 +1,140 @@
-import type { MatchLibraryEntry } from "../replay/matchLibrary";
-
 type Props = {
-  latestMatch: MatchLibraryEntry | null;
-  localMatchCount: number;
-  parserBridgeAvailable: boolean;
   onOpenMatches: () => void;
 };
 
-const foundationPoints = ["Parser First", "Map First", "Trust First"];
+const DEMOREAD_LOGO_PARTS = {
+  icon: "/DR Icon.png",
+  demo: "/Demo.png",
+  read: "/Read.png",
+  tagline: "/DemoRead_tagline.png",
+} as const;
 
-export function HomePage({ latestMatch, localMatchCount, parserBridgeAvailable, onOpenMatches }: Props) {
+const heroTimelineTicks = Array.from({ length: 18 }, (_, index) => index);
+
+const valuePoints = [
+  ["See what happened", "Follow the round in 2D instead of guessing from memory."],
+  ["Review faster", "Get to the useful moments without replaying dead time."],
+  ["Find mistakes", "Spot timing, spacing, utility, deaths, and bomb decisions."],
+  ["Explain it clearly", "Show teammates the round, not just a clip."],
+];
+
+const workflowSteps = [
+  ["Upload demo", "Add a local CS2 demo."],
+  ["Review the round", "Open the map, timeline, utility, paths, and bomb context."],
+  ["Share the lesson", "Use the visual round state to explain what to change next."],
+];
+
+const audienceRows = [
+  ["Players", "Review your own demos with less guesswork."],
+  ["Teams", "Make round reviews easier to explain and repeat."],
+  ["Analysts / reviewers", "Move from demo file to round evidence faster."],
+];
+
+export function HomePage({
+  onOpenMatches,
+}: Props) {
+  function handleSeeFlow() {
+    document.getElementById("landing-flow-heading")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   return (
-    <section className="home-page">
-      <div className="home-cyber-shell">
-        <div className="home-cyber-grid" />
-        <div className="home-cyber-scanlines" />
+    <section className="landing-page">
+      <header className="landing-hero">
+        <div className="landing-hero-copy">
+          <span className="landing-kicker">DemoRead for CS2 demos</span>
+          <h1>See the round clearly.</h1>
+          <p>
+            Turn a local CS2 demo into a focused 2D review. Understand what happened, find the mistake faster, and
+            explain the round with less guesswork.
+          </p>
+          <div className="landing-actions" aria-label="Homepage actions">
+            <button type="button" className="landing-button landing-button-primary" onClick={onOpenMatches}>
+              Open Matches
+            </button>
+            <button type="button" className="landing-button landing-button-secondary" onClick={handleSeeFlow}>
+              See Review Flow
+            </button>
+          </div>
+        </div>
 
-        <div className="home-hero-shell home-hero-shell-cyber">
-          <div className="home-hero home-hero-cyber">
-            <div className="home-status-chip">
-              <span>Replay Workspace</span>
-            </div>
-            <h2 className="home-display-headline">
-              <span className="home-display-line home-display-line-primary">READ</span>
-              <span className="home-display-line home-display-line-accent">THE ROUND</span>
-              <span className="home-display-line home-display-line-secondary">RIGHT</span>
-            </h2>
-            <div className="home-terminal-copy">
-              <span className="home-terminal-prefix">&gt;</span>
-              <p>
-                Turn local CS2 demos into canonical replay truth, then step into a 2D review surface built for round
-                reads, utility, and bomb context.
-              </p>
-            </div>
-            <div className="home-hero-actions home-hero-actions-cyber">
-              <button className="home-primary-button home-primary-button-cyber" onClick={onOpenMatches}>Open Matches</button>
-              <span className={`home-bridge-status home-bridge-status-cyber ${parserBridgeAvailable ? "home-bridge-status-live" : ""}`}>
-                {parserBridgeAvailable ? "Parser Bridge Online" : "Parser Bridge Offline"}
-              </span>
-            </div>
-            <div className="home-principles-inline">
-              {foundationPoints.map((point) => (
-                <span key={point}>{point}</span>
-              ))}
-            </div>
+        <aside className="landing-brand-film" aria-label="DemoRead animated brand identity">
+          <div className="landing-brand-film-logo" aria-hidden="true">
+            <img className="landing-brand-film-logo-part landing-brand-film-logo-icon" src={DEMOREAD_LOGO_PARTS.icon} alt="" decoding="async" />
+            <img className="landing-brand-film-logo-part landing-brand-film-logo-demo" src={DEMOREAD_LOGO_PARTS.demo} alt="" decoding="async" />
+            <img className="landing-brand-film-logo-part landing-brand-film-logo-read" src={DEMOREAD_LOGO_PARTS.read} alt="" decoding="async" />
+            <img className="landing-brand-film-logo-part landing-brand-film-logo-tagline" src={DEMOREAD_LOGO_PARTS.tagline} alt="" decoding="async" />
           </div>
 
-          <aside className="home-product-frame home-product-frame-cyber">
-            <div className="home-product-frame-header">
-              <span>HUD Display v0.1</span>
-              <small>Local Review Surface</small>
-            </div>
+          <div className="landing-brand-film-timeline" aria-hidden="true">
+            {heroTimelineTicks.map((tick) => (
+              <i key={tick} />
+            ))}
+          </div>
+        </aside>
+      </header>
 
-            <div className="home-product-screen">
-              <div className="home-product-stage">
-                <div
-                  className={`home-product-stage-map ${latestMatch ? "" : "home-product-stage-map-empty"}`}
-                  style={
-                    latestMatch
-                      ? {
-                          backgroundImage: `linear-gradient(180deg, rgba(4, 8, 12, 0.12), rgba(4, 8, 12, 0.72)), url(${latestMatch.summary.mapImageUrl})`,
-                        }
-                      : undefined
-                  }
-                />
-                <div className="home-product-stage-overlay">
-                  <div className="home-product-stage-tag">Canonical replay locked</div>
-                  {latestMatch ? (
-                    <div className="home-product-stage-summary">
-                      <span>Latest Local Match</span>
-                      <strong>{latestMatch.summary.mapName}</strong>
-                      <small>{latestMatch.summary.teamAName} vs {latestMatch.summary.teamBName}</small>
-                    </div>
-                  ) : (
-                    <div className="home-product-stage-summary">
-                      <span>Awaiting first upload</span>
-                      <strong>Parser-first ingest</strong>
-                      <small>Your first demo will light up this product preview.</small>
-                    </div>
-                  )}
-                </div>
-                <div className="home-product-stage-hud">
-                  <div className="home-product-stage-hud-card">
-                    <span>Bridge</span>
-                    <strong>{parserBridgeAvailable ? "ONLINE" : "OFFLINE"}</strong>
-                  </div>
-                  <div className="home-product-stage-hud-card home-product-stage-hud-card-accent">
-                    <span>Library</span>
-                    <strong>{localMatchCount}</strong>
-                  </div>
-                </div>
-                <div className="home-product-stage-dock">
-                  <div className="home-product-stage-dock-line" />
-                  <div className="home-product-stage-dock-points">
-                    <span />
-                    <span />
-                    <span />
-                    <span />
-                    <span />
-                  </div>
-                </div>
-              </div>
-
-              <div className="home-product-flow">
-                <div className="home-product-flow-row">
-                  <span>01</span>
-                  <p>Upload `.dem` locally through the parser bridge.</p>
-                </div>
-                <div className="home-product-flow-row">
-                  <span>02</span>
-                  <p>Index the match by map, teams, score, and added date.</p>
-                </div>
-                <div className="home-product-flow-row">
-                  <span>03</span>
-                  <p>Open the replay workspace only after canonical truth is ready.</p>
-                </div>
-              </div>
-            </div>
-          </aside>
+      <section className="landing-value" aria-labelledby="landing-value-heading">
+        <div className="landing-section-heading">
+          <span className="landing-kicker">Why it matters</span>
+          <h2 id="landing-value-heading">A round is easier to fix when everyone can see it.</h2>
         </div>
-      </div>
+        <div className="landing-value-grid">
+          {valuePoints.map(([title, body]) => (
+            <article key={title}>
+              <h3>{title}</h3>
+              <p>{body}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="landing-flow" aria-labelledby="landing-flow-heading">
+        <div className="landing-section-heading">
+          <span className="landing-kicker">How it works</span>
+          <h2 id="landing-flow-heading">From demo file to clear round review.</h2>
+        </div>
+        <div className="landing-flow-steps">
+          {workflowSteps.map(([title, body], index) => (
+            <article key={title}>
+              <span>{String(index + 1).padStart(2, "0")}</span>
+              <h3>{title}</h3>
+              <p>{body}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="landing-audience" aria-labelledby="landing-audience-heading">
+        <div className="landing-section-heading">
+          <span className="landing-kicker">Who it is for</span>
+          <h2 id="landing-audience-heading">Built for people who review rounds seriously.</h2>
+        </div>
+        <div className="landing-audience-row">
+          {audienceRows.map(([title, body]) => (
+            <article key={title}>
+              <h3>{title}</h3>
+              <p>{body}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="landing-final-cta">
+        <div>
+          <span className="landing-kicker">Alpha testing</span>
+          <h2>Bring a demo. Leave with a clearer round.</h2>
+          <p>
+            Alpha testing is for real review sessions. Upload a demo, open the round, and tell us where the review
+            feels fast, clear, or still too hard.
+          </p>
+        </div>
+        <div className="landing-final-actions">
+          <button type="button" className="landing-button landing-button-primary" onClick={onOpenMatches}>
+            Start Alpha Review
+          </button>
+          <span>Early access / local demo flow</span>
+        </div>
+      </section>
     </section>
   );
 }

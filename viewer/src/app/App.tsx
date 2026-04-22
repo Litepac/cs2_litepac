@@ -1,9 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { HomePage } from "../controls/HomePage";
-import { LegacyHomePage } from "../controls/LegacyHomePage";
 import { MatchesPage } from "../controls/MatchesPage";
-import { MatchesPageV2 } from "../controls/MatchesPageV2";
 import { ReplayMapFirstPage } from "../controls/ReplayMapFirstPage";
 import { ShellTopNav } from "../controls/ShellTopNav";
 import { StatsPage } from "../controls/StatsPage";
@@ -47,7 +45,8 @@ const MAX_POSITION_PLAYER_SELECTIONS = 3;
 
 export function App() {
   const fixtures = useFixtureCatalog();
-  const [shellPage, setShellPage] = useState<"home" | "home-original" | "matches" | "matches-v2" | "stats">("home");
+  const matchesUploadInputRef = useRef<HTMLInputElement | null>(null);
+  const [shellPage, setShellPage] = useState<"home" | "matches" | "stats">("home");
   const {
     closeReplay,
     demoIngestState,
@@ -637,25 +636,6 @@ export function App() {
                 onOpenMatches={() => setShellPage("matches")}
               />
             </section>
-          ) : shellPage === "home-original" ? (
-            <section className="home-surface">
-              <ShellTopNav
-                actionLabel={libraryEntries.length > 0 ? "Open Matches" : "Start Local Review"}
-                feedbackContext={feedbackContext}
-                localMatchCount={libraryEntries.length}
-                onAction={() => setShellPage("matches")}
-                onOpenHome={() => setShellPage("home")}
-                onOpenMatches={() => setShellPage("matches")}
-                parserBridgeAvailable={parserBridgeAvailable}
-                shellPage={shellPage}
-              />
-              <LegacyHomePage
-                latestMatch={libraryEntries[0] ?? null}
-                localMatchCount={libraryEntries.length}
-                onOpenMatches={() => setShellPage("matches")}
-                parserBridgeAvailable={parserBridgeAvailable}
-              />
-            </section>
           ) : shellPage === "matches" ? (
             <section className="matches-surface">
               <ShellTopNav
@@ -663,9 +643,7 @@ export function App() {
                 actionLabel={parserBridgeAvailable ? "Upload Demo" : "Parser Offline"}
                 feedbackContext={feedbackContext}
                 localMatchCount={libraryEntries.length}
-                onAction={() => {
-                  document.getElementById("matches-redline-upload-input")?.click();
-                }}
+                onAction={() => matchesUploadInputRef.current?.click()}
                 onOpenHome={() => setShellPage("home")}
                 onOpenMatches={() => setShellPage("matches")}
                 parserBridgeAvailable={parserBridgeAvailable}
@@ -679,37 +657,13 @@ export function App() {
                 matches={libraryEntries}
                 loadingSource={loadingSource}
                 parserBridgeAvailable={parserBridgeAvailable}
+                uploadInputRef={matchesUploadInputRef}
                 onDemoFileChange={handleDemoFileChange}
                 onDeleteMatch={deleteReplay}
                 onFixtureLoad={onFixtureLoad}
                 onOpenMatch={handleOpenMatch}
                 onOpenStats={handleOpenStats}
                 parserBridgeHealth={parserBridgeHealth}
-              />
-            </section>
-          ) : shellPage === "matches-v2" ? (
-            <section className="matches-surface matches-surface-v2">
-              <ShellTopNav
-                feedbackContext={feedbackContext}
-                localMatchCount={libraryEntries.length}
-                onOpenHome={() => setShellPage("home")}
-                onOpenMatches={() => setShellPage("matches")}
-                parserBridgeAvailable={parserBridgeAvailable}
-                shellPage={shellPage}
-              />
-              <MatchesPageV2
-                demoIngestState={demoIngestState}
-                error={error}
-                fixtures={fixtures}
-                libraryHydrated={libraryHydrated}
-                matches={libraryEntries}
-                loadingSource={loadingSource}
-                parserBridgeAvailable={parserBridgeAvailable}
-                onDemoFileChange={handleDemoFileChange}
-                onDeleteMatch={deleteReplay}
-                onFixtureLoad={onFixtureLoad}
-                onOpenMatch={handleOpenMatch}
-                onOpenStats={handleOpenStats}
               />
             </section>
           ) : (

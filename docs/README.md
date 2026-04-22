@@ -17,6 +17,7 @@ Read the design and implementation docs in this order:
 13. `docs/13-advanced-stats-v1.md`
 14. `docs/14-replay-v1-product-spec.md`
 15. `docs/15-domain-alpha-readiness.md`
+16. `docs/16-alpha-qa-checklist.md`
 
 Historical review records:
 

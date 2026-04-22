@@ -1,4 +1,4 @@
-import { useMemo, useState, type ChangeEvent, type MouseEvent } from "react";
+import { useMemo, useState, type ChangeEvent, type MouseEvent, type RefObject } from "react";
 
 import type { LoaderIssue } from "../app/useReplayLoader";
 import type { FixtureIndex } from "../replay/fixtures";
@@ -16,6 +16,7 @@ type Props = {
   loadingSource: "demo" | "fixture" | "replay" | null;
   parserBridgeAvailable: boolean;
   parserBridgeHealth: ParserBridgeHealth;
+  uploadInputRef?: RefObject<HTMLInputElement | null>;
   onDemoFileChange: (event: ChangeEvent<HTMLInputElement>) => void | Promise<void>;
   onDeleteMatch: (id: string) => void | Promise<void>;
   onFixtureLoad: (fileName: string) => void | Promise<void>;
@@ -32,6 +33,7 @@ export function MatchesPage({
   loadingSource,
   parserBridgeAvailable,
   parserBridgeHealth,
+  uploadInputRef,
   onDemoFileChange,
   onDeleteMatch,
   onFixtureLoad,
@@ -133,6 +135,7 @@ export function MatchesPage({
             </span>
             <small>{parserBridgeAvailable ? "Parser-backed local ingest" : "Parser offline"}</small>
             <input
+              ref={uploadInputRef}
               id="matches-redline-upload-input"
               type="file"
               accept=".dem"

@@ -5,7 +5,7 @@ type Props = {
   feedbackContext?: Record<string, unknown>;
   localMatchCount: number;
   parserBridgeAvailable: boolean;
-  shellPage: "home" | "home-original" | "matches" | "matches-v2" | "stats";
+  shellPage: "home" | "matches" | "stats";
   onAction?: () => void;
   actionDisabled?: boolean;
   onOpenHome: () => void;
@@ -26,8 +26,8 @@ export function ShellTopNav({
   onOpenMatches,
 }: Props) {
   const fallbackActionLabel = localMatchCount > 0 ? "Open Matches" : "Start Local Review";
-  const homeActive = shellPage === "home" || shellPage === "home-original";
-  const matchesActive = shellPage === "matches" || shellPage === "matches-v2" || shellPage === "stats";
+  const homeActive = shellPage === "home";
+  const matchesActive = shellPage === "matches" || shellPage === "stats";
   const showStaticHomeStatus = shellPage === "home";
 
   return (

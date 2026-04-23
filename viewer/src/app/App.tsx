@@ -1,10 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { HomePage } from "../controls/HomePage";
-import { MatchesPage } from "../controls/MatchesPage";
 import { ReplayMapFirstPage } from "../controls/ReplayMapFirstPage";
-import { ShellTopNav } from "../controls/ShellTopNav";
-import { StatsPage } from "../controls/StatsPage";
 import {
   collectHeatmapSnapshot,
   heatmapScopeLabel,
@@ -36,6 +32,7 @@ import {
 } from "../replay/replayAnalysis";
 import { trackUsageEvent, trackUsageEventOnce } from "../replay/parserBridge";
 import type { UtilityFocus } from "../replay/utilityFilter";
+import { HomeShellPage, MatchesShellPage, StatsShellPage } from "./AppShellPages";
 import { useFixtureCatalog } from "./useFixtureCatalog";
 import { useReplayLoader } from "./useReplayLoader";
 import { useReplayPlayback } from "./useReplayPlayback";
@@ -621,77 +618,46 @@ export function App() {
             onUtilityFocusChange={setUtilityFocus}
           />
         ) : shellPage === "home" ? (
-            <section className="home-surface home-surface-landing">
-              <ShellTopNav
-                actionLabel="Open Matches"
-                feedbackContext={feedbackContext}
-                localMatchCount={0}
-                onAction={() => setShellPage("matches")}
-                onOpenHome={() => setShellPage("home")}
-                onOpenMatches={() => setShellPage("matches")}
-                parserBridgeAvailable={false}
-                shellPage={shellPage}
-              />
-              <HomePage
-                onOpenMatches={() => setShellPage("matches")}
-              />
-            </section>
-          ) : shellPage === "matches" ? (
-            <section className="matches-surface">
-              <ShellTopNav
-                actionDisabled={loadingSource != null || !parserBridgeAvailable}
-                actionLabel={parserBridgeAvailable ? "Upload Demo" : "Parser Offline"}
-                feedbackContext={feedbackContext}
-                localMatchCount={libraryEntries.length}
-                onAction={() => matchesUploadInputRef.current?.click()}
-                onOpenHome={() => setShellPage("home")}
-                onOpenMatches={() => setShellPage("matches")}
-                parserBridgeAvailable={parserBridgeAvailable}
-                shellPage={shellPage}
-              />
-              <MatchesPage
-                demoIngestState={demoIngestState}
-                error={error}
-                fixtures={fixtures}
-                libraryHydrated={libraryHydrated}
-                matches={libraryEntries}
-                loadingSource={loadingSource}
-                parserBridgeAvailable={parserBridgeAvailable}
-                uploadInputRef={matchesUploadInputRef}
-                onDemoFileChange={handleDemoFileChange}
-                onDeleteMatch={deleteReplay}
-                onFixtureLoad={onFixtureLoad}
-                onOpenMatch={handleOpenMatch}
-                onOpenStats={handleOpenStats}
-                parserBridgeHealth={parserBridgeHealth}
-              />
-            </section>
-          ) : (
-            <section className="matches-surface stats-surface">
-              <ShellTopNav
-                feedbackContext={feedbackContext}
-                localMatchCount={libraryEntries.length}
-                onOpenHome={() => setShellPage("home")}
-                onOpenMatches={() => setShellPage("matches")}
-                parserBridgeAvailable={parserBridgeAvailable}
-                shellPage={shellPage}
-              />
-              {statsEntry ? (
-                <StatsPage
-                  entry={statsEntry}
-                  onBackToMatches={() => setShellPage("matches")}
-                  onOpenReplay={(id) => {
-                    openReplay(id);
-                    setShellPage("stats");
-                  }}
-                />
-              ) : (
-                <section className="matches-page stats-page">
-                  <div className="match-library-empty">This match is no longer available in your local library.</div>
-                </section>
-              )}
-            </section>
-          )
+          <HomeShellPage
+            feedbackContext={feedbackContext}
+            onOpenHome={() => setShellPage("home")}
+            onOpenMatches={() => setShellPage("matches")}
+          />
+        ) : shellPage === "matches" ? (
+          <MatchesShellPage
+            demoIngestState={demoIngestState}
+            error={error}
+            feedbackContext={feedbackContext}
+            fixtures={fixtures}
+            libraryEntries={libraryEntries}
+            libraryHydrated={libraryHydrated}
+            loadingSource={loadingSource}
+            matchesUploadInputRef={matchesUploadInputRef}
+            parserBridgeAvailable={parserBridgeAvailable}
+            parserBridgeHealth={parserBridgeHealth}
+            onDemoFileChange={handleDemoFileChange}
+            onDeleteMatch={deleteReplay}
+            onFixtureLoad={onFixtureLoad}
+            onOpenHome={() => setShellPage("home")}
+            onOpenMatch={handleOpenMatch}
+            onOpenMatches={() => setShellPage("matches")}
+            onOpenStats={handleOpenStats}
+          />
+        ) : (
+          <StatsShellPage
+            feedbackContext={feedbackContext}
+            libraryEntries={libraryEntries}
+            onBackToMatches={() => setShellPage("matches")}
+            onOpenHome={() => setShellPage("home")}
+            onOpenMatches={() => setShellPage("matches")}
+            onOpenReplay={(id) => {
+              openReplay(id);
+              setShellPage("stats");
+            }}
+            parserBridgeAvailable={parserBridgeAvailable}
+            statsEntry={statsEntry}
+          />
+        )
         }
       </main>
     </div>

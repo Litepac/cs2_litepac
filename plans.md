@@ -41,6 +41,7 @@ Planning note:
 
 ## Done
 ### Recent Done
+- Completed alpha readiness cleanup slice 5: extracted the non-replay shell branches from `App.tsx` into focused page-shell components for Home, Matches, and Stats while leaving replay state ownership, parser-backed actions, and route behavior unchanged; verified with the viewer production build.
 - Completed alpha readiness cleanup slice 4: extracted the compact replay HUD/header into a focused presentational component with explicit score/team/timer props while leaving map rendering, timeline behavior, and replay state ownership unchanged; verified with the viewer production build.
 - Completed alpha readiness cleanup slice 3: extracted the replay drawing toolbar, left mode rail, and roster column into focused `replay-map-first` components while leaving replay parser state, map rendering, and timeline logic unchanged; verified with the viewer production build.
 - Completed alpha readiness cleanup slice 2: removed provably unreachable CSS for retired Matches V2 and old replay shell wrappers from `viewer/src/app/app.css`, cutting the file from about 12.8k lines to about 11.9k lines and the built global CSS from 205.10 kB to 188.28 kB before the broader CSS split; verified with the viewer production build.

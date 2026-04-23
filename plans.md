@@ -37,7 +37,7 @@ Planning note:
 - Revisit a separate internal AI runtime surface only if direct VSCode/Codex integration becomes valuable enough to justify a true runtime-first sidecar instead of another staged prototype
 
 ## In Progress
-- None.
+- Alpha readiness cleanup batch: replay page presentation has been split into smaller local components, `App.tsx` routing/derived-state weight has been reduced with extracted shell pages and analysis helpers, and the next active step is splitting `viewer/src/app/app.css` by active surface ownership without changing selectors or runtime behavior.
 
 ## Done
 ### Recent Done

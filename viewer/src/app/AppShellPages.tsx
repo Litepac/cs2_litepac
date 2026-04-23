@@ -87,7 +87,7 @@ export function MatchesShellPage({
   onOpenStats,
 }: MatchesShellPageProps) {
   return (
-    <section className="matches-surface">
+    <section className="matches-surface home-surface-landing">
       <ShellTopNav
         actionDisabled={loadingSource != null || !parserBridgeAvailable}
         actionLabel={parserBridgeAvailable ? "Upload Demo" : "Parser Offline"}

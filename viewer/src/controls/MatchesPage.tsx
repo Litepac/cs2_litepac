@@ -1,4 +1,4 @@
-import { useMemo, useState, type ChangeEvent, type MouseEvent, type RefObject } from "react";
+import { useMemo, useState, type ChangeEvent, type KeyboardEvent, type MouseEvent, type RefObject } from "react";
 
 import type { LoaderIssue } from "../app/useReplayLoader";
 import type { FixtureIndex } from "../replay/fixtures";
@@ -254,6 +254,15 @@ export function MatchesPage({
               <article
                 key={entry.id}
                 className={`matches-redline-row matches-redline-row-${winnerAccent(entry.summary.teamAResult, entry.summary.teamBResult)}`}
+                role="button"
+                tabIndex={loadingSource != null ? -1 : 0}
+                aria-label={`Open ${entry.summary.mapName}: ${entry.summary.teamAName} versus ${entry.summary.teamBName}`}
+                onClick={() => {
+                  if (loadingSource == null) {
+                    onOpenMatch(entry.id);
+                  }
+                }}
+                onKeyDown={(event) => handleRowKeyDown(event, () => onOpenMatch(entry.id), loadingSource != null)}
               >
                 <div className="matches-redline-row-map">
                   <span>{entry.replay.map.mapId}</span>
@@ -387,4 +396,15 @@ function winnerAccent(teamAResult: "win" | "loss" | "draw", teamBResult: "win" |
 function handleActionClick(event: MouseEvent<HTMLButtonElement>, action: () => void) {
   event.stopPropagation();
   action();
+}
+
+function handleRowKeyDown(event: KeyboardEvent<HTMLElement>, action: () => void, disabled: boolean) {
+  if (disabled) {
+    return;
+  }
+
+  if (event.key === "Enter" || event.key === " ") {
+    event.preventDefault();
+    action();
+  }
 }

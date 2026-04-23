@@ -577,8 +577,10 @@ button {
 
 .viewer-shell-matches {
   background:
-    radial-gradient(circle at 70% 16%, rgba(79, 179, 255, 0.08), transparent 22%),
-    linear-gradient(180deg, rgba(8, 13, 18, 0.98), rgba(5, 9, 13, 0.99));
+    linear-gradient(rgba(255, 255, 255, 0.012) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.01) 1px, transparent 1px),
+    linear-gradient(180deg, #080809 0%, #050506 100%);
+  background-size: 64px 64px, 64px 64px, auto;
 }
 
 .viewer-shell-stats {

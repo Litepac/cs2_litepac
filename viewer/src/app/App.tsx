@@ -1,18 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { ReplayMapFirstPage } from "../controls/ReplayMapFirstPage";
-import {
-  collectHeatmapSnapshot,
-  heatmapScopeLabel,
-  type HeatmapScope,
-  type HeatmapSourceFilter,
-  type HeatmapTeamFilter,
-} from "../replay/heatmapAnalysis";
+import { type HeatmapScope, type HeatmapSourceFilter, type HeatmapTeamFilter } from "../replay/heatmapAnalysis";
 import type { Side } from "../replay/derived";
 import {
-  collectPositionPlayerSnapshots,
-  collectPositionTrailEntries,
-  positionsScopeLabel,
   type PositionPlayerSnapshot,
   type PositionPlayerSelection,
   type PositionsScope,
@@ -21,9 +12,6 @@ import {
   type PositionsView,
 } from "../replay/positionsAnalysis";
 import {
-  buildReplaySideBlocks,
-  collectUtilityAtlasEntries,
-  utilityAtlasScopeLabel,
   type ReplayAnalysisMode,
   type UtilityAtlasEntry,
   type UtilityAtlasScope,
@@ -33,7 +21,14 @@ import {
 import { trackUsageEvent, trackUsageEventOnce } from "../replay/parserBridge";
 import type { UtilityFocus } from "../replay/utilityFilter";
 import { HomeShellPage, MatchesShellPage, StatsShellPage } from "./AppShellPages";
+import {
+  resolvePositionPlayerSelection,
+  resolvePositionPlayerTeamFilter,
+  resolveUtilityAtlasLiveFocus,
+  toPositionPlayerRosterSelectionKey,
+} from "./replayAppHelpers";
 import { useFixtureCatalog } from "./useFixtureCatalog";
+import { useReplayAnalysisState } from "./useReplayAnalysisState";
 import { useReplayLoader } from "./useReplayLoader";
 import { useReplayPlayback } from "./useReplayPlayback";
 import { useTimelineMarkers } from "./useTimelineMarkers";
@@ -94,156 +89,42 @@ export function App() {
     () => positionPlayerSelections.map((player) => toPositionPlayerRosterSelectionKey(player.playerIds, player.side)),
     [positionPlayerSelections],
   );
-  const replaySideBlocks = useMemo(() => (replay ? buildReplaySideBlocks(replay) : []), [replay]);
-  const utilityAtlasEntries = useMemo(
-    () =>
-      replay
-        ? collectUtilityAtlasEntries(replay, roundIndex, replaySideBlocks, selectedPlayerId, {
-            scope: utilityAtlasScope,
-            sourceFilter: utilityAtlasSourceFilter,
-            teamFilter: utilityAtlasTeamFilter,
-            utilityFocus,
-          })
-        : [],
-    [replay, replaySideBlocks, roundIndex, selectedPlayerId, utilityAtlasScope, utilityAtlasSourceFilter, utilityAtlasTeamFilter, utilityFocus],
-  );
-  const utilityAtlasLabel = replay ? utilityAtlasScopeLabel(replay, roundIndex, replaySideBlocks, utilityAtlasScope) : "Round";
-  const analysisPlayers = useMemo(() => {
-    if (!replay) {
-      return [];
-    }
-
-    const seen = new Set<string>();
-    const streams =
-      analysisMode === "positions" && positionsView === "player"
-        ? replay.rounds.flatMap((entry) => entry.playerStreams)
-        : (round?.playerStreams ?? []);
-
-    return streams
-      .flatMap((stream) => {
-        const seenKey =
-          analysisMode === "positions" && positionsView === "player"
-            ? `${stream.side ?? "unknown"}:${stream.playerId}`
-            : stream.playerId;
-
-        if (stream.side == null || seen.has(seenKey)) {
-          return [];
-        }
-
-        const player = replay.players.find((entry) => entry.playerId === stream.playerId);
-        if (!player) {
-          return [];
-        }
-
-        seen.add(seenKey);
-        return [{
-          displayName: player.displayName,
-          playerId: player.playerId,
-          side: stream.side,
-          teamId: player.teamId,
-          teamName: replay.teams.find((team) => team.teamId === player.teamId)?.displayName ?? player.teamId,
-        }];
-      })
-      .sort((left, right) => {
-        if (left.teamName !== right.teamName) {
-          return left.teamName.localeCompare(right.teamName);
-        }
-
-        if (analysisMode === "positions" && positionsView === "player") {
-          return left.displayName.localeCompare(right.displayName);
-        }
-
-        if (left.side !== right.side) {
-          return left.side === "CT" ? -1 : 1;
-        }
-
-        return left.displayName.localeCompare(right.displayName);
-      });
-  }, [analysisMode, positionsView, replay, round]);
-  const effectivePositionsScope: PositionsScope = positionsView === "player" ? "match" : positionsScope;
-  const positionTrailEntries = useMemo(
-    () =>
-      replay
-        ? collectPositionTrailEntries(replay, roundIndex, replaySideBlocks, selectedPlayerId, {
-            scope: effectivePositionsScope,
-            sourceFilter: positionsSourceFilter,
-            teamFilter: positionsTeamFilter,
-          })
-        : [],
-    [effectivePositionsScope, positionsSourceFilter, positionsTeamFilter, replay, replaySideBlocks, roundIndex, selectedPlayerId],
-  );
-  const positionsLabel = replay ? positionsScopeLabel(replay, roundIndex, replaySideBlocks, effectivePositionsScope) : "Round";
-  const positionsComparisonOffsetTicks = useMemo(() => {
-    if (!round) {
-      return 0;
-    }
-
-    const comparisonStartTick = showFreezeTime ? round.startTick : playback.initialRoundTick;
-    const visibleComparisonTick = Math.max(playback.renderTick, comparisonStartTick);
-    return Math.round(visibleComparisonTick - comparisonStartTick);
-  }, [playback.initialRoundTick, playback.renderTick, round, showFreezeTime]);
-  const displayedPositionTrailEntries = useMemo(() => {
-    if (positionsView === "player") {
-      return [];
-    }
-
-    if (selectedPlayerId != null) {
-      return positionTrailEntries.filter((entry) => entry.playerId === selectedPlayerId);
-    }
-
-    return positionTrailEntries;
-  }, [positionTrailEntries, positionsView, selectedPlayerId]);
-  const positionPlayerSnapshots = useMemo(
-    () => {
-      if (!replay || positionsView !== "player") {
-        return [];
-      }
-
-      if (positionsSourceFilter === "selected") {
-        return collectPositionPlayerSnapshots(
-          replay,
-          positionPlayerSelections,
-          positionsTeamFilter,
-          positionsComparisonOffsetTicks,
-          showFreezeTime,
-        );
-      }
-
-      if (!positionPlayerBroadCompareEnabled) {
-        return [];
-      }
-
-      return collectPositionPlayerSnapshots(
-        replay,
-        [],
-        positionsTeamFilter,
-        positionsComparisonOffsetTicks,
-        showFreezeTime,
-      );
-    },
-    [
-      positionPlayerBroadCompareEnabled,
-      positionPlayerSelections,
-      positionsComparisonOffsetTicks,
-      positionsSourceFilter,
-      positionsTeamFilter,
-      positionsView,
-      replay,
-      showFreezeTime,
-    ],
-  );
-  const heatmapSnapshot = useMemo(
-    () =>
-      replay
-        ? collectHeatmapSnapshot(replay, roundIndex, replaySideBlocks, selectedPlayerId, {
-            scope: heatmapScope,
-            sourceFilter: heatmapSourceFilter,
-            teamFilter: heatmapTeamFilter,
-          })
-        : { buckets: [], cellSize: 0, maxSampleCount: 0, playerCount: 0, roundCount: 0, sampleCount: 0 },
-    [heatmapScope, heatmapSourceFilter, heatmapTeamFilter, replay, replaySideBlocks, roundIndex, selectedPlayerId],
-  );
-  const heatmapLabel = replay ? heatmapScopeLabel(replay, roundIndex, replaySideBlocks, heatmapScope) : "Round";
+  const {
+    analysisPlayers,
+    displayedPositionTrailEntries,
+    effectivePositionsScope,
+    heatmapLabel,
+    heatmapSnapshot,
+    positionPlayerSnapshots,
+    positionTrailEntries,
+    positionsComparisonOffsetTicks,
+    positionsLabel,
+    replaySideBlocks,
+    utilityAtlasEntries,
+    utilityAtlasLabel,
+  } = useReplayAnalysisState({
+    analysisMode,
+    heatmapScope,
+    heatmapSourceFilter,
+    heatmapTeamFilter,
+    playbackInitialRoundTick: playback.initialRoundTick,
+    playbackRenderTick: playback.renderTick,
+    positionPlayerBroadCompareEnabled,
+    positionPlayerSelections,
+    positionsScope,
+    positionsSourceFilter,
+    positionsTeamFilter,
+    positionsView,
+    replay,
+    round,
+    roundIndex,
+    selectedPlayerId,
+    showFreezeTime,
+    utilityAtlasScope,
+    utilityAtlasSourceFilter,
+    utilityAtlasTeamFilter,
+    utilityFocus,
+  });
   const feedbackContext = useMemo(
     () => ({
       analysisMode: replay ? analysisMode : null,
@@ -662,82 +543,4 @@ export function App() {
       </main>
     </div>
   );
-}
-
-function resolvePositionPlayerTeamFilter(
-  selections: PositionPlayerSelection[],
-  currentTeamFilter: PositionsTeamFilter,
-): PositionsTeamFilter {
-  if (selections.length === 0) {
-    return "all";
-  }
-
-  if (currentTeamFilter === "all") {
-    return "all";
-  }
-
-  return selections.every((player) => player.side === currentTeamFilter) ? currentTeamFilter : "all";
-}
-
-function resolvePositionPlayerSelection(
-  replay: NonNullable<ReturnType<typeof useReplayLoader>["replay"]>,
-  roundIndex: number,
-  playerId: string,
-): PositionPlayerSelection | null {
-  const activeRoundSide = replay.rounds[roundIndex]?.playerStreams.find((stream) => stream.playerId === playerId)?.side ?? null;
-  const displayName = replay.players.find((player) => player.playerId === playerId)?.displayName ?? null;
-
-  if (activeRoundSide) {
-    return {
-      playerIds: collectPositionPlayerIdsByNameAndSide(replay, playerId, displayName, activeRoundSide),
-      side: activeRoundSide,
-    };
-  }
-
-  for (const round of replay.rounds) {
-    const playerSide = round.playerStreams.find((stream) => stream.playerId === playerId)?.side ?? null;
-    if (playerSide) {
-      return {
-        playerIds: collectPositionPlayerIdsByNameAndSide(replay, playerId, displayName, playerSide),
-        side: playerSide,
-      };
-    }
-  }
-
-  return null;
-}
-
-function collectPositionPlayerIdsByNameAndSide(
-  replay: NonNullable<ReturnType<typeof useReplayLoader>["replay"]>,
-  playerId: string,
-  displayName: string | null,
-  side: Side,
-) {
-  if (!displayName) {
-    return [playerId];
-  }
-
-  const groupedPlayerIds = replay.players
-    .filter((player) => player.displayName === displayName)
-    .map((player) => player.playerId)
-    .filter((candidatePlayerId) =>
-      replay.rounds.some((round) =>
-        round.playerStreams.some((stream) => stream.playerId === candidatePlayerId && stream.side === side),
-      ),
-    );
-
-  return groupedPlayerIds.length > 0 ? groupedPlayerIds : [playerId];
-}
-
-function toPositionPlayerRosterSelectionKey(playerIds: string[], side: Side) {
-  const normalizedPlayerIds = [...new Set(playerIds)].sort();
-  return `${side}:${normalizedPlayerIds.join("|")}`;
-}
-
-function resolveUtilityAtlasLiveFocus(kind: UtilityAtlasEntry["utility"]["kind"]): UtilityFocus {
-  if (kind === "molotov" || kind === "incendiary") {
-    return "fire";
-  }
-
-  return kind;
 }

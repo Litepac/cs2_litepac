@@ -199,7 +199,7 @@ func parseDemoUpload(w http.ResponseWriter, r *http.Request, opts Options) error
 	}); err != nil {
 		_ = streamEvent(map[string]any{
 			"type":  "error",
-			"error": fmt.Sprintf("parse demo %s: %v", baseName, err),
+			"error": uploadParseError(baseName, err),
 		})
 		return nil
 	}
@@ -245,6 +245,44 @@ func parseDemoUpload(w http.ResponseWriter, r *http.Request, opts Options) error
 	flusher.Flush()
 
 	return nil
+}
+
+func uploadParseError(fileName string, err error) string {
+	if err == nil {
+		return "Demo processing failed.";
+	}
+
+	raw := strings.TrimSpace(err.Error())
+	if raw == "" {
+		return fmt.Sprintf("Demo processing failed for %s.", fileName)
+	}
+
+	cleaned := stripGoStackTrace(raw)
+	normalized := strings.ToLower(cleaned)
+	if strings.Contains(normalized, "unable to find existing entity") {
+		return fmt.Sprintf(
+			"Demo processing failed for %s. This demo uses entity data the current review parser cannot safely read yet.",
+			fileName,
+		)
+	}
+	if strings.Contains(normalized, "crashed") {
+		return fmt.Sprintf(
+			"Demo processing failed for %s. The local review parser hit an unsupported demo state.",
+			fileName,
+		)
+	}
+
+	return fmt.Sprintf("Demo processing failed for %s: %s", fileName, cleaned)
+}
+
+func stripGoStackTrace(message string) string {
+	for _, marker := range []string{" stacktrace:", "\nstacktrace:", "\ngoroutine "} {
+		if index := strings.Index(message, marker); index >= 0 {
+			return strings.TrimSpace(message[:index])
+		}
+	}
+
+	return strings.TrimSpace(message)
 }
 
 func allowCORS(w http.ResponseWriter, opts Options) {

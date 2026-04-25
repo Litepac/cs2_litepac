@@ -353,71 +353,71 @@ function normalizeLoaderIssue(
     if (!parserBridgeAvailable || normalized.includes("failed to fetch") || normalized.includes("networkerror")) {
       return {
         context,
-        title: "Local parser unavailable",
-        message: "The viewer could not reach the local parser API.",
-        hint: "Start the local parser path and verify /api/health before uploading again.",
+        title: "Local demo processing unavailable",
+        message: "DemoRead could not reach the local review service.",
+        hint: "Start the local review service before uploading again.",
       };
     }
 
     if (normalized.includes("timed out")) {
       return {
         context,
-        title: "Demo ingest timed out",
+        title: "Demo processing timed out",
         message: rawMessage,
-        hint: "The upload reached the parser, but the replay artifact was not produced in time.",
+        hint: "The upload started, but the 2D review was not produced in time.",
       };
     }
 
     if (normalized.includes("maxbuffer")) {
       return {
         context,
-        title: "Fallback parser bridge could not finish",
-        message: "The fallback bridge hit its parser process output limit before the replay artifact was ready.",
-        hint: "Use the Go parser API path when available, or check the fallback bridge logs before retrying.",
+        title: "Demo processing could not finish",
+        message: "The local review service stopped before the 2D review was ready.",
+        hint: "Restart the local review service, then try the upload again.",
       };
     }
 
     if (normalized.includes("programkontrol") || normalized.includes("application control")) {
       return {
         context,
-        title: "Local parser blocked by Windows",
-        message: "Windows Application Control blocked the fallback parser executable.",
-        hint: "Use the Go parser API path or allow the parser binary before uploading demos again.",
+        title: "Local review service blocked by Windows",
+        message: "Windows Application Control blocked the local review executable.",
+        hint: "Allow the local review service before uploading demos again.",
       };
     }
 
     if (normalized.includes("fixtureparse.exe")) {
       return {
         context,
-        title: "Fallback parser executable missing",
+        title: "Local review service missing",
         message: rawMessage,
-        hint: "Build the fallback parser binary or start the Go parser API path before uploading again.",
+        hint: "Start the local review service before uploading again.",
       };
     }
 
     if (normalized.includes("validation failed")) {
       return {
         context,
-        title: "Canonical replay validation failed",
+        title: "Replay data validation failed",
         message: rawMessage,
-        hint: "The parser returned a replay artifact, but it did not pass viewer-side schema validation.",
+        hint: "The demo was processed, but the replay data was not safe to open.",
       };
     }
 
     return {
       context,
-      title: "Demo ingest failed",
-      message: rawMessage || "The local parser could not turn this demo into a replay artifact.",
-      hint: "Check the parser logs or try the upload again after confirming the local parser is healthy.",
+      title: "Demo processing failed",
+      message: rawMessage || "The local review service could not turn this demo into a 2D review.",
+      hint: "Try the upload again after confirming local demo processing is available.",
     };
   }
 
   if (context === "fixture") {
     return {
       context,
-      title: "Fixture load failed",
-      message: rawMessage || "The requested fixture replay could not be loaded.",
-      hint: "This only affects the validation fixtures. Uploaded local demos should still work if the parser is healthy.",
+      title: "Sample demo load failed",
+      message: rawMessage || "The requested sample review could not be loaded.",
+      hint: "Uploaded local demos should still work if demo processing is available.",
     };
   }
 

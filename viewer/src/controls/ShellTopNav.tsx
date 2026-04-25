@@ -53,7 +53,7 @@ export function ShellTopNav({
 
       <div className="home-top-nav-utilities">
         <span className={`home-top-nav-status ${!showStaticHomeStatus && parserBridgeAvailable ? "home-top-nav-status-live" : ""}`}>
-          {showStaticHomeStatus ? "Early Access" : parserBridgeAvailable ? "Bridge Online" : "Bridge Offline"}
+          {showStaticHomeStatus ? "Early Access" : parserBridgeAvailable ? "Review Ready" : "Upload Paused"}
         </span>
         {feedbackContext ? <FeedbackWidget context={feedbackContext} /> : null}
         {onAction ? (

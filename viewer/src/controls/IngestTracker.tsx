@@ -40,13 +40,13 @@ export function IngestTracker({ issue, state }: Props) {
       : state?.mapName
         ? `${state.mapName} is being prepared`
         : "Preparing local match entry";
-  const statusCopy = failed ? issue.message : state ? demoIngestStatusCopy(state) : "Waiting for the parser to respond.";
+  const statusCopy = failed ? issue.message : state ? demoIngestStatusCopy(state) : "Waiting for local demo processing.";
 
   return (
     <section className={`ingest-tracker ${failed ? "ingest-tracker-failed" : ""} ${ready ? "ingest-tracker-ready" : ""}`}>
       <div className="ingest-tracker-header">
         <div>
-          <div className="ingest-tracker-kicker">{failed ? "Demo ingest failed" : ready ? "Demo ready" : "Demo ingest"}</div>
+          <div className="ingest-tracker-kicker">{failed ? "Demo upload failed" : ready ? "Demo ready" : "Preparing demo"}</div>
           <strong>{title}</strong>
         </div>
         <span>{state?.fileName ?? "Local demo"}</span>
@@ -96,7 +96,7 @@ export function IngestTracker({ issue, state }: Props) {
                       index < roundsIndexed ? " locked" : index === currentRoundIndex ? " processing" : " waiting"
                     }`
                   : index < roundsIndexed
-                    ? `Parsed round ${index + 1}`
+                    ? `Processed round ${index + 1}`
                     : `Round ${index + 1} waiting for structure`
               }
               className={`ingest-round-chip ${
@@ -116,7 +116,7 @@ export function IngestTracker({ issue, state }: Props) {
                       index < roundsIndexed ? " locked" : index === currentRoundIndex ? " processing" : " waiting"
                     }`
                   : index < roundsIndexed
-                    ? `Parsed round ${index + 1}`
+                    ? `Processed round ${index + 1}`
                     : `Round ${index + 1} waiting for structure`
               }
             >

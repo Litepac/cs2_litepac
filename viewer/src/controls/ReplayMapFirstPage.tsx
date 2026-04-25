@@ -158,14 +158,20 @@ export function ReplayMapFirstPage({
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      if (event.defaultPrevented || isInteractiveKeyboardTarget(event.target)) {
+      if (event.defaultPrevented) {
         return;
       }
 
       const key = event.key.toLowerCase();
       if (key === " " || event.code === "Space") {
-        event.preventDefault();
-        playback.togglePlayback();
+        if (isReplayTimelineRangeTarget(event.target) || !isInteractiveKeyboardTarget(event.target)) {
+          event.preventDefault();
+          playback.togglePlayback();
+        }
+        return;
+      }
+
+      if (isInteractiveKeyboardTarget(event.target)) {
         return;
       }
 
@@ -334,17 +340,13 @@ export function ReplayMapFirstPage({
         </svg>
 
         <ReplayHud
-          ctAlive={ctPlayers.filter((entry) => entry.alive).length}
           ctScore={ctScore}
           ctTeamName={ctTeam?.displayName ?? "CT"}
-          ctTotal={ctPlayers.length}
           mapName={replay.map.displayName}
           modeLabel={resolveModeLabel(analysisMode, positionsView, livePlayerContextMode)}
           roundNumber={round.roundNumber}
-          tAlive={tPlayers.filter((entry) => entry.alive).length}
           tScore={tScore}
           tTeamName={tTeam?.displayName ?? "T"}
-          tTotal={tPlayers.length}
           timerDisplay={timer?.display ?? playback.roundClock ?? "--:--"}
         />
 
@@ -352,19 +354,25 @@ export function ReplayMapFirstPage({
 
         <aside className="dr-mapfirst-roster-rail dr-mapfirst-roster-rail-ct" aria-label={`${ctTeam?.displayName ?? "CT"} roster`}>
           <ReplayRosterColumn
+            activeRoundIndex={activeRoundIndex}
+            currentTick={playback.renderTickRounded}
             players={ctPlayers}
+            replay={replay}
+            round={round}
             selectedPlayerId={selectedPlayerId}
             side="CT"
-            teamLabel={ctTeam?.displayName ?? "CT"}
             onSelectPlayer={onReplayPlayerSelect}
           />
         </aside>
         <aside className="dr-mapfirst-roster-rail dr-mapfirst-roster-rail-t" aria-label={`${tTeam?.displayName ?? "T"} roster`}>
           <ReplayRosterColumn
+            activeRoundIndex={activeRoundIndex}
+            currentTick={playback.renderTickRounded}
             players={tPlayers}
+            replay={replay}
+            round={round}
             selectedPlayerId={selectedPlayerId}
             side="T"
-            teamLabel={tTeam?.displayName ?? "T"}
             onSelectPlayer={onReplayPlayerSelect}
           />
         </aside>
@@ -438,6 +446,10 @@ function isInteractiveKeyboardTarget(target: EventTarget | null) {
     tagName === "a" ||
     target.closest('[role="button"], [role="slider"], input[type="range"]') != null
   );
+}
+
+function isReplayTimelineRangeTarget(target: EventTarget | null) {
+  return target instanceof HTMLInputElement && target.type === "range" && target.closest(".dr-mapfirst-track") != null;
 }
 
 function resolveModeLabel(analysisMode: ReplayAnalysisMode, positionsView: PositionsView, livePlayerContextMode: boolean) {

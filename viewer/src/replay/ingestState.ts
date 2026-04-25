@@ -15,11 +15,11 @@ export function demoIngestStepLabel(step: DemoIngestStep) {
     case "upload":
       return "Upload";
     case "parser":
-      return "Parse";
+      return "Process";
     case "validate":
-      return "Validate";
+      return "Check";
     case "index":
-      return "Index";
+      return "Build";
     case "save":
       return "Save";
   }
@@ -28,17 +28,17 @@ export function demoIngestStepLabel(step: DemoIngestStep) {
 export function demoIngestStatusCopy(state: DemoIngestState) {
   switch (state.step) {
     case "upload":
-      return "Sending the local demo to the parser.";
+      return "Sending the local demo to the review service.";
     case "parser":
       return state.roundsIndexed > 0
-        ? `${state.roundsIndexed}${state.roundsTotal != null ? ` / ${state.roundsTotal}` : ""} parsed round${state.roundsIndexed === 1 ? "" : "s"} detected. Waiting for the replay artifact.`
-        : "The parser accepted the upload. Detecting round structure.";
+        ? `${state.roundsIndexed}${state.roundsTotal != null ? ` / ${state.roundsTotal}` : ""} round${state.roundsIndexed === 1 ? "" : "s"} detected. Building the 2D review.`
+        : "The upload was accepted. Detecting round structure.";
     case "validate":
-      return "Validating the replay artifact before it enters the library.";
+      return "Checking the replay data before it enters the library.";
     case "index":
       return state.roundsTotal != null
-        ? `Indexing ${state.roundsTotal} parsed round${state.roundsTotal === 1 ? "" : "s"} into the match library.`
-        : "Indexing parsed rounds into the match library.";
+        ? `Building ${state.roundsTotal} round${state.roundsTotal === 1 ? "" : "s"} into the match library.`
+        : "Building rounds into the match library.";
     case "save":
       return "Match saved to the local library.";
   }

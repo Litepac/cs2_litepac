@@ -32,31 +32,38 @@ export function ReplayModeRail({
         <img src="/DemoRead_Logo.png" alt="DemoRead" decoding="async" />
       </button>
       <div className="dr-mapfirst-mode-rail-list">
-        <button className="dr-mapfirst-rail-button dr-mapfirst-shell-button" onClick={onOpenHome} type="button">
-          Home
-        </button>
-        <button className="dr-mapfirst-rail-button dr-mapfirst-shell-button" onClick={onOpenMatches} type="button">
-          Matches
-        </button>
-        <span className="dr-mapfirst-rail-divider" aria-hidden="true" />
-        {MODE_OPTIONS.map((entry) => {
-          const active = analysisMode === entry.mode && (entry.mode !== "positions" || entry.positionsView === positionsView);
-          return (
-            <button
-              key={`${entry.mode}-${entry.positionsView ?? "default"}`}
-              className={active ? "dr-mapfirst-rail-button dr-mapfirst-rail-button-active" : "dr-mapfirst-rail-button"}
-              onClick={() => {
-                onSelectAnalysisMode(entry.mode);
-                if (entry.positionsView) {
-                  onSelectPositionsView(entry.positionsView);
+        <div className="dr-mapfirst-rail-section dr-mapfirst-rail-section-shell">
+          <button className="dr-mapfirst-rail-button dr-mapfirst-shell-button" onClick={onOpenHome} type="button">
+            Home
+          </button>
+          <button className="dr-mapfirst-rail-button dr-mapfirst-shell-button" onClick={onOpenMatches} type="button">
+            Matches
+          </button>
+        </div>
+        <div className="dr-mapfirst-rail-section dr-mapfirst-rail-section-tools">
+          {MODE_OPTIONS.map((entry) => {
+            const active = analysisMode === entry.mode && (entry.mode !== "positions" || entry.positionsView === positionsView);
+            return (
+              <button
+                key={`${entry.mode}-${entry.positionsView ?? "default"}`}
+                className={
+                  active
+                    ? "dr-mapfirst-rail-button dr-mapfirst-mode-button dr-mapfirst-rail-button-active"
+                    : "dr-mapfirst-rail-button dr-mapfirst-mode-button"
                 }
-              }}
-              type="button"
-            >
-              {entry.label}
-            </button>
-          );
-        })}
+                onClick={() => {
+                  onSelectAnalysisMode(entry.mode);
+                  if (entry.positionsView) {
+                    onSelectPositionsView(entry.positionsView);
+                  }
+                }}
+                type="button"
+              >
+                {entry.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
     </nav>
   );

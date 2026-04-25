@@ -94,22 +94,14 @@ export function MatchesPage({
   const savedMatchLabel = libraryHydrated ? `${matches.length} saved` : "Hydrating";
   const visibleMatchLabel = libraryHydrated ? `${filteredMatches.length} visible` : "Loading";
   const mapCountLabel = libraryHydrated ? `${maps.length} map${maps.length === 1 ? "" : "s"}` : "Loading";
-  const parserModeLabel = parserBridgeHealth.mode === "go-api"
-    ? "Go parser"
-    : parserBridgeHealth.mode === "node-bridge"
-    ? "Fallback bridge"
-    : !parserBridgeAvailable && parserBridgeHealth.bridge
-    ? "Fallback blocked"
-    : parserBridgeHealth.bridge
-    ? "Fallback bridge"
-    : parserBridgeHealth.service
-      ? "Go parser"
-      : parserBridgeAvailable
-        ? "Parser online"
-        : "Parser offline";
-  const parserStatusCopy = parserBridgeAvailable
-    ? parserModeLabel
-    : parserBridgeHealth.error || "Upload disabled until the parser returns.";
+  const uploadStatusLabel = parserBridgeAvailable
+    ? "Ready"
+    : parserBridgeHealth.bridge || parserBridgeHealth.error
+      ? "Paused"
+      : "Offline";
+  const reviewStatusCopy = parserBridgeAvailable
+    ? "Local demos can be uploaded and opened as focused 2D reviews."
+    : "Demo uploads are paused until local processing is available.";
 
   function clearFilters() {
     setQuery("");
@@ -122,7 +114,7 @@ export function MatchesPage({
         <div className="matches-redline-heading">
           <span className="matches-redline-kicker">Local match library</span>
           <h1>Matches</h1>
-          <p>Upload local CS2 demos, then open a clean 2D review when the parser-backed replay is ready.</p>
+          <p>Upload local CS2 demos, then open a clean 2D review when the round data is ready.</p>
         </div>
 
         <div className="matches-redline-header-panel" aria-label="Match library actions and status">
@@ -133,7 +125,7 @@ export function MatchesPage({
             <span>
               Upload Demo <small aria-hidden="true">{"->"}</small>
             </span>
-            <small>{parserBridgeAvailable ? "Parser-backed local ingest" : "Parser offline"}</small>
+            <small>{parserBridgeAvailable ? "Ready for local demos" : "Uploads paused"}</small>
             <input
               ref={uploadInputRef}
               id="matches-redline-upload-input"
@@ -147,7 +139,7 @@ export function MatchesPage({
           <section className="matches-redline-header-status">
             <span className="matches-redline-kicker">Current state</span>
             <strong>{loadingLabel ?? libraryStatus}</strong>
-            <p>{parserStatusCopy}</p>
+            <p>{reviewStatusCopy}</p>
           </section>
 
           <section className="matches-redline-header-metrics" aria-label="Library metrics">
@@ -164,8 +156,8 @@ export function MatchesPage({
               <strong>{mapCountLabel}</strong>
             </div>
             <div>
-              <span>Parser</span>
-              <strong>{parserBridgeAvailable ? parserModeLabel : parserBridgeHealth.bridge ? "Blocked" : "Offline"}</strong>
+              <span>Uploads</span>
+              <strong>{uploadStatusLabel}</strong>
             </div>
           </section>
         </div>
@@ -208,11 +200,11 @@ export function MatchesPage({
       {showParserOfflineNotice ? (
         <section className="matches-redline-notice matches-redline-notice-warning">
           <div>
-            <strong>Local parser offline</strong>
-            <p>Uploads are disabled until the local parser API responds again.</p>
+            <strong>Local demo processing paused</strong>
+            <p>Uploads are disabled until the local review service is available again.</p>
           </div>
           <small>
-            Start the local parser path, then verify <code>/api/health</code>.
+            Start the local review service, then try the upload again.
           </small>
         </section>
       ) : null}
@@ -344,8 +336,8 @@ export function MatchesPage({
               {filtersActive
                 ? "Clear the current search or map filter to widen the library results."
                 : parserBridgeAvailable
-                  ? "Upload a `.dem` to start building the local parser-backed match library."
-                  : "Bring the local parser back online first, then upload a `.dem` to build the local match library."}
+                  ? "Upload a `.dem` to start building the local match library."
+                  : "Bring local demo processing back online first, then upload a `.dem` to build the match library."}
             </p>
             {filtersActive ? (
               <button type="button" className="matches-redline-clear matches-redline-empty-action" onClick={clearFilters}>
@@ -359,8 +351,8 @@ export function MatchesPage({
       {fixtures.length > 0 ? (
         <details className="matches-redline-secondary-tools">
           <summary>
-            <span className="matches-redline-kicker">Validation fixtures</span>
-            <strong>Parser/replay test demos</strong>
+            <span className="matches-redline-kicker">Sample demos</span>
+            <strong>Try a prepared review</strong>
           </summary>
           <div className="entry-fixture-list matches-redline-fixture-list">
             {fixtures.map((fixture) => (

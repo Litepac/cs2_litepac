@@ -90,7 +90,7 @@ export function MatchesShellPage({
     <section className="matches-surface home-surface-landing">
       <ShellTopNav
         actionDisabled={loadingSource != null || !parserBridgeAvailable}
-        actionLabel={parserBridgeAvailable ? "Upload Demo" : "Parser Offline"}
+        actionLabel={parserBridgeAvailable ? "Upload Demo" : "Upload Paused"}
         feedbackContext={feedbackContext}
         localMatchCount={libraryEntries.length}
         onAction={() => matchesUploadInputRef.current?.click()}

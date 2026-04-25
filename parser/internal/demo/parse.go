@@ -12,7 +12,13 @@ import (
 	"mastermind/parser/internal/validate"
 )
 
-func Parse(opts Options) error {
+func Parse(opts Options) (err error) {
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			err = fmt.Errorf("parse demo crashed: %v", recovered)
+		}
+	}()
+
 	if opts.DemoPath == "" {
 		return fmt.Errorf("demo path is required")
 	}

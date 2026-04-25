@@ -8,7 +8,14 @@ import (
 	demoevents "github.com/markus-wa/demoinfocs-golang/v5/pkg/demoinfocs/events"
 )
 
-func CountRounds(demoPath string) (int, error) {
+func CountRounds(demoPath string) (rounds int, err error) {
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			rounds = 0
+			err = fmt.Errorf("count demo rounds crashed: %v", recovered)
+		}
+	}()
+
 	if demoPath == "" {
 		return 0, fmt.Errorf("demo path is required")
 	}
@@ -22,7 +29,6 @@ func CountRounds(demoPath string) (int, error) {
 	parser := demoinfocs.NewParser(file)
 	defer parser.Close()
 
-	rounds := 0
 	activeRound := false
 	finalizedRound := false
 

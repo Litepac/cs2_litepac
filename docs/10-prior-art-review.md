@@ -26,6 +26,7 @@ That conflicts with this project's canonical contract:
 - Keep the timeline flat, dense, and operator-oriented.
 - Keep the right-side team rail compact and information-first.
 - Keep utility visuals calm and readable rather than debug-heavy.
+- For the replay dock, prefer grouped event lanes over one undifferentiated marker strip when kills, utility, and bomb events are all visible. Sports-analysis tools commonly use timeline markers to jump to tagged events, and session-analysis tools group dense events into easier-to-read buckets; DemoRead should adapt that idea as parser-owned "round evidence" lanes rather than a copied media scrubber.
 - Keep renderer concerns separate from replay extraction concerns.
 - Treat multi-round position tools as pattern-finders, not generic overview clutter: external tools like Noesis and team-analysis suites push positions toward repeated movement/strategy discovery, round filtering, and quick jump-back into concrete replay examples.
 - Keep player-position study narrow and legible: selected-player timing/pattern study should be the primary workflow, while broad all-player compare should stay explicit and secondary.

@@ -23,8 +23,6 @@ type ReplayDockProps = {
   round: Round;
   roundClock: string | null;
   selectedPlayerName: string | null;
-  showFreezeTime: boolean;
-  speed: number;
   tickRate: number;
   utilityAtlasScope: UtilityAtlasScope;
   utilityAtlasTeamFilter: UtilityAtlasTeamFilter;
@@ -32,17 +30,13 @@ type ReplayDockProps = {
   onHeatmapTeamFilterChange: (filter: HeatmapTeamFilter) => void;
   onPlayToggle: () => void;
   onPositionsTeamFilterChange: (filter: PositionsTeamFilter) => void;
-  onReset: () => void;
   onSelectRound: (index: number) => void;
-  onShowFreezeTimeChange: (show: boolean) => void;
-  onSpeedChange: (speed: number) => void;
   onTickChange: (tick: number) => void;
   onUtilityAtlasScopeChange: (scope: UtilityAtlasScope) => void;
   onUtilityAtlasTeamFilterChange: (filter: UtilityAtlasTeamFilter) => void;
   onUtilityFocusChange: (focus: UtilityFocus) => void;
 };
 
-const SPEEDS = [0.5, 1, 2];
 const TEAM_FILTERS: Array<{ label: string; value: "all" | Side }> = [
   { label: "All", value: "all" },
   { label: "CT", value: "CT" },
@@ -95,8 +89,6 @@ export function ReplayDock({
   round,
   roundClock,
   selectedPlayerName,
-  showFreezeTime,
-  speed,
   tickRate,
   utilityAtlasScope,
   utilityAtlasTeamFilter,
@@ -104,10 +96,7 @@ export function ReplayDock({
   onHeatmapTeamFilterChange,
   onPlayToggle,
   onPositionsTeamFilterChange,
-  onReset,
   onSelectRound,
-  onShowFreezeTimeChange,
-  onSpeedChange,
   onTickChange,
   onUtilityAtlasScopeChange,
   onUtilityAtlasTeamFilterChange,
@@ -126,8 +115,8 @@ export function ReplayDock({
   );
   const bombPhase = resolveBombPhase(presentedMarkers);
   const elapsedSeconds = Math.max(0, (safeTick - displayStartTick) / tickRate);
-  const rulerMarks = buildRulerMarks(displayStartTick, displayEndTick, tickRate);
-  const showAnalysisControls = analysisMode !== "live" || selectedPlayerName != null;
+  const rulerMarks = buildRulerMarks(displayStartTick, displayEndTick, tickRate, replay, round);
+  const showAnalysisControls = analysisMode !== "live";
 
   return (
     <>
@@ -177,7 +166,11 @@ export function ReplayDock({
 
       <div className="dr-mapfirst-timeline-row">
         <button className="dr-mapfirst-play" onClick={onPlayToggle} type="button">
-          {playing ? "Pause" : "Play"}
+          <span
+            className={playing ? "dr-mapfirst-play-icon dr-mapfirst-play-icon-pause" : "dr-mapfirst-play-icon dr-mapfirst-play-icon-play"}
+            aria-hidden="true"
+          />
+          <span>{playing ? "Pause" : "Play"}</span>
         </button>
 
         <div className="dr-mapfirst-time-readout">
@@ -203,6 +196,11 @@ export function ReplayDock({
                 <span>Bomb</span>
               </div>
             ) : null}
+            <div className="dr-mapfirst-evidence-lanes" aria-hidden="true">
+              <span>Kill</span>
+              <span>Utility</span>
+              <span>Bomb</span>
+            </div>
             <div className="dr-mapfirst-track-base" />
             <div className="dr-mapfirst-track-fill" style={{ width: `${currentPercent}%` }} />
             <div className="dr-mapfirst-event-marks" aria-label="Replay events">
@@ -216,6 +214,9 @@ export function ReplayDock({
                     marker.kind === "kill" && marker.killerSide === "T" ? "dr-mapfirst-marker-kill-t" : "",
                     marker.kind === "utility" && marker.utilitySide === "CT" ? "dr-mapfirst-marker-utility-ct" : "",
                     marker.kind === "utility" && marker.utilitySide === "T" ? "dr-mapfirst-marker-utility-t" : "",
+                    marker.kind === "kill" ? "dr-mapfirst-marker-lane-kill" : "",
+                    marker.kind === "utility" ? "dr-mapfirst-marker-lane-utility" : "",
+                    marker.kind === "bomb" ? "dr-mapfirst-marker-lane-bomb" : "",
                   ].filter(Boolean).join(" ")}
                   style={{ left: `${percent}%` }}
                   title={marker.label}
@@ -236,22 +237,6 @@ export function ReplayDock({
           />
         </div>
 
-        <div className="dr-mapfirst-transport">
-          {SPEEDS.map((entry) => (
-            <button
-              key={entry}
-              className={entry === speed ? "dr-mapfirst-chip dr-mapfirst-chip-active" : "dr-mapfirst-chip"}
-              onClick={() => onSpeedChange(entry)}
-              type="button"
-            >
-              {entry}x
-            </button>
-          ))}
-          <button className="dr-mapfirst-chip" onClick={() => onShowFreezeTimeChange(!showFreezeTime)} type="button">
-            {showFreezeTime ? "Hide freeze" : "Freeze"}
-          </button>
-          <button className="dr-mapfirst-chip" onClick={onReset} type="button">Reset</button>
-        </div>
       </div>
 
       <div className="dr-mapfirst-context-row">
@@ -305,6 +290,19 @@ function resolveTimelineMarkerPresentation(marker: TimelineEventItem): TimelineM
 
 function timelineMarkerIcon(presentation: TimelineMarkerPresentation) {
   switch (presentation) {
+    case "kill":
+      return (
+        <svg className="dr-mapfirst-marker-skull" viewBox="0 0 16 16" aria-hidden="true">
+          <path
+            className="dr-mapfirst-marker-skull-fill"
+            d="M3.2 6.9C3.2 3.8 5.3 2 8 2s4.8 1.8 4.8 4.9c0 1.7-.7 3-1.8 3.8v1.2h-1v1.3H8.7v-1.3H7.3v1.3H6v-1.3H5v-1.2c-1.1-.8-1.8-2.1-1.8-3.8Z"
+          />
+          <path
+            className="dr-mapfirst-marker-skull-cut"
+            d="M5.1 6.4h2.2v2H5.1v-2Zm3.6 0h2.2v2H8.7v-2ZM7.1 9.6h1.8l.5 1.2H6.6l.5-1.2Z"
+          />
+        </svg>
+      );
     case "bomb":
     case "bomb-plant":
     case "bomb-explode":
@@ -333,11 +331,11 @@ function resolveBombPhase(markers: PresentedTimelineMarker[]) {
   };
 }
 
-function buildRulerMarks(startTick: number, endTick: number, tickRate: number) {
+function buildRulerMarks(startTick: number, endTick: number, tickRate: number, replay: Replay, round: Round) {
   const range = Math.max(1, endTick - startTick);
   const durationSeconds = range / Math.max(1, tickRate);
   const endSeconds = Math.floor(durationSeconds / 15) * 15;
-  const marks: Array<{ key: string; label: string; percent: number }> = [{ key: "0", label: "0s", percent: 0 }];
+  const marks: Array<{ key: string; label: string; percent: number }> = [{ key: "0", label: formatRulerTick(startTick, startTick, tickRate, replay, round), percent: 0 }];
 
   for (let seconds = 15; seconds <= endSeconds; seconds += 15) {
     const tick = startTick + seconds * tickRate;
@@ -347,12 +345,24 @@ function buildRulerMarks(startTick: number, endTick: number, tickRate: number) {
 
     marks.push({
       key: `${seconds}`,
-      label: `${Math.round(seconds)}s`,
+      label: formatRulerTick(tick, startTick, tickRate, replay, round),
       percent: Math.min(100, Math.max(0, ((tick - startTick) / range) * 100)),
     });
   }
 
   return marks;
+}
+
+function formatRulerTick(tick: number, startTick: number, tickRate: number, replay: Replay, round: Round) {
+  const freezeEndTick = round.freezeEndTick ?? round.startTick;
+  const roundTimeSeconds = replay.match.roundTimeSeconds ?? null;
+
+  if (roundTimeSeconds != null && Number.isFinite(roundTimeSeconds) && roundTimeSeconds > 0 && tick >= freezeEndTick) {
+    return formatElapsed(Math.max(0, roundTimeSeconds - (tick - freezeEndTick) / Math.max(1, tickRate)));
+  }
+
+  const elapsedSeconds = Math.max(0, (tick - startTick) / Math.max(1, tickRate));
+  return `${Math.round(elapsedSeconds)}s`;
 }
 
 type SegmentedProps<T extends string> = {

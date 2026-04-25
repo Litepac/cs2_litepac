@@ -28,6 +28,8 @@ import { ReplayModeRail } from "./replay-map-first/ReplayModeRail";
 import { ReplayRosterColumn } from "./replay-map-first/ReplayRosterColumn";
 import "./ReplayMapFirstPage.css";
 
+const PLAYBACK_SPEEDS = [0.5, 1, 1.5, 2];
+
 type PlaybackState = {
   changeTick: (tick: number) => void;
   initialRoundTick: number;
@@ -273,16 +275,43 @@ export function ReplayMapFirstPage({
           onSelectPlayer={onReplayPlayerSelect}
         />
 
-        <ReplayDrawingToolbar
-          mode={stageToolMode}
-          hasDrawings={drawingStrokes.length > 0}
-          onClear={() => {
-            setDrawingStrokes([]);
-            setActiveDrawingId(null);
-          }}
-          onSelectDraw={() => setStageToolMode("draw")}
-          onSelectMove={() => setStageToolMode("move")}
-        />
+        <div className="dr-mapfirst-stage-toolbar">
+          <ReplayDrawingToolbar
+            mode={stageToolMode}
+            hasDrawings={drawingStrokes.length > 0}
+            onClear={() => {
+              setDrawingStrokes([]);
+              setActiveDrawingId(null);
+            }}
+            onSelectDraw={() => setStageToolMode("draw")}
+            onSelectMove={() => setStageToolMode("move")}
+          />
+          <div className="dr-mapfirst-transport" aria-label="Playback controls">
+            <div className="dr-mapfirst-action-group" aria-label="Timeline actions">
+              <button
+                aria-pressed={showFreezeTime}
+                className={showFreezeTime ? "dr-mapfirst-chip dr-mapfirst-chip-active" : "dr-mapfirst-chip"}
+                onClick={() => onShowFreezeTimeChange(!showFreezeTime)}
+                type="button"
+              >
+                Freeze
+              </button>
+              <button className="dr-mapfirst-chip" onClick={playback.resetPlayback} type="button">Reset</button>
+            </div>
+            <div className="dr-mapfirst-speed-group" aria-label="Playback speed">
+              {PLAYBACK_SPEEDS.map((entry) => (
+                <button
+                  key={entry}
+                  className={entry === playback.speed ? "dr-mapfirst-chip dr-mapfirst-chip-active" : "dr-mapfirst-chip"}
+                  onClick={() => playback.setSpeed(entry)}
+                  type="button"
+                >
+                  {entry}x
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
 
         <svg
           aria-hidden="true"
@@ -357,8 +386,6 @@ export function ReplayMapFirstPage({
           round={round}
           roundClock={playback.roundClock}
           selectedPlayerName={selectedPlayerName}
-          showFreezeTime={showFreezeTime}
-          speed={playback.speed}
           tickRate={replay.match.tickRate}
           utilityAtlasScope={utilityAtlasScope}
           utilityAtlasTeamFilter={utilityAtlasTeamFilter}
@@ -366,10 +393,7 @@ export function ReplayMapFirstPage({
           onHeatmapTeamFilterChange={onHeatmapTeamFilterChange}
           onPlayToggle={playback.togglePlayback}
           onPositionsTeamFilterChange={onPositionsTeamFilterChange}
-          onReset={playback.resetPlayback}
           onSelectRound={onSelectRound}
-          onShowFreezeTimeChange={onShowFreezeTimeChange}
-          onSpeedChange={playback.setSpeed}
           onTickChange={playback.changeTick}
           onUtilityAtlasScopeChange={onUtilityAtlasScopeChange}
           onUtilityAtlasTeamFilterChange={onUtilityAtlasTeamFilterChange}

@@ -3,7 +3,7 @@ import { Container, Graphics, Text } from "pixi.js";
 import type { RadarViewport } from "../../maps/transform";
 import { worldToScreen } from "../../maps/transform";
 import type { Replay, Round } from "../../replay/types";
-import { HURT_BURST_GAP_TICKS, RECENT_HURT_WINDOW_TICKS, RECENT_KILL_WINDOW_TICKS } from "./constants";
+import { HURT_BURST_GAP_TICKS, RECENT_HURT_WINDOW_TICKS } from "./constants";
 
 const KILL_MARKER_CT_COLOR = 0x56b3ff;
 const KILL_MARKER_T_COLOR = 0xf2a64b;

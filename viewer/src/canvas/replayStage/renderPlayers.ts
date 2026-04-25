@@ -677,7 +677,6 @@ function drawPlayerLabels(layer: Container, livePlayers: LivePlayerEntry[], rada
     const fontSize = Math.round((entry.selected ? 9 : 8) * labelScale);
     const paddingX = entry.selected ? 6 : 5;
     const labelWidth = estimateLabelWidth(displayName, fontSize) + paddingX * 2;
-    const labelHeight = fontSize + 6;
     const markerRadius = entry.selected ? 11 : 8;
     const labelX = Math.round(entry.point.x - labelWidth / 2);
     const labelY = Math.round(entry.point.y + markerRadius + 2);

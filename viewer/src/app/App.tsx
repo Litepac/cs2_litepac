@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { ReplayMapFirstPage } from "../controls/ReplayMapFirstPage";
 import { type HeatmapScope, type HeatmapSourceFilter, type HeatmapTeamFilter } from "../replay/heatmapAnalysis";
-import type { Side } from "../replay/derived";
 import {
   type PositionPlayerSnapshot,
   type PositionPlayerSelection,
@@ -64,7 +63,7 @@ export function App() {
   const [utilityAtlasScope, setUtilityAtlasScope] = useState<UtilityAtlasScope>("round");
   const [utilityAtlasTeamFilter, setUtilityAtlasTeamFilter] = useState<UtilityAtlasTeamFilter>("all");
   const [utilityAtlasSourceFilter, setUtilityAtlasSourceFilter] = useState<UtilityAtlasSourceFilter>("all");
-  const [positionsScope, setPositionsScope] = useState<PositionsScope>("round");
+  const positionsScope: PositionsScope = "round";
   const [positionsTeamFilter, setPositionsTeamFilter] = useState<PositionsTeamFilter>("all");
   const [positionsSourceFilter, setPositionsSourceFilter] = useState<PositionsSourceFilter>("all");
   const [positionsView, setPositionsView] = useState<PositionsView>("paths");
@@ -72,7 +71,7 @@ export function App() {
   const [positionPlayerBroadCompareEnabled, setPositionPlayerBroadCompareEnabled] = useState(false);
   const [positionPlayerCompareEnabled, setPositionPlayerCompareEnabled] = useState(false);
   const [showPositionRoundNumbers, setShowPositionRoundNumbers] = useState(false);
-  const [heatmapScope, setHeatmapScope] = useState<HeatmapScope>("round");
+  const heatmapScope: HeatmapScope = "round";
   const [heatmapTeamFilter, setHeatmapTeamFilter] = useState<HeatmapTeamFilter>("all");
   const [heatmapSourceFilter, setHeatmapSourceFilter] = useState<HeatmapSourceFilter>("all");
   const [livePlayerContextMode, setLivePlayerContextMode] = useState(false);
@@ -81,7 +80,7 @@ export function App() {
   const [statsMatchId, setStatsMatchId] = useState<string | null>(null);
 
   const round = replay?.rounds[roundIndex] ?? null;
-  const playback = useReplayPlayback(replay, round, roundIndex, showFreezeTime);
+  const playback = useReplayPlayback(replay, round, roundIndex);
   const timelineMarkers = useTimelineMarkers(replay, round, utilityFocus);
   const statsEntry = statsMatchId ? libraryEntries.find((entry) => entry.id === statsMatchId) ?? null : null;
   const selectedPlayerName = replay?.players.find((player) => player.playerId === selectedPlayerId)?.displayName ?? null;
@@ -90,20 +89,11 @@ export function App() {
     [positionPlayerSelections],
   );
   const {
-    analysisPlayers,
     displayedPositionTrailEntries,
-    effectivePositionsScope,
-    heatmapLabel,
     heatmapSnapshot,
     positionPlayerSnapshots,
-    positionTrailEntries,
-    positionsComparisonOffsetTicks,
-    positionsLabel,
-    replaySideBlocks,
     utilityAtlasEntries,
-    utilityAtlasLabel,
   } = useReplayAnalysisState({
-    analysisMode,
     heatmapScope,
     heatmapSourceFilter,
     heatmapTeamFilter,
@@ -262,66 +252,42 @@ export function App() {
 
   function handleReplayPlayerSelect(playerId: string) {
     setLivePlayerContextMode(false);
-    if (selectedPlayerId === playerId) {
-      setSelectedPlayerId(null);
-      return;
-    }
-
-    setSelectedPlayerId(playerId);
-    if (analysisMode === "utilityAtlas") {
-      setUtilityAtlasSourceFilter("selected");
-      setUtilityAtlasTeamFilter("all");
-    } else if (analysisMode === "positions") {
-      setPositionsSourceFilter("selected");
-    } else if (analysisMode === "heatmap") {
-      setHeatmapSourceFilter("selected");
-      setHeatmapTeamFilter("all");
-    }
-  }
-
-  function handleAnalysisPlayerToggle(playerIds: string[], playerSide: Side) {
-    setLivePlayerContextMode(false);
-    const primaryPlayerId = playerIds[0];
-    if (!primaryPlayerId) {
-      return;
-    }
-
     if (analysisMode === "positions" && positionsView === "player") {
-      const toggleKey = toPositionPlayerRosterSelectionKey(playerIds, playerSide);
-      const selectedKeys = new Set(positionPlayerSelectedKeys);
-
-      if (positionPlayerCompareEnabled) {
-        if (selectedKeys.has(toggleKey)) {
-          updatePositionPlayerSelections(positionPlayerSelections.filter((player) => toPositionPlayerRosterSelectionKey(player.playerIds, player.side) !== toggleKey));
-          return;
-        }
-
-        updatePositionPlayerSelections([...positionPlayerSelections, { playerIds, side: playerSide }], primaryPlayerId);
-        return;
-      }
-
-      if (selectedKeys.has(toggleKey)) {
+      const selection = replay ? resolvePositionPlayerSelection(replay, roundIndex, playerId) : null;
+      if (!selection) {
         updatePositionPlayerSelections([]);
         return;
       }
 
-      updatePositionPlayerSelections([{ playerIds, side: playerSide }], primaryPlayerId);
+      const selectionKey = toPositionPlayerRosterSelectionKey(selection.playerIds, selection.side);
+      const selectedKeys = new Set(positionPlayerSelectedKeys);
+
+      if (positionPlayerCompareEnabled) {
+        if (selectedKeys.has(selectionKey)) {
+          updatePositionPlayerSelections(
+            positionPlayerSelections.filter(
+              (player) => toPositionPlayerRosterSelectionKey(player.playerIds, player.side) !== selectionKey,
+            ),
+            playerId,
+          );
+          return;
+        }
+
+        updatePositionPlayerSelections([...positionPlayerSelections, selection], playerId);
+        return;
+      }
+
+      if (selectedKeys.has(selectionKey)) {
+        updatePositionPlayerSelections([]);
+        return;
+      }
+
+      updatePositionPlayerSelections([selection], playerId);
       setPositionPlayerCompareEnabled(false);
       return;
     }
 
-    const selectedActive =
-      analysisMode === "utilityAtlas"
-        ? utilityAtlasSourceFilter === "selected" && selectedPlayerId === primaryPlayerId
-        : analysisMode === "positions"
-          ? positionsSourceFilter === "selected" &&
-            selectedPlayerId === primaryPlayerId &&
-            (positionsView !== "player" || positionsTeamFilter === "all" || positionsTeamFilter === playerSide)
-          : analysisMode === "heatmap"
-            ? heatmapSourceFilter === "selected" && selectedPlayerId === primaryPlayerId
-          : false;
-
-    if (selectedActive) {
+    if (selectedPlayerId === playerId) {
       setSelectedPlayerId(null);
       if (analysisMode === "utilityAtlas") {
         setUtilityAtlasSourceFilter("all");
@@ -334,37 +300,15 @@ export function App() {
       return;
     }
 
-    setSelectedPlayerId(primaryPlayerId);
+    setSelectedPlayerId(playerId);
     if (analysisMode === "utilityAtlas") {
       setUtilityAtlasSourceFilter("selected");
       setUtilityAtlasTeamFilter("all");
     } else if (analysisMode === "positions") {
       setPositionsSourceFilter("selected");
-      if (positionsView === "player") {
-        setPositionsTeamFilter(playerSide);
-      }
     } else if (analysisMode === "heatmap") {
       setHeatmapSourceFilter("selected");
       setHeatmapTeamFilter("all");
-    }
-  }
-
-  function handleAnalysisPlayerClear() {
-    setLivePlayerContextMode(false);
-    if (analysisMode === "positions" && positionsView === "player") {
-      setPositionPlayerBroadCompareEnabled(false);
-      updatePositionPlayerSelections([]);
-      return;
-    }
-
-    setSelectedPlayerId(null);
-    if (analysisMode === "utilityAtlas") {
-      setUtilityAtlasSourceFilter("all");
-    } else if (analysisMode === "positions") {
-      setPositionsSourceFilter("all");
-      setPositionsTeamFilter("all");
-    } else if (analysisMode === "heatmap") {
-      setHeatmapSourceFilter("all");
     }
   }
 
@@ -435,26 +379,16 @@ export function App() {
           <ReplayMapFirstPage
             activeRoundIndex={roundIndex}
             analysisMode={analysisMode}
-            analysisPlayers={analysisPlayers}
             displayedPositionTrailEntries={displayedPositionTrailEntries}
-            heatmapLabel={heatmapLabel}
             heatmapScope={heatmapScope}
             heatmapSnapshot={heatmapSnapshot}
-            heatmapSourceFilter={heatmapSourceFilter}
             heatmapTeamFilter={heatmapTeamFilter}
             livePlayerContextMode={livePlayerContextMode}
             markers={timelineMarkers}
             playback={playback}
-            positionPlayerBroadCompareEnabled={positionPlayerBroadCompareEnabled}
             positionPlayerCompareEnabled={positionPlayerCompareEnabled}
-            positionPlayerMaxSelections={MAX_POSITION_PLAYER_SELECTIONS}
             positionPlayerSelectedCount={positionPlayerSelections.length}
-            positionPlayerSelectedKeys={positionPlayerSelectedKeys}
             positionPlayerSnapshots={positionPlayerSnapshots}
-            positionTrailEntries={positionTrailEntries}
-            positionsLabel={positionsLabel}
-            positionsScope={positionsScope}
-            positionsSourceFilter={positionsSourceFilter}
             positionsTeamFilter={positionsTeamFilter}
             positionsView={positionsView}
             replay={replay}
@@ -464,17 +398,12 @@ export function App() {
             showFreezeTime={showFreezeTime}
             showPositionRoundNumbers={showPositionRoundNumbers}
             utilityAtlasEntries={utilityAtlasEntries}
-            utilityAtlasLabel={utilityAtlasLabel}
             utilityAtlasScope={utilityAtlasScope}
-            utilityAtlasSourceFilter={utilityAtlasSourceFilter}
             utilityAtlasTeamFilter={utilityAtlasTeamFilter}
             utilityFocus={utilityFocus}
-            onAnalysisPlayerClear={handleAnalysisPlayerClear}
-            onAnalysisPlayerToggle={handleAnalysisPlayerToggle}
             onDisablePositionPlayerCompare={handleDisablePositionPlayerCompare}
             onEnablePositionPlayerBroadCompare={handleEnablePositionPlayerBroadCompare}
             onEnablePositionPlayerCompare={handleEnablePositionPlayerCompare}
-            onHeatmapScopeChange={setHeatmapScope}
             onHeatmapTeamFilterChange={setHeatmapTeamFilter}
             onOpenHome={() => {
               closeReplay();
@@ -484,7 +413,6 @@ export function App() {
               closeReplay();
               setShellPage("matches");
             }}
-            onPositionsScopeChange={setPositionsScope}
             onPositionsTeamFilterChange={setPositionsTeamFilter}
             onReplayPlayerSelect={handleReplayPlayerSelect}
             onSelectAnalysisMode={handleAnalysisModeChange}

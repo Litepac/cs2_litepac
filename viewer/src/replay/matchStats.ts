@@ -2,7 +2,7 @@ import { teamName, type Side } from "./derived";
 import { inferPlayerRole } from "./roleInference";
 import { accumulateStreamZoneOccupancy, createEmptySideZoneTallies, deriveSideRoleTendency } from "./positionalRoles";
 import type { Replay } from "./types";
-import type { HeadToHeadDuel, MatchRoundBreakdown, MatchStatsPlayerRow, MatchStatsSideFilter, MatchStatsSnapshot, MatchStatsTeamTable } from "./statsTypes";
+import type { HeadToHeadDuel, MatchStatsPlayerRow, MatchStatsSideFilter, MatchStatsSnapshot } from "./statsTypes";
 import { utilityKindFromWeaponName } from "./weapons";
 export type { HeadToHeadDuel, MatchRoundBreakdown, MatchStatsPlayerRow, MatchStatsSideFilter, MatchStatsSnapshot, MatchStatsTeamTable } from "./statsTypes";
 

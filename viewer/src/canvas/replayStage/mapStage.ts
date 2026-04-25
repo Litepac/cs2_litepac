@@ -82,7 +82,6 @@ export async function ensureStageMap(
   const radarURL = radarImageURL(replay.map.radarImageKey);
   const radarSize = await loadRadarImageSize(radarURL);
   const radarViewport = createRadarViewport(
-    replay,
     viewportWidth,
     viewportHeight,
     radarSize.imageWidth,

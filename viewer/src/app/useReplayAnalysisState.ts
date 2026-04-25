@@ -2,17 +2,14 @@ import { useMemo } from "react";
 
 import {
   collectHeatmapSnapshot,
-  heatmapScopeLabel,
   type HeatmapSnapshot,
   type HeatmapScope,
   type HeatmapSourceFilter,
   type HeatmapTeamFilter,
 } from "../replay/heatmapAnalysis";
-import type { Side } from "../replay/derived";
 import {
   collectPositionPlayerSnapshots,
   collectPositionTrailEntries,
-  positionsScopeLabel,
   type PositionPlayerSelection,
   type PositionsScope,
   type PositionsSourceFilter,
@@ -22,8 +19,6 @@ import {
 import {
   buildReplaySideBlocks,
   collectUtilityAtlasEntries,
-  utilityAtlasScopeLabel,
-  type ReplayAnalysisMode,
   type UtilityAtlasScope,
   type UtilityAtlasSourceFilter,
   type UtilityAtlasTeamFilter,
@@ -31,16 +26,7 @@ import {
 import type { Replay, Round } from "../replay/types";
 import type { UtilityFocus } from "../replay/utilityFilter";
 
-type AnalysisPanelPlayer = {
-  displayName: string;
-  playerId: string;
-  side: Side;
-  teamId: string;
-  teamName: string;
-};
-
 type Args = {
-  analysisMode: ReplayAnalysisMode;
   heatmapScope: HeatmapScope;
   heatmapSourceFilter: HeatmapSourceFilter;
   heatmapTeamFilter: HeatmapTeamFilter;
@@ -73,7 +59,6 @@ const EMPTY_HEATMAP_SNAPSHOT: HeatmapSnapshot = {
 };
 
 export function useReplayAnalysisState({
-  analysisMode,
   heatmapScope,
   heatmapSourceFilter,
   heatmapTeamFilter,
@@ -110,61 +95,6 @@ export function useReplayAnalysisState({
     [replay, replaySideBlocks, roundIndex, selectedPlayerId, utilityAtlasScope, utilityAtlasSourceFilter, utilityAtlasTeamFilter, utilityFocus],
   );
 
-  const utilityAtlasLabel = replay ? utilityAtlasScopeLabel(replay, roundIndex, replaySideBlocks, utilityAtlasScope) : "Round";
-
-  const analysisPlayers = useMemo(() => {
-    if (!replay) {
-      return [];
-    }
-
-    const seen = new Set<string>();
-    const streams =
-      analysisMode === "positions" && positionsView === "player"
-        ? replay.rounds.flatMap((entry) => entry.playerStreams)
-        : (round?.playerStreams ?? []);
-
-    return streams
-      .flatMap((stream) => {
-        const seenKey =
-          analysisMode === "positions" && positionsView === "player"
-            ? `${stream.side ?? "unknown"}:${stream.playerId}`
-            : stream.playerId;
-
-        if (stream.side == null || seen.has(seenKey)) {
-          return [];
-        }
-
-        const player = replay.players.find((entry) => entry.playerId === stream.playerId);
-        if (!player) {
-          return [];
-        }
-
-        seen.add(seenKey);
-        return [{
-          displayName: player.displayName,
-          playerId: player.playerId,
-          side: stream.side,
-          teamId: player.teamId,
-          teamName: replay.teams.find((team) => team.teamId === player.teamId)?.displayName ?? player.teamId,
-        }];
-      })
-      .sort((left, right) => {
-        if (left.teamName !== right.teamName) {
-          return left.teamName.localeCompare(right.teamName);
-        }
-
-        if (analysisMode === "positions" && positionsView === "player") {
-          return left.displayName.localeCompare(right.displayName);
-        }
-
-        if (left.side !== right.side) {
-          return left.side === "CT" ? -1 : 1;
-        }
-
-        return left.displayName.localeCompare(right.displayName);
-      });
-  }, [analysisMode, positionsView, replay, round]);
-
   const effectivePositionsScope: PositionsScope = positionsView === "player" ? "match" : positionsScope;
 
   const positionTrailEntries = useMemo(
@@ -178,8 +108,6 @@ export function useReplayAnalysisState({
         : [],
     [effectivePositionsScope, positionsSourceFilter, positionsTeamFilter, replay, replaySideBlocks, roundIndex, selectedPlayerId],
   );
-
-  const positionsLabel = replay ? positionsScopeLabel(replay, roundIndex, replaySideBlocks, effectivePositionsScope) : "Round";
 
   const positionsComparisonOffsetTicks = useMemo(() => {
     if (!round) {
@@ -252,20 +180,10 @@ export function useReplayAnalysisState({
     [heatmapScope, heatmapSourceFilter, heatmapTeamFilter, replay, replaySideBlocks, roundIndex, selectedPlayerId],
   );
 
-  const heatmapLabel = replay ? heatmapScopeLabel(replay, roundIndex, replaySideBlocks, heatmapScope) : "Round";
-
   return {
-    analysisPlayers,
     displayedPositionTrailEntries,
-    effectivePositionsScope,
-    heatmapLabel,
     heatmapSnapshot,
     positionPlayerSnapshots,
-    positionTrailEntries,
-    positionsComparisonOffsetTicks,
-    positionsLabel,
-    replaySideBlocks,
     utilityAtlasEntries,
-    utilityAtlasLabel,
   };
 }

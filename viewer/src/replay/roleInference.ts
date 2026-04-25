@@ -91,7 +91,6 @@ export function inferPlayerRole(input: RoleInferenceInput): RoleInferenceResult 
   ].map((entry) => ({ ...entry, score: roundScore(entry.score) }));
 
   scores.sort((left, right) => right.score - left.score);
-  const [topScore, runnerUpScore] = scores;
   const eligibleRoles = scores.filter((entry) =>
     hasRoleEvidence(entry.label, {
       blindSecondsRate,

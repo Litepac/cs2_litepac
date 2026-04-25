@@ -112,7 +112,7 @@ For V1, Stats should not drive the roadmap more than Replay correctness and repl
 ## What already meets the V1 bar
 - Parser-backed live playback, round switching, timeline scrubbing, player selection, and live roster are implemented in `viewer/src/app/App.tsx`, `viewer/src/app/useReplayPlayback.ts`, `viewer/src/controls/ReplayMapFirstPage.tsx`, and `viewer/src/canvas/ReplayStage.tsx`
 - Core utility, combat, bomb, and player rendering already come from canonical replay streams and events through `viewer/src/canvas/replayStage/*`
-- `Utility Atlas`, `Position Paths`, `Position Player`, and `Heatmap` already exist as distinct replay-analysis modes wired through `viewer/src/replay/replayAnalysis.ts`, `viewer/src/replay/positionsAnalysis.ts`, `viewer/src/replay/heatmapAnalysis.ts`, `viewer/src/controls/ReplayAnalysisPanel.tsx`, and `viewer/src/canvas/ReplayStage.tsx`
+- `Utility Atlas`, `Position Paths`, `Position Player`, and `Heatmap` already exist as distinct replay-analysis modes wired through `viewer/src/replay/replayAnalysis.ts`, `viewer/src/replay/positionsAnalysis.ts`, `viewer/src/replay/heatmapAnalysis.ts`, `viewer/src/controls/ReplayMapFirstPage.tsx`, `viewer/src/controls/replay-map-first/ReplayDock.tsx`, and `viewer/src/canvas/ReplayStage.tsx`
 - Cross-round utility and position overlays can already jump back into live replay through the app-level handlers in `viewer/src/app/App.tsx`
 - Home / Matches / Replay / Stats are already split into separate product surfaces
 

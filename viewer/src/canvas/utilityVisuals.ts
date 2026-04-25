@@ -961,34 +961,6 @@ function displacedSmokeAlpha(
   return Math.max(0, baseAlpha * (1 - reduction));
 }
 
-function interpolateTrajectorySampleAtTick(utility: UtilityEntity, currentTick: number) {
-  const sampleInterval = Math.max(1, utility.trajectory.sampleIntervalTicks || 1);
-  const relativeTick = currentTick - utility.trajectory.sampleOriginTick;
-  const baseIndex = Math.floor(relativeTick / sampleInterval);
-  if (baseIndex < 0 || baseIndex >= utility.trajectory.x.length - 1) {
-    return null;
-  }
-
-  const mix = (relativeTick - baseIndex * sampleInterval) / sampleInterval;
-  if (mix <= 0 || mix >= 1) {
-    return null;
-  }
-
-  const leftX = utility.trajectory.x[baseIndex];
-  const leftY = utility.trajectory.y[baseIndex];
-  const rightX = utility.trajectory.x[baseIndex + 1];
-  const rightY = utility.trajectory.y[baseIndex + 1];
-  if (leftX == null || leftY == null || rightX == null || rightY == null) {
-    return null;
-  }
-
-  return {
-    tick: currentTick,
-    x: leftX + (rightX - leftX) * mix,
-    y: leftY + (rightY - leftY) * mix,
-  };
-}
-
 function trajectoryTrailPoints(
   replay: Replay,
   utility: UtilityEntity,

@@ -83,7 +83,10 @@ export function ReplayRosterColumn({ players, selectedPlayerId, side, teamLabel,
                 {utility.map((item) => (
                   <span
                     key={item.kind}
-                    className={item.active ? "dr-mapfirst-utility-item dr-mapfirst-utility-item-active" : "dr-mapfirst-utility-item"}
+                    className={[
+                      "dr-mapfirst-utility-item",
+                      item.active ? "dr-mapfirst-utility-item-active" : "",
+                    ].filter(Boolean).join(" ")}
                     style={{ color: utilityColorCss(item.kind) }}
                     title={item.title}
                   >
@@ -143,38 +146,27 @@ function utilityInventory(player: LivePlayerState): RailIconItem[] {
     activeWeaponClass: player.activeWeaponClass,
     mainWeapon: player.mainWeapon,
   }).activeUtilityKind;
-  const capacities: Array<{ count: number | null; kind: UtilityKind; label: string; slots: number }> = [
+  const capacities: Array<{ count: number | null; kind: UtilityKind; label: string; slots: number; visualKind?: UtilityVisualKind }> = [
+    { count: player.heGrenades, kind: "hegrenade", label: "HE grenade", slots: 1 },
     { count: player.flashbangs, kind: "flashbang", label: "Flashbang", slots: 2 },
     { count: player.smokes, kind: "smoke", label: "Smoke", slots: 1 },
-    { count: player.heGrenades, kind: "hegrenade", label: "HE grenade", slots: 1 },
-    { count: player.fireGrenades, kind: "molotov", label: "Molotov / incendiary", slots: 1 },
-    { count: player.decoys, kind: "decoy", label: "Decoy", slots: 1 },
+    { count: player.fireGrenades, kind: "molotov", label: "Molotov / incendiary", slots: 1, visualKind: "fire" },
   ];
 
-  const utility = capacities
-    .map((entry) => ({
-      active:
-        (entry.kind === "molotov"
-          ? activeUtilityKind === "molotov" || activeUtilityKind === "incendiary"
-          : activeUtilityKind === entry.kind) && (entry.count ?? 0) > 0,
-      count: Math.min(entry.slots, Math.max(0, entry.count ?? 0)),
-      kind: normalizeUtilityVisualKind(entry.kind) ?? "fire",
-      title: `${entry.label}${(entry.count ?? 0) > 1 ? ` x${Math.min(entry.slots, Math.max(0, entry.count ?? 0))}` : ""}`,
-    }))
-    .filter((entry) => entry.count > 0)
-    .sort((left, right) => Number(right.active) - Number(left.active));
+  return capacities
+    .map((entry) => {
+      const count = Math.min(entry.slots, Math.max(0, entry.count ?? 0));
+      const kind = entry.visualKind ?? normalizeUtilityVisualKind(entry.kind) ?? "fire";
 
-  if (!player.hasBomb) {
-    return utility;
-  }
-
-  return [
-    ...utility,
-    {
-      active: false,
-      count: 1,
-      kind: "bomb",
-      title: "Bomb",
-    },
-  ];
+      return {
+        active:
+          (entry.kind === "molotov"
+            ? activeUtilityKind === "molotov" || activeUtilityKind === "incendiary"
+            : activeUtilityKind === entry.kind) && count > 0,
+        count,
+        kind,
+        title: `${entry.label}${count > 1 ? ` x${count}` : ""}`,
+      };
+    })
+    .filter((entry) => entry.count > 0);
 }

@@ -335,13 +335,13 @@ function resolveBombPhase(markers: PresentedTimelineMarker[]) {
 
 function buildRulerMarks(startTick: number, endTick: number, tickRate: number) {
   const range = Math.max(1, endTick - startTick);
-  const startSeconds = Math.ceil(startTick / tickRate / 15) * 15;
-  const endSeconds = Math.floor(endTick / tickRate / 15) * 15;
+  const durationSeconds = range / Math.max(1, tickRate);
+  const endSeconds = Math.floor(durationSeconds / 15) * 15;
   const marks: Array<{ key: string; label: string; percent: number }> = [{ key: "0", label: "0s", percent: 0 }];
 
-  for (let seconds = startSeconds; seconds <= endSeconds; seconds += 15) {
-    const tick = seconds * tickRate;
-    if (tick <= startTick || tick >= endTick) {
+  for (let seconds = 15; seconds <= endSeconds; seconds += 15) {
+    const tick = startTick + seconds * tickRate;
+    if (tick >= endTick) {
       continue;
     }
 

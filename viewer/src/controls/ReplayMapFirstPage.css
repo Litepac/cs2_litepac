@@ -12,7 +12,7 @@
   min-height: 0;
   height: 100%;
   display: grid;
-  grid-template-columns: 88px minmax(0, 1fr);
+  grid-template-columns: 126px minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr) auto;
   gap: 6px;
   padding: 6px;
@@ -34,21 +34,26 @@
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   border: 1px solid rgba(255, 255, 255, 0.075);
-  background: rgba(6, 7, 8, 0.82);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.018), transparent 28%),
+    rgba(6, 7, 8, 0.88);
 }
 
 .dr-mapfirst-mode-brand {
   display: grid;
   align-items: center;
   justify-items: center;
-  min-height: 66px;
-  padding: 9px 8px 10px;
+  min-height: 88px;
+  padding: 12px 13px 13px;
+  border: 0;
   border-bottom: 1px solid var(--dr-mapfirst-line-soft);
+  background: transparent;
+  cursor: pointer;
 }
 
 .dr-mapfirst-mode-brand img {
   display: block;
-  width: min(72px, 100%);
+  width: min(108px, 100%);
   height: auto;
   object-fit: contain;
 }
@@ -74,48 +79,79 @@
   text-transform: uppercase;
 }
 
-.dr-mapfirst-shell-rail-list,
 .dr-mapfirst-mode-rail-list {
   min-width: 0;
   display: grid;
   align-content: start;
 }
 
-.dr-mapfirst-shell-rail-list {
-  grid-auto-rows: 38px;
-  border-bottom: 1px solid var(--dr-mapfirst-line-soft);
-}
-
 .dr-mapfirst-mode-rail-list {
-  grid-auto-rows: 43px;
+  grid-auto-rows: 42px;
+  padding-top: 6px;
 }
 
 .dr-mapfirst-rail-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
   border: 0;
-  border-bottom: 1px solid var(--dr-mapfirst-line-soft);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.055);
   background: transparent;
   color: var(--dr-mapfirst-muted);
-  font-size: 8.5px;
+  font-size: 9px;
   font-weight: 850;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.11em;
   cursor: pointer;
 }
 
 .dr-mapfirst-shell-button {
-  color: rgba(235, 227, 220, 0.76);
+  color: rgba(235, 227, 220, 0.82);
 }
 
+.dr-mapfirst-mode-brand:hover,
 .dr-mapfirst-rail-button:hover {
   color: var(--dr-mapfirst-text);
   background: rgba(184, 50, 41, 0.07);
 }
 
+.dr-mapfirst-mode-brand:focus-visible,
+.dr-mapfirst-rail-button:focus-visible {
+  outline: 2px solid rgba(209, 58, 48, 0.8);
+  outline-offset: -2px;
+}
+
 .dr-mapfirst-rail-button-active {
   color: #fff0ea;
   background:
-    linear-gradient(90deg, rgba(184, 50, 41, 0.2), rgba(184, 50, 41, 0.035) 58%, transparent),
-    rgba(10, 10, 11, 0.76);
-  box-shadow: inset 3px 0 0 var(--dr-mapfirst-red);
+    linear-gradient(90deg, rgba(184, 50, 41, 0.08), rgba(184, 50, 41, 0.025) 54%, transparent),
+    rgba(10, 10, 11, 0.62);
+}
+
+.dr-mapfirst-rail-button-active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 10px;
+  bottom: 10px;
+  width: 2px;
+  background: var(--dr-mapfirst-red);
+}
+
+.dr-mapfirst-rail-button-active::after {
+  content: "";
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: 9px;
+  height: 1px;
+  background: var(--dr-mapfirst-red);
+}
+
+.dr-mapfirst-rail-divider {
+  height: 10px;
+  border-bottom: 1px solid rgba(217, 54, 40, 0.34);
 }
 
 .dr-mapfirst-stage {
@@ -339,7 +375,7 @@
 
 .dr-mapfirst-player-chip {
   min-width: 0;
-  min-height: 100px;
+  min-height: 96px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   grid-template-areas:
@@ -347,8 +383,8 @@
     "loadout loadout"
     "meta utility";
   align-items: center;
-  gap: 8px 13px;
-  padding: 12px 13px 13px;
+  gap: 7px 12px;
+  padding: 11px 13px 12px;
   border: 0;
   border-top: 1px solid var(--dr-mapfirst-line-soft);
   background: rgba(255, 255, 255, 0.006);
@@ -388,8 +424,9 @@
 }
 
 .dr-mapfirst-player-name {
+  color: rgba(235, 227, 220, 0.9);
   font-family: "Inter Tight", "Inter", system-ui, sans-serif;
-  font-size: 19px;
+  font-size: 18px;
   font-weight: 880;
   letter-spacing: -0.035em;
 }
@@ -405,39 +442,56 @@
 
 .dr-mapfirst-player-loadout {
   grid-area: loadout;
-  display: inline-flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(72px, 0.42fr);
   align-items: center;
-  flex-wrap: wrap;
-  justify-items: start;
-  gap: 8px 13px;
+  gap: 10px;
+  min-height: 28px;
 }
 
 .dr-mapfirst-weapon-slot {
   min-width: 0;
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
+  overflow: hidden;
 }
 
 .dr-mapfirst-weapon-slot-active {
-  color: #fff0ea;
+  justify-content: flex-end;
+  gap: 6px;
+  color: rgba(235, 227, 220, 0.58);
 }
 
 .dr-mapfirst-weapon-slot-active span {
-  color: rgba(255, 240, 234, 0.88);
+  color: rgba(235, 227, 220, 0.62);
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
 }
 
 .dr-mapfirst-weapon-glyph {
-  width: clamp(64px, 4vw, 90px);
+  width: clamp(54px, 3.35vw, 74px);
   height: 25px;
   object-fit: contain;
-  opacity: 0.9;
-  filter: brightness(1.16);
+  opacity: 0.66;
+  filter: brightness(0.96);
+}
+
+.dr-mapfirst-weapon-slot-active .dr-mapfirst-weapon-glyph {
+  width: clamp(24px, 2vw, 44px);
+  height: 20px;
+  opacity: 0.56;
+  filter: brightness(0.92);
 }
 
 .dr-mapfirst-weapon-slot span {
-  max-width: 118px;
+  max-width: 112px;
   text-align: left;
+}
+
+.dr-mapfirst-weapon-slot-active span {
+  max-width: 76px;
+  text-align: right;
 }
 
 .dr-mapfirst-player-meta {
@@ -455,11 +509,11 @@
 }
 
 .dr-mapfirst-equipment-icon {
-  width: 16px;
-  height: 16px;
+  width: 15px;
+  height: 15px;
   object-fit: contain;
-  opacity: 0.9;
-  filter: brightness(1.12);
+  opacity: 0.68;
+  filter: brightness(0.98);
 }
 
 .dr-mapfirst-utility-row {
@@ -467,26 +521,28 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
-  min-height: 17px;
+  gap: 7px;
+  min-height: 15px;
 }
 
 .dr-mapfirst-utility-item {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 1px;
-  opacity: 0.72;
+  width: 16px;
+  opacity: 0.56;
 }
 
 .dr-mapfirst-utility-item-active {
-  opacity: 1;
+  opacity: 0.78;
 }
 
 .dr-mapfirst-utility-icon {
-  width: 17px;
-  height: 17px;
+  width: 14px;
+  height: 14px;
   object-fit: contain;
-  filter: brightness(1.08);
+  filter: brightness(0.94);
 }
 
 .dr-mapfirst-utility-item span {
@@ -1129,26 +1185,29 @@
   .dr-mapfirst-mode-rail {
     grid-column: 1;
     grid-row: 1;
-    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-columns: 142px minmax(0, 1fr);
     grid-template-rows: auto;
   }
 
   .dr-mapfirst-mode-brand {
     min-height: 52px;
+    padding: 8px 12px;
     border-right: 1px solid var(--dr-mapfirst-line-soft);
     border-bottom: 0;
   }
 
-  .dr-mapfirst-shell-rail-list,
   .dr-mapfirst-mode-rail-list {
     grid-auto-flow: column;
     grid-auto-columns: minmax(92px, 1fr);
     grid-auto-rows: auto;
+    padding-top: 0;
     overflow-x: auto;
   }
 
-  .dr-mapfirst-shell-rail-list {
-    border-right: 1px solid var(--dr-mapfirst-line-soft);
+  .dr-mapfirst-rail-divider {
+    width: 1px;
+    height: auto;
+    border-right: 1px solid rgba(217, 54, 40, 0.34);
     border-bottom: 0;
   }
 
@@ -1217,9 +1276,18 @@
 
 @media (max-height: 900px) and (min-width: 1181px) {
   .dr-mapfirst-page {
-    grid-template-columns: 82px minmax(0, 1fr);
+    grid-template-columns: 116px minmax(0, 1fr);
     gap: 6px;
     padding: 6px;
+  }
+
+  .dr-mapfirst-mode-brand {
+    min-height: 76px;
+    padding: 10px 11px;
+  }
+
+  .dr-mapfirst-mode-brand img {
+    width: min(98px, 100%);
   }
 
   .dr-mapfirst-hud {
@@ -1233,12 +1301,8 @@
     max-height: calc(100% - 118px);
   }
 
-  .dr-mapfirst-shell-rail-list {
-    grid-auto-rows: 34px;
-  }
-
   .dr-mapfirst-mode-rail-list {
-    grid-auto-rows: 39px;
+    grid-auto-rows: 38px;
   }
 
   .dr-mapfirst-timeline-row {

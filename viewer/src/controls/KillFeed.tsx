@@ -23,7 +23,7 @@ export function KillFeed({ replay, round, currentTick }: Props) {
         assisterName: assister?.displayName ?? null,
         key: `${event.tick}-${event.victimPlayerId}-${event.weaponName}`,
         killerName: killer?.displayName ?? "World",
-        side: killer?.teamId === victim?.teamId ? null : sideForPlayer(replay, round, killer?.playerId ?? null),
+        side: killer?.teamId === victim?.teamId ? null : sideForPlayer(round, killer?.playerId ?? null),
         victimName: victim?.displayName ?? "Unknown",
         weaponName: compactWeaponName(event.weaponName),
       };
@@ -49,7 +49,7 @@ export function KillFeed({ replay, round, currentTick }: Props) {
   );
 }
 
-function sideForPlayer(replay: Replay, round: Round, playerId: string | null) {
+function sideForPlayer(round: Round, playerId: string | null) {
   if (!playerId) {
     return null;
   }

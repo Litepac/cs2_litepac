@@ -8,7 +8,6 @@ export function useReplayPlayback(
   replay: Replay | null,
   round: Replay["rounds"][number] | null,
   roundIndex: number,
-  showFreezeTime: boolean,
 ) {
   const [displayTick, setDisplayTick] = useState(0);
   const [playing, setPlaying] = useState(false);

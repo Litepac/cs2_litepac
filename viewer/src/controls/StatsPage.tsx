@@ -520,17 +520,6 @@ function clutchScore(player: MatchStatsPlayerRow) {
 }
 
 
-function buildTeamHeaderMeta(team: MatchStatsTeamTable, currentView: StatsView) {
-  const standout = buildTeamStandout(team, currentView);
-  if (team.sideFilter === "all") {
-    return standout ? `${currentView.label} · ${team.finalScore} rounds won · ${standout}` : `${currentView.label} · ${team.finalScore} rounds won`;
-  }
-
-  return standout
-    ? `${currentView.label} · ${team.sideFilter} split · ${standout}`
-    : `${currentView.label} · ${team.sideFilter} split · match final ${team.finalScore}`;
-}
-
 function buildCompactTeamHeaderMeta(team: MatchStatsTeamTable, currentView: StatsView) {
   const standout = buildTeamStandout(team, currentView);
   if (team.sideFilter === "all") {

@@ -13,19 +13,21 @@ import (
 	"mastermind/parser/internal/demo"
 )
 
-const defaultMaxUploadBytes = 2 << 30
+const defaultMaxUploadBytes int64 = 2 << 30
 
 type Options struct {
-	ListenAddr string
-	SchemaPath string
-	AssetsRoot string
-	TempDir    string
+	ListenAddr     string
+	SchemaPath     string
+	AssetsRoot     string
+	TempDir        string
+	MaxUploadBytes int64
+	AllowedOrigin  string
 }
 
 func Serve(opts Options) error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/health", func(w http.ResponseWriter, r *http.Request) {
-		allowCORS(w)
+		allowCORS(w, opts)
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
 			return
@@ -42,7 +44,7 @@ func Serve(opts Options) error {
 		})
 	})
 	mux.HandleFunc("/api/parse-demo", func(w http.ResponseWriter, r *http.Request) {
-		allowCORS(w)
+		allowCORS(w, opts)
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
 			return
@@ -58,7 +60,7 @@ func Serve(opts Options) error {
 		}
 	})
 	mux.HandleFunc("/api/usage-events", func(w http.ResponseWriter, r *http.Request) {
-		allowCORS(w)
+		allowCORS(w, opts)
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
 			return
@@ -74,7 +76,7 @@ func Serve(opts Options) error {
 		w.WriteHeader(http.StatusNoContent)
 	})
 	mux.HandleFunc("/api/feedback", func(w http.ResponseWriter, r *http.Request) {
-		allowCORS(w)
+		allowCORS(w, opts)
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
 			return
@@ -100,7 +102,7 @@ func Serve(opts Options) error {
 }
 
 func parseDemoUpload(w http.ResponseWriter, r *http.Request, opts Options) error {
-	r.Body = http.MaxBytesReader(w, r.Body, defaultMaxUploadBytes)
+	r.Body = http.MaxBytesReader(w, r.Body, maxUploadBytes(opts))
 	if err := r.ParseMultipartForm(32 << 20); err != nil {
 		return fmt.Errorf("parse multipart form: %w", err)
 	}
@@ -245,10 +247,27 @@ func parseDemoUpload(w http.ResponseWriter, r *http.Request, opts Options) error
 	return nil
 }
 
-func allowCORS(w http.ResponseWriter) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
+func allowCORS(w http.ResponseWriter, opts Options) {
+	w.Header().Set("Access-Control-Allow-Origin", allowedOrigin(opts))
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+}
+
+func maxUploadBytes(opts Options) int64 {
+	if opts.MaxUploadBytes > 0 {
+		return opts.MaxUploadBytes
+	}
+
+	return defaultMaxUploadBytes
+}
+
+func allowedOrigin(opts Options) string {
+	origin := strings.TrimSpace(opts.AllowedOrigin)
+	if origin != "" {
+		return origin
+	}
+
+	return "*"
 }
 
 func writeJSON(w http.ResponseWriter, status int, payload any) {

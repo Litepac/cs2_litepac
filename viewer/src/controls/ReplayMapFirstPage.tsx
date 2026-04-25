@@ -1,14 +1,12 @@
 import { useEffect, useState, type PointerEvent as ReactPointerEvent } from "react";
 
 import { ReplayStage } from "../canvas/ReplayStage";
-import { scoreForSide, sideTeam, type Side } from "../replay/derived";
-import type { HeatmapScope, HeatmapSnapshot, HeatmapSourceFilter, HeatmapTeamFilter } from "../replay/heatmapAnalysis";
+import { scoreForSide, sideTeam } from "../replay/derived";
+import type { HeatmapScope, HeatmapSnapshot, HeatmapTeamFilter } from "../replay/heatmapAnalysis";
 import { livePlayersAtTick } from "../replay/live";
 import type {
   PositionPlayerSnapshot,
   PositionTrailEntry,
-  PositionsScope,
-  PositionsSourceFilter,
   PositionsTeamFilter,
   PositionsView,
 } from "../replay/positionsAnalysis";
@@ -16,30 +14,19 @@ import type {
   ReplayAnalysisMode,
   UtilityAtlasEntry,
   UtilityAtlasScope,
-  UtilityAtlasSourceFilter,
   UtilityAtlasTeamFilter,
 } from "../replay/replayAnalysis";
 import { resolveRoundTimer } from "../replay/roundTimer";
 import type { Replay, Round } from "../replay/types";
 import type { TimelineEventItem } from "../replay/timeline";
 import type { UtilityFocus } from "../replay/utilityFilter";
-import { EquipmentIcon } from "./EquipmentIcon";
 import { KillFeed } from "./KillFeed";
 import { ReplayDrawingToolbar, type StageToolMode } from "./replay-map-first/ReplayDrawingToolbar";
 import { ReplayDock } from "./replay-map-first/ReplayDock";
 import { ReplayHud } from "./replay-map-first/ReplayHud";
 import { ReplayModeRail } from "./replay-map-first/ReplayModeRail";
 import { ReplayRosterColumn } from "./replay-map-first/ReplayRosterColumn";
-import { UtilityIcon } from "./UtilityIcon";
 import "./ReplayMapFirstPage.css";
-
-type AnalysisPanelPlayer = {
-  displayName: string;
-  playerId: string;
-  side: Side;
-  teamId: string;
-  teamName: string;
-};
 
 type PlaybackState = {
   changeTick: (tick: number) => void;
@@ -68,26 +55,16 @@ type DrawingStroke = {
 type Props = {
   activeRoundIndex: number;
   analysisMode: ReplayAnalysisMode;
-  analysisPlayers: AnalysisPanelPlayer[];
   displayedPositionTrailEntries: PositionTrailEntry[];
-  heatmapLabel: string;
   heatmapScope: HeatmapScope;
   heatmapSnapshot: HeatmapSnapshot;
-  heatmapSourceFilter: HeatmapSourceFilter;
   heatmapTeamFilter: HeatmapTeamFilter;
   livePlayerContextMode: boolean;
   markers: TimelineEventItem[];
   playback: PlaybackState;
-  positionPlayerBroadCompareEnabled: boolean;
   positionPlayerCompareEnabled: boolean;
-  positionPlayerMaxSelections: number;
   positionPlayerSelectedCount: number;
-  positionPlayerSelectedKeys: string[];
   positionPlayerSnapshots: PositionPlayerSnapshot[];
-  positionTrailEntries: PositionTrailEntry[];
-  positionsLabel: string;
-  positionsScope: PositionsScope;
-  positionsSourceFilter: PositionsSourceFilter;
   positionsTeamFilter: PositionsTeamFilter;
   positionsView: PositionsView;
   replay: Replay;
@@ -97,21 +74,15 @@ type Props = {
   showFreezeTime: boolean;
   showPositionRoundNumbers: boolean;
   utilityAtlasEntries: UtilityAtlasEntry[];
-  utilityAtlasLabel: string;
   utilityAtlasScope: UtilityAtlasScope;
-  utilityAtlasSourceFilter: UtilityAtlasSourceFilter;
   utilityAtlasTeamFilter: UtilityAtlasTeamFilter;
   utilityFocus: UtilityFocus;
-  onAnalysisPlayerClear: () => void;
-  onAnalysisPlayerToggle: (playerIds: string[], playerSide: Side) => void;
   onDisablePositionPlayerCompare: () => void;
   onEnablePositionPlayerBroadCompare: () => void;
   onEnablePositionPlayerCompare: () => void;
-  onHeatmapScopeChange: (scope: HeatmapScope) => void;
   onHeatmapTeamFilterChange: (filter: HeatmapTeamFilter) => void;
   onOpenHome: () => void;
   onOpenMatches: () => void;
-  onPositionsScopeChange: (scope: PositionsScope) => void;
   onPositionsTeamFilterChange: (filter: PositionsTeamFilter) => void;
   onReplayPlayerSelect: (playerId: string) => void;
   onSelectAnalysisMode: (mode: ReplayAnalysisMode) => void;
@@ -129,26 +100,16 @@ type Props = {
 export function ReplayMapFirstPage({
   activeRoundIndex,
   analysisMode,
-  analysisPlayers,
   displayedPositionTrailEntries,
-  heatmapLabel,
   heatmapScope,
   heatmapSnapshot,
-  heatmapSourceFilter,
   heatmapTeamFilter,
   livePlayerContextMode,
   markers,
   playback,
-  positionPlayerBroadCompareEnabled,
   positionPlayerCompareEnabled,
-  positionPlayerMaxSelections,
   positionPlayerSelectedCount,
-  positionPlayerSelectedKeys,
   positionPlayerSnapshots,
-  positionTrailEntries,
-  positionsLabel,
-  positionsScope,
-  positionsSourceFilter,
   positionsTeamFilter,
   positionsView,
   replay,
@@ -158,21 +119,15 @@ export function ReplayMapFirstPage({
   showFreezeTime,
   showPositionRoundNumbers,
   utilityAtlasEntries,
-  utilityAtlasLabel,
   utilityAtlasScope,
-  utilityAtlasSourceFilter,
   utilityAtlasTeamFilter,
   utilityFocus,
-  onAnalysisPlayerClear,
-  onAnalysisPlayerToggle,
   onDisablePositionPlayerCompare,
   onEnablePositionPlayerBroadCompare,
   onEnablePositionPlayerCompare,
-  onHeatmapScopeChange,
   onHeatmapTeamFilterChange,
   onOpenHome,
   onOpenMatches,
-  onPositionsScopeChange,
   onPositionsTeamFilterChange,
   onReplayPlayerSelect,
   onSelectAnalysisMode,

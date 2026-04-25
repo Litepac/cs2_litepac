@@ -28,7 +28,6 @@ type RadarImageMeta = {
 const radarSizeCache = new Map<string, Promise<RadarImageMeta>>();
 
 export function createRadarViewport(
-  replay: Replay,
   viewportWidth: number,
   viewportHeight: number,
   imageWidth: number,
@@ -262,11 +261,11 @@ function trimBackgroundMargins(
     right -= 1;
   }
 
-  while (bottom - top > 32 && rowBackgroundRatio(data, imageWidth, imageHeight, top, left, right, background) >= 0.985) {
+  while (bottom - top > 32 && rowBackgroundRatio(data, imageWidth, top, left, right, background) >= 0.985) {
     top += 1;
   }
 
-  while (bottom - top > 32 && rowBackgroundRatio(data, imageWidth, imageHeight, bottom - 1, left, right, background) >= 0.985) {
+  while (bottom - top > 32 && rowBackgroundRatio(data, imageWidth, bottom - 1, left, right, background) >= 0.985) {
     bottom -= 1;
   }
 
@@ -305,7 +304,6 @@ function columnBackgroundRatio(
 function rowBackgroundRatio(
   data: Uint8ClampedArray,
   imageWidth: number,
-  imageHeight: number,
   y: number,
   left: number,
   right: number,

@@ -53,6 +53,20 @@ Critical gaps:
 - validation needs stricter canonical invariants before more viewer assumptions depend on it
 - the frontend still carries too much old/experimental code in the active bundle
 
+### April 2026 implementation map
+
+Current local flow:
+
+- `viewer/src/app/useReplayLoader.ts` owns upload state, parser progress, local match insertion, delete, and active replay selection in one client-side hook.
+- `viewer/src/replay/parserBridge.ts` posts the `.dem` to `/api/parse-demo`, reads NDJSON parser progress, validates the returned canonical replay in the browser, then returns the full replay object to the app.
+- `viewer/src/replay/matchStore.ts` persists full replay artifacts in browser IndexedDB under `mastermind-local-matches`.
+- `parser/internal/server/server.go` exposes the local API surface: `/api/health`, `/api/parse-demo`, `/api/usage-events`, and `/api/feedback`.
+- `/api/parse-demo` is synchronous from the HTTP caller's perspective: it stores a temp upload, parses immediately, streams progress, streams the full replay artifact, and deletes the temp files after the request.
+
+First hosted-alpha hardening already started:
+
+- `cmd/mastermind-api` now accepts `-max-upload-bytes` and `-allowed-origin`, preserving local defaults while giving hosted deployments explicit upload-size and origin-policy controls.
+
 Near-term cleanup:
 
 - code-split Home / Matches / Replay so the public landing page stays light
@@ -71,6 +85,14 @@ Minimum bar:
 - replay artifact persistence
 - async parse job lifecycle or equivalent durable ingest flow
 - operational safeguards such as upload limits, timeouts, cleanup, and basic abuse protection
+
+Recommended first implementation slice:
+
+- Introduce a server-side ingest job model with states equivalent to the current client-visible stages: upload, parser, validate, index, save, failed.
+- Keep the parser as the canonical replay producer; do not move replay truth into the viewer or a separate stats service.
+- Persist the canonical replay artifact server-side before the viewer adds it to the library.
+- Add a development filesystem-backed store first, behind a small interface that can later be backed by object storage plus a database without changing parser truth.
+- Keep the existing `/api/parse-demo` local endpoint as a compatibility path until the async hosted flow proves stable.
 
 Without this, a domain still fronts a local-style prototype rather than a product.
 

@@ -27,19 +27,18 @@ export function ReplayModeRail({
   onSelectPositionsView,
 }: ReplayModeRailProps) {
   return (
-    <nav className="dr-mapfirst-mode-rail" aria-label="Replay mode">
-      <div className="dr-mapfirst-mode-brand">
+    <nav className="dr-mapfirst-mode-rail" aria-label="Replay navigation">
+      <button className="dr-mapfirst-mode-brand" onClick={onOpenHome} type="button" aria-label="Open Home">
         <img src="/DemoRead_Logo.png" alt="DemoRead" decoding="async" />
-      </div>
-      <div className="dr-mapfirst-shell-rail-list" aria-label="Product navigation">
+      </button>
+      <div className="dr-mapfirst-mode-rail-list">
         <button className="dr-mapfirst-rail-button dr-mapfirst-shell-button" onClick={onOpenHome} type="button">
           Home
         </button>
         <button className="dr-mapfirst-rail-button dr-mapfirst-shell-button" onClick={onOpenMatches} type="button">
           Matches
         </button>
-      </div>
-      <div className="dr-mapfirst-mode-rail-list">
+        <span className="dr-mapfirst-rail-divider" aria-hidden="true" />
         {MODE_OPTIONS.map((entry) => {
           const active = analysisMode === entry.mode && (entry.mode !== "positions" || entry.positionsView === positionsView);
           return (

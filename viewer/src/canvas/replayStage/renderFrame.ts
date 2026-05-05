@@ -18,6 +18,7 @@ export function renderDynamicFrame(
   round: Round,
   currentTick: number,
   selectedPlayerId: string | null,
+  selectedUtilityAtlasKey: string | null,
   activeRoundIndex: number,
   heatmapCellSize: number,
   heatmapScope: HeatmapScope,
@@ -64,7 +65,20 @@ export function renderDynamicFrame(
     stage.lastSelectedPlayerId = null;
     stage.lastAtlasEntryKey = null;
 
-    for (const entry of utilityAtlasEntries) {
+    const sortedAtlasEntries = selectedUtilityAtlasKey
+      ? [...utilityAtlasEntries].sort((left, right) => {
+          if (left.key === selectedUtilityAtlasKey) {
+            return 1;
+          }
+          if (right.key === selectedUtilityAtlasKey) {
+            return -1;
+          }
+          return 0;
+        })
+      : utilityAtlasEntries;
+
+    for (const entry of sortedAtlasEntries) {
+      const emphasize = selectedUtilityAtlasKey === entry.key;
       drawUtilityAtlasVisual(
         stage.utilityTrailLayer,
         stage.utilityOverlayLayer,
@@ -73,13 +87,7 @@ export function renderDynamicFrame(
         entry.throwerSide,
         radarViewport,
         {
-          emphasize:
-            selectedPlayerId != null &&
-            entry.throwerPlayerId === selectedPlayerId &&
-            (entry.utility.kind === "smoke" ||
-              entry.utility.kind === "molotov" ||
-              entry.utility.kind === "incendiary" ||
-              entry.utility.kind === "decoy"),
+          emphasize,
         },
         onSelectAtlasEntry ? () => onSelectAtlasEntry(entry) : undefined,
       );

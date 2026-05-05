@@ -1,12 +1,13 @@
 import { useEffect, useState, type PointerEvent as ReactPointerEvent } from "react";
 
 import { ReplayStage } from "../canvas/ReplayStage";
-import { scoreForSide, sideTeam } from "../replay/derived";
+import { scoreForSide, sideTeam, type Side } from "../replay/derived";
 import type { HeatmapScope, HeatmapSnapshot, HeatmapTeamFilter } from "../replay/heatmapAnalysis";
-import { livePlayersAtTick } from "../replay/live";
+import { livePlayersAtTick, type LivePlayerState } from "../replay/live";
 import type {
   PositionPlayerSnapshot,
   PositionTrailEntry,
+  PositionsScope,
   PositionsTeamFilter,
   PositionsView,
 } from "../replay/positionsAnalysis";
@@ -28,7 +29,30 @@ import { ReplayModeRail } from "./replay-map-first/ReplayModeRail";
 import { ReplayRosterColumn } from "./replay-map-first/ReplayRosterColumn";
 import "./ReplayMapFirstPage.css";
 
-const PLAYBACK_SPEEDS = [0.5, 1, 1.5, 2];
+const TEAM_FILTERS: Array<{ label: string; value: "all" | Side }> = [
+  { label: "All", value: "all" },
+  { label: "CT", value: "CT" },
+  { label: "T", value: "T" },
+];
+const UTILITY_OPTIONS: Array<{ label: string; value: UtilityFocus }> = [
+  { label: "Smoke", value: "smoke" },
+  { label: "Flash", value: "flashbang" },
+  { label: "HE", value: "hegrenade" },
+  { label: "Fire", value: "fire" },
+  { label: "All", value: "all" },
+];
+const SCOPE_OPTIONS: Array<{ label: string; value: UtilityAtlasScope }> = [
+  { label: "Round", value: "round" },
+  { label: "Half", value: "sideBlock" },
+  { label: "Match", value: "match" },
+];
+type RoundSetFilter = "round" | "ctSide" | "tSide" | "match";
+const ROUND_SET_OPTIONS: Array<{ label: string; value: RoundSetFilter }> = [
+  { label: "Round", value: "round" },
+  { label: "CT side", value: "ctSide" },
+  { label: "T side", value: "tSide" },
+  { label: "Match", value: "match" },
+];
 
 type PlaybackState = {
   changeTick: (tick: number) => void;
@@ -64,15 +88,18 @@ type Props = {
   livePlayerContextMode: boolean;
   markers: TimelineEventItem[];
   playback: PlaybackState;
+  positionPlayerBroadCompareEnabled: boolean;
   positionPlayerCompareEnabled: boolean;
   positionPlayerSelectedCount: number;
   positionPlayerSnapshots: PositionPlayerSnapshot[];
+  positionsScope: PositionsScope;
   positionsTeamFilter: PositionsTeamFilter;
   positionsView: PositionsView;
   replay: Replay;
   round: Round;
   selectedPlayerId: string | null;
   selectedPlayerName: string | null;
+  selectedUtilityAtlasKey: string | null;
   showFreezeTime: boolean;
   showPositionRoundNumbers: boolean;
   utilityAtlasEntries: UtilityAtlasEntry[];
@@ -82,6 +109,7 @@ type Props = {
   onDisablePositionPlayerCompare: () => void;
   onEnablePositionPlayerBroadCompare: () => void;
   onEnablePositionPlayerCompare: () => void;
+  onHeatmapScopeChange: (scope: HeatmapScope) => void;
   onHeatmapTeamFilterChange: (filter: HeatmapTeamFilter) => void;
   onOpenHome: () => void;
   onOpenMatches: () => void;
@@ -92,6 +120,7 @@ type Props = {
   onSelectPositionSnapshot: (snapshot: PositionPlayerSnapshot) => void;
   onSelectPositionsView: (view: PositionsView) => void;
   onSelectRound: (index: number) => void;
+  onPositionsScopeChange: (scope: PositionsScope) => void;
   onShowFreezeTimeChange: (show: boolean) => void;
   onShowPositionRoundNumbersChange: (next: boolean) => void;
   onUtilityAtlasScopeChange: (scope: UtilityAtlasScope) => void;
@@ -109,15 +138,18 @@ export function ReplayMapFirstPage({
   livePlayerContextMode,
   markers,
   playback,
+  positionPlayerBroadCompareEnabled,
   positionPlayerCompareEnabled,
   positionPlayerSelectedCount,
   positionPlayerSnapshots,
+  positionsScope,
   positionsTeamFilter,
   positionsView,
   replay,
   round,
   selectedPlayerId,
   selectedPlayerName,
+  selectedUtilityAtlasKey,
   showFreezeTime,
   showPositionRoundNumbers,
   utilityAtlasEntries,
@@ -127,6 +159,7 @@ export function ReplayMapFirstPage({
   onDisablePositionPlayerCompare,
   onEnablePositionPlayerBroadCompare,
   onEnablePositionPlayerCompare,
+  onHeatmapScopeChange,
   onHeatmapTeamFilterChange,
   onOpenHome,
   onOpenMatches,
@@ -137,6 +170,7 @@ export function ReplayMapFirstPage({
   onSelectPositionSnapshot,
   onSelectPositionsView,
   onSelectRound,
+  onPositionsScopeChange,
   onShowFreezeTimeChange,
   onShowPositionRoundNumbersChange,
   onUtilityAtlasScopeChange,
@@ -149,12 +183,19 @@ export function ReplayMapFirstPage({
   const liveMode = analysisMode === "live";
   const timer = resolveRoundTimer(replay, round, playback.renderTickRounded);
   const livePlayers = livePlayersAtTick(replay, round, playback.renderTickRounded);
+  const selectedLivePlayer = livePlayers.find((entry) => entry.playerId === selectedPlayerId) ?? null;
   const ctPlayers = livePlayers.filter((entry) => entry.side === "CT");
   const tPlayers = livePlayers.filter((entry) => entry.side === "T");
   const ctTeam = sideTeam(replay, round, "CT");
   const tTeam = sideTeam(replay, round, "T");
   const ctScore = scoreForSide(round, "CT", "before");
   const tScore = scoreForSide(round, "T", "before");
+
+  useEffect(() => {
+    setStageToolMode("move");
+    setDrawingStrokes([]);
+    setActiveDrawingId(null);
+  }, [activeRoundIndex, replay.sourceDemo.sha256]);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -164,7 +205,7 @@ export function ReplayMapFirstPage({
 
       const key = event.key.toLowerCase();
       if (key === " " || event.code === "Space") {
-        if (isReplayTimelineRangeTarget(event.target) || !isInteractiveKeyboardTarget(event.target)) {
+        if (!isTextEntryKeyboardTarget(event.target)) {
           event.preventDefault();
           playback.togglePlayback();
         }
@@ -275,47 +316,55 @@ export function ReplayMapFirstPage({
           replay={replay}
           round={round}
           selectedPlayerId={selectedPlayerId}
+          selectedUtilityAtlasKey={selectedUtilityAtlasKey}
           utilityAtlasEntries={utilityAtlasEntries}
           utilityFocus={utilityFocus}
           onSelectPositionSnapshot={onSelectPositionSnapshot}
           onSelectPlayer={onReplayPlayerSelect}
         />
 
-        <div className="dr-mapfirst-stage-toolbar">
-          <ReplayDrawingToolbar
-            mode={stageToolMode}
-            hasDrawings={drawingStrokes.length > 0}
-            onClear={() => {
-              setDrawingStrokes([]);
-              setActiveDrawingId(null);
-            }}
-            onSelectDraw={() => setStageToolMode("draw")}
-            onSelectMove={() => setStageToolMode("move")}
-          />
-          <div className="dr-mapfirst-transport" aria-label="Playback controls">
-            <div className="dr-mapfirst-action-group" aria-label="Timeline actions">
-              <button
-                aria-pressed={showFreezeTime}
-                className={showFreezeTime ? "dr-mapfirst-chip dr-mapfirst-chip-active" : "dr-mapfirst-chip"}
-                onClick={() => onShowFreezeTimeChange(!showFreezeTime)}
-                type="button"
-              >
-                Freeze
-              </button>
-              <button className="dr-mapfirst-chip" onClick={playback.resetPlayback} type="button">Reset</button>
-            </div>
-            <div className="dr-mapfirst-speed-group" aria-label="Playback speed">
-              {PLAYBACK_SPEEDS.map((entry) => (
-                <button
-                  key={entry}
-                  className={entry === playback.speed ? "dr-mapfirst-chip dr-mapfirst-chip-active" : "dr-mapfirst-chip"}
-                  onClick={() => playback.setSpeed(entry)}
-                  type="button"
-                >
-                  {entry}x
-                </button>
-              ))}
-            </div>
+        <div className="dr-mapfirst-stage-tool-stack">
+          {analysisMode !== "live" ? (
+            <StageAnalysisControls
+              analysisMode={analysisMode}
+              heatmapScope={heatmapScope}
+              heatmapTeamFilter={heatmapTeamFilter}
+              positionPlayerBroadCompareEnabled={positionPlayerBroadCompareEnabled}
+              positionPlayerCompareEnabled={positionPlayerCompareEnabled}
+              positionPlayerSelectedCount={positionPlayerSelectedCount}
+              positionsScope={positionsScope}
+              positionsTeamFilter={positionsTeamFilter}
+              positionsView={positionsView}
+              selectedPlayerName={selectedPlayerName}
+              showPositionRoundNumbers={showPositionRoundNumbers}
+              utilityAtlasScope={utilityAtlasScope}
+              utilityAtlasTeamFilter={utilityAtlasTeamFilter}
+              utilityFocus={utilityFocus}
+              onDisablePositionPlayerCompare={onDisablePositionPlayerCompare}
+              onEnablePositionPlayerBroadCompare={onEnablePositionPlayerBroadCompare}
+              onEnablePositionPlayerCompare={onEnablePositionPlayerCompare}
+              onHeatmapScopeChange={onHeatmapScopeChange}
+              onHeatmapTeamFilterChange={onHeatmapTeamFilterChange}
+              onPositionsScopeChange={onPositionsScopeChange}
+              onPositionsTeamFilterChange={onPositionsTeamFilterChange}
+              onShowPositionRoundNumbersChange={onShowPositionRoundNumbersChange}
+              onUtilityAtlasScopeChange={onUtilityAtlasScopeChange}
+              onUtilityAtlasTeamFilterChange={onUtilityAtlasTeamFilterChange}
+              onUtilityFocusChange={onUtilityFocusChange}
+            />
+          ) : null}
+
+          <div className="dr-mapfirst-stage-toolbar">
+            <ReplayDrawingToolbar
+              mode={stageToolMode}
+              hasDrawings={drawingStrokes.length > 0}
+              onClear={() => {
+                setDrawingStrokes([]);
+                setActiveDrawingId(null);
+              }}
+              onSelectDraw={() => setStageToolMode("draw")}
+              onSelectMove={() => setStageToolMode("move")}
+            />
           </div>
         </div>
 
@@ -343,7 +392,6 @@ export function ReplayMapFirstPage({
           ctScore={ctScore}
           ctTeamName={ctTeam?.displayName ?? "CT"}
           mapName={replay.map.displayName}
-          modeLabel={resolveModeLabel(analysisMode, positionsView, livePlayerContextMode)}
           roundNumber={round.roundNumber}
           tScore={tScore}
           tTeamName={tTeam?.displayName ?? "T"}
@@ -351,6 +399,13 @@ export function ReplayMapFirstPage({
         />
 
         {liveMode ? <KillFeed currentTick={playback.renderTickRounded} replay={replay} round={round} /> : null}
+
+        {liveMode && selectedPlayerId != null ? (
+          <LivePlayerFocusStrip
+            player={selectedLivePlayer}
+            playerName={selectedPlayerName}
+          />
+        ) : null}
 
         <aside className="dr-mapfirst-roster-rail dr-mapfirst-roster-rail-ct" aria-label={`${ctTeam?.displayName ?? "CT"} roster`}>
           <ReplayRosterColumn
@@ -381,46 +436,272 @@ export function ReplayMapFirstPage({
       <section className="dr-mapfirst-dock" aria-label="Replay review controls">
         <ReplayDock
           activeRoundIndex={activeRoundIndex}
-          analysisMode={analysisMode}
           currentTick={playback.tick}
           displayEndTick={round.officialEndTick != null && round.officialEndTick > round.endTick ? round.officialEndTick : round.endTick}
           displayStartTick={showFreezeTime ? round.startTick : playback.initialRoundTick}
-          heatmapTeamFilter={heatmapTeamFilter}
           markers={markers}
           playing={playback.playing}
-          positionsTeamFilter={positionsTeamFilter}
-          positionsView={positionsView}
           replay={replay}
           round={round}
           roundClock={playback.roundClock}
-          selectedPlayerName={selectedPlayerName}
+          showFreezeTime={showFreezeTime}
+          speed={playback.speed}
           tickRate={replay.match.tickRate}
-          utilityAtlasScope={utilityAtlasScope}
-          utilityAtlasTeamFilter={utilityAtlasTeamFilter}
-          utilityFocus={utilityFocus}
-          onHeatmapTeamFilterChange={onHeatmapTeamFilterChange}
+          onResetPlayback={playback.resetPlayback}
           onPlayToggle={playback.togglePlayback}
-          onPositionsTeamFilterChange={onPositionsTeamFilterChange}
           onSelectRound={onSelectRound}
+          onSetSpeed={playback.setSpeed}
+          onShowFreezeTimeChange={onShowFreezeTimeChange}
           onTickChange={playback.changeTick}
-          onUtilityAtlasScopeChange={onUtilityAtlasScopeChange}
-          onUtilityAtlasTeamFilterChange={onUtilityAtlasTeamFilterChange}
-          onUtilityFocusChange={onUtilityFocusChange}
         />
-        {positionsView === "player" && analysisMode === "positions" ? (
-          <div className="dr-mapfirst-player-tools">
-            <span>{selectedPlayerName ? `Studying ${selectedPlayerName}` : "Choose a player on the map or roster"}</span>
-            <button type="button" onClick={onEnablePositionPlayerBroadCompare}>Broad compare</button>
-            <button type="button" disabled={positionPlayerSelectedCount === 0} onClick={onEnablePositionPlayerCompare}>Compare selected</button>
-            <button type="button" disabled={!positionPlayerCompareEnabled} onClick={onDisablePositionPlayerCompare}>Focus one</button>
-            <button type="button" onClick={() => onShowPositionRoundNumbersChange(!showPositionRoundNumbers)}>
-              {showPositionRoundNumbers ? "Hide round numbers" : "Show round numbers"}
-            </button>
-          </div>
-        ) : null}
       </section>
     </div>
   );
+}
+
+function LivePlayerFocusStrip({
+  player,
+  playerName,
+}: {
+  player: LivePlayerState | null;
+  playerName: string | null;
+}) {
+  const displayName = player?.name ?? playerName ?? "Selected player";
+  const utilityCount = player ? countKnownUtility(player) : null;
+  const weapon = player?.activeWeapon ?? player?.mainWeapon ?? null;
+
+  return (
+    <div
+      className={`dr-mapfirst-live-focus-strip ${
+        player?.side === "T" ? "dr-mapfirst-live-focus-strip-t" : "dr-mapfirst-live-focus-strip-ct"
+      }`}
+    >
+      <strong>{displayName}</strong>
+      {player ? (
+        <>
+          <span className="dr-mapfirst-live-focus-health">{player.alive ? `${player.health ?? "--"} HP` : "Dead"}</span>
+          <span className="dr-mapfirst-live-focus-weapon">{weapon ?? "No weapon"}</span>
+          <span className="dr-mapfirst-live-focus-util">
+            {utilityCount != null ? `${utilityCount} util` : ""}
+          </span>
+          <span className="dr-mapfirst-live-focus-bomb">{player.hasBomb ? "C4" : ""}</span>
+        </>
+      ) : (
+        <span className="dr-mapfirst-live-focus-empty">Outside current sample</span>
+      )}
+    </div>
+  );
+}
+
+function StageAnalysisControls({
+  analysisMode,
+  heatmapScope,
+  heatmapTeamFilter,
+  positionPlayerBroadCompareEnabled,
+  positionPlayerCompareEnabled,
+  positionPlayerSelectedCount,
+  positionsScope,
+  positionsTeamFilter,
+  positionsView,
+  selectedPlayerName,
+  showPositionRoundNumbers,
+  utilityAtlasScope,
+  utilityAtlasTeamFilter,
+  utilityFocus,
+  onDisablePositionPlayerCompare,
+  onEnablePositionPlayerBroadCompare,
+  onEnablePositionPlayerCompare,
+  onHeatmapScopeChange,
+  onHeatmapTeamFilterChange,
+  onPositionsScopeChange,
+  onPositionsTeamFilterChange,
+  onShowPositionRoundNumbersChange,
+  onUtilityAtlasScopeChange,
+  onUtilityAtlasTeamFilterChange,
+  onUtilityFocusChange,
+}: {
+  analysisMode: ReplayAnalysisMode;
+  heatmapScope: HeatmapScope;
+  heatmapTeamFilter: HeatmapTeamFilter;
+  positionPlayerBroadCompareEnabled: boolean;
+  positionPlayerCompareEnabled: boolean;
+  positionPlayerSelectedCount: number;
+  positionsScope: PositionsScope;
+  positionsTeamFilter: PositionsTeamFilter;
+  positionsView: PositionsView;
+  selectedPlayerName: string | null;
+  showPositionRoundNumbers: boolean;
+  utilityAtlasScope: UtilityAtlasScope;
+  utilityAtlasTeamFilter: UtilityAtlasTeamFilter;
+  utilityFocus: UtilityFocus;
+  onDisablePositionPlayerCompare: () => void;
+  onEnablePositionPlayerBroadCompare: () => void;
+  onEnablePositionPlayerCompare: () => void;
+  onHeatmapScopeChange: (scope: HeatmapScope) => void;
+  onHeatmapTeamFilterChange: (filter: HeatmapTeamFilter) => void;
+  onPositionsScopeChange: (scope: PositionsScope) => void;
+  onPositionsTeamFilterChange: (filter: PositionsTeamFilter) => void;
+  onShowPositionRoundNumbersChange: (next: boolean) => void;
+  onUtilityAtlasScopeChange: (scope: UtilityAtlasScope) => void;
+  onUtilityAtlasTeamFilterChange: (filter: UtilityAtlasTeamFilter) => void;
+  onUtilityFocusChange: (focus: UtilityFocus) => void;
+}) {
+  const positionsRoundSet = roundSetFromScope(positionsScope, positionsTeamFilter);
+  const heatmapRoundSet = roundSetFromScope(heatmapScope, heatmapTeamFilter);
+  const playerSingleActive = !positionPlayerBroadCompareEnabled && !positionPlayerCompareEnabled;
+
+  function setPositionsRoundSet(next: RoundSetFilter) {
+    const { scope, teamFilter } = roundSetToScope(next);
+    onPositionsScopeChange(scope);
+    onPositionsTeamFilterChange(teamFilter);
+  }
+
+  function setHeatmapRoundSet(next: RoundSetFilter) {
+    const { scope, teamFilter } = roundSetToScope(next);
+    onHeatmapScopeChange(scope);
+    onHeatmapTeamFilterChange(teamFilter);
+  }
+
+  return (
+    <div className={`dr-mapfirst-analysis-controls dr-mapfirst-analysis-controls-${analysisMode}-${positionsView}`} aria-label="Analysis controls">
+      <div className="dr-mapfirst-analysis-copy">
+        <span>{resolveDockControlLabel(analysisMode, positionsView)}</span>
+        {selectedPlayerName ? <strong>Focus: {selectedPlayerName}</strong> : null}
+      </div>
+      <div className="dr-mapfirst-analysis-actions">
+        {analysisMode === "utilityAtlas" ? (
+          <>
+            <Segmented items={SCOPE_OPTIONS} selectedValue={utilityAtlasScope} onChange={onUtilityAtlasScopeChange} />
+            <Segmented items={TEAM_FILTERS} selectedValue={utilityAtlasTeamFilter} onChange={onUtilityAtlasTeamFilterChange} />
+            <Segmented items={UTILITY_OPTIONS} selectedValue={utilityFocus} onChange={onUtilityFocusChange} />
+          </>
+        ) : null}
+        {analysisMode === "positions" && positionsView === "paths" ? (
+          <Segmented items={ROUND_SET_OPTIONS} selectedValue={positionsRoundSet} onChange={setPositionsRoundSet} />
+        ) : null}
+        {analysisMode === "positions" && positionsView === "player" ? (
+          <>
+            <Segmented items={TEAM_FILTERS} selectedValue={positionsTeamFilter} onChange={onPositionsTeamFilterChange} />
+            <div className="dr-mapfirst-analysis-player-actions">
+              <button
+                className={playerSingleActive ? "dr-mapfirst-analysis-action-active" : ""}
+                type="button"
+                aria-pressed={playerSingleActive}
+                onClick={onDisablePositionPlayerCompare}
+              >
+                Single
+              </button>
+              <button
+                className={positionPlayerBroadCompareEnabled ? "dr-mapfirst-analysis-action-active" : ""}
+                type="button"
+                aria-pressed={positionPlayerBroadCompareEnabled}
+                onClick={onEnablePositionPlayerBroadCompare}
+              >
+                All
+              </button>
+              <button
+                className={positionPlayerCompareEnabled ? "dr-mapfirst-analysis-action-active" : ""}
+                type="button"
+                aria-pressed={positionPlayerCompareEnabled}
+                disabled={positionPlayerSelectedCount === 0}
+                onClick={onEnablePositionPlayerCompare}
+              >
+                Multi
+              </button>
+              <button type="button" onClick={() => onShowPositionRoundNumbersChange(!showPositionRoundNumbers)}>
+                {showPositionRoundNumbers ? "Hide R#" : "Show R#"}
+              </button>
+            </div>
+          </>
+        ) : null}
+        {analysisMode === "heatmap" ? (
+          <Segmented items={ROUND_SET_OPTIONS} selectedValue={heatmapRoundSet} onChange={setHeatmapRoundSet} />
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+type SegmentedProps<T extends string> = {
+  items: Array<{ label: string; value: T }>;
+  selectedValue: T;
+  onChange: (value: T) => void;
+};
+
+function Segmented<T extends string>({ items, selectedValue, onChange }: SegmentedProps<T>) {
+  return (
+    <div className="dr-mapfirst-segmented">
+      {items.map((entry) => (
+        <button
+          key={entry.value}
+          className={entry.value === selectedValue ? "dr-mapfirst-chip dr-mapfirst-chip-active" : "dr-mapfirst-chip"}
+          onClick={() => onChange(entry.value)}
+          type="button"
+        >
+          {entry.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function roundSetFromScope(scope: PositionsScope | HeatmapScope, teamFilter: PositionsTeamFilter | HeatmapTeamFilter): RoundSetFilter {
+  if (scope === "round") {
+    return "round";
+  }
+
+  if (scope === "match" && teamFilter === "CT") {
+    return "ctSide";
+  }
+
+  if (scope === "match" && teamFilter === "T") {
+    return "tSide";
+  }
+
+  return "match";
+}
+
+function roundSetToScope(value: RoundSetFilter): { scope: PositionsScope; teamFilter: PositionsTeamFilter } {
+  switch (value) {
+    case "round":
+      return { scope: "round", teamFilter: "all" };
+    case "ctSide":
+      return { scope: "match", teamFilter: "CT" };
+    case "tSide":
+      return { scope: "match", teamFilter: "T" };
+    case "match":
+    default:
+      return { scope: "match", teamFilter: "all" };
+  }
+}
+
+function countKnownUtility(player: LivePlayerState) {
+  const counts = [player.flashbangs, player.smokes, player.heGrenades, player.fireGrenades, player.decoys];
+  if (counts.every((entry) => entry == null)) {
+    return null;
+  }
+
+  let total = 0;
+  for (const count of counts) {
+    total += count ?? 0;
+  }
+  return total;
+}
+
+function resolveDockControlLabel(analysisMode: ReplayAnalysisMode, positionsView: PositionsView) {
+  if (analysisMode === "utilityAtlas") {
+    return "Utility review";
+  }
+
+  if (analysisMode === "positions") {
+    return positionsView === "player" ? "Player study" : "Path review";
+  }
+
+  if (analysisMode === "heatmap") {
+    return "Heatmap";
+  }
+
+  return "Live review";
 }
 
 function pointerEventToDrawingPoint(event: ReactPointerEvent<SVGSVGElement>) {
@@ -448,22 +729,19 @@ function isInteractiveKeyboardTarget(target: EventTarget | null) {
   );
 }
 
-function isReplayTimelineRangeTarget(target: EventTarget | null) {
-  return target instanceof HTMLInputElement && target.type === "range" && target.closest(".dr-mapfirst-track") != null;
+function isTextEntryKeyboardTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  const tagName = target.tagName.toLowerCase();
+  return target.isContentEditable || tagName === "textarea" || tagName === "select" || isTextInput(target);
 }
 
-function resolveModeLabel(analysisMode: ReplayAnalysisMode, positionsView: PositionsView, livePlayerContextMode: boolean) {
-  if (analysisMode === "live") {
-    return livePlayerContextMode ? "Live focus" : "Live replay";
+function isTextInput(target: HTMLElement) {
+  if (!(target instanceof HTMLInputElement)) {
+    return false;
   }
 
-  if (analysisMode === "utilityAtlas") {
-    return "Utility";
-  }
-
-  if (analysisMode === "heatmap") {
-    return "Heatmap";
-  }
-
-  return positionsView === "player" ? "Position player" : "Paths";
+  return !["button", "checkbox", "radio", "range", "reset", "submit"].includes(target.type);
 }

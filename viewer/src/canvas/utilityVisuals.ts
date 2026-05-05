@@ -1,9 +1,14 @@
-import { Container, Graphics, Text } from "pixi.js";
+import { Circle, Container, Graphics, Text } from "pixi.js";
 
 import type { RadarViewport } from "../maps/transform";
 import { worldToScreen } from "../maps/transform";
-import { normalizeUtilityVisualKind, utilityColorPixi } from "../replay/utilityPresentation";
+import { normalizeUtilityVisualKind } from "../replay/utilityPresentation";
 import type { Replay, UtilityEntity } from "../replay/types";
+import decoyIconSvg from "../assets/icons/cs2-equipment/panorama/images/icons/equipment/decoy.svg?raw";
+import flashbangIconSvg from "../assets/icons/cs2-equipment/panorama/images/icons/equipment/flashbang.svg?raw";
+import hegrenadeIconSvg from "../assets/icons/cs2-equipment/panorama/images/icons/equipment/hegrenade.svg?raw";
+import molotovIconSvg from "../assets/icons/cs2-equipment/panorama/images/icons/equipment/molotov.svg?raw";
+import smokegrenadeIconSvg from "../assets/icons/cs2-equipment/panorama/images/icons/equipment/smokegrenade.svg?raw";
 import {
   utilityActivationTick,
   utilityLifecycleEndTick,
@@ -30,6 +35,79 @@ type SmokeDisplacementVisual = {
 };
 
 type UtilityPhase = "projectile" | "active" | "burst";
+
+type UtilityOverlayStyle = {
+  coreColor: number;
+  endpointColor: number;
+  ringColor: number;
+  trailColor: number;
+};
+
+type UtilitySvgIcon = {
+  height: number;
+  svg: string;
+  width: number;
+};
+
+function utilityOverlayStyle(kind: UtilityEntity["kind"]): UtilityOverlayStyle {
+  switch (kind) {
+    case "smoke":
+      return { coreColor: 0xf5f8fa, endpointColor: 0xdce6ee, ringColor: 0xb8c4cb, trailColor: 0xb9c6ce };
+    case "flashbang":
+      return { coreColor: 0xffffff, endpointColor: 0xfff2b8, ringColor: 0xfff8e7, trailColor: 0xffdf7a };
+    case "hegrenade":
+      return { coreColor: 0xffe2da, endpointColor: 0xff7669, ringColor: 0xffaa9f, trailColor: 0xff7669 };
+    case "molotov":
+    case "incendiary":
+      return { coreColor: 0xfff0bf, endpointColor: 0xffa84e, ringColor: 0xffcf86, trailColor: 0xffa84e };
+    case "decoy":
+      return { coreColor: 0xf0e8ff, endpointColor: 0xcdb8ff, ringColor: 0xe0d2ff, trailColor: 0xcdb8ff };
+    default:
+      return { coreColor: 0xffffff, endpointColor: 0xd8e1e8, ringColor: 0xf0f5f9, trailColor: 0xd8e1e8 };
+  }
+}
+
+function utilityTeamAccentColor(side: "T" | "CT" | null) {
+  if (side === "CT") {
+    return 0x4faeff;
+  }
+
+  if (side === "T") {
+    return 0xf3a448;
+  }
+
+  return 0xb7c2ca;
+}
+
+function utilityTeamPlateFill(side: "T" | "CT" | null) {
+  if (side === "CT") {
+    return 0x071a27;
+  }
+
+  if (side === "T") {
+    return 0x241606;
+  }
+
+  return 0x0d1114;
+}
+
+function utilitySvgIcon(kind: UtilityEntity["kind"]): UtilitySvgIcon {
+  switch (kind) {
+    case "flashbang":
+      return { svg: flashbangIconSvg, width: 30, height: 32 };
+    case "hegrenade":
+      return { svg: hegrenadeIconSvg, width: 25, height: 33 };
+    case "smoke":
+      return { svg: smokegrenadeIconSvg, width: 15, height: 32 };
+    case "molotov":
+    case "incendiary":
+      return { svg: molotovIconSvg, width: 22, height: 32 };
+    case "decoy":
+      return { svg: decoyIconSvg, width: 30, height: 32 };
+    default:
+      return { svg: smokegrenadeIconSvg, width: 15, height: 32 };
+  }
+}
 
 export function drawUtilityVisual(
   trailLayer: Container,
@@ -127,6 +205,7 @@ export function drawUtilityAtlasVisual(
   onSelect?: () => void,
 ) {
   const utilityKind = normalizeUtilityVisualKind(utility.kind) ?? "smoke";
+  const teamAccent = utilityTeamAccentColor(throwerSide);
   const trajectoryMode = resolveAtlasTrajectoryMode(utility.kind, options?.emphasize ?? false);
   const showTrajectory = trajectoryMode !== "none";
   const trajectoryPoints = showTrajectory
@@ -135,30 +214,20 @@ export function drawUtilityAtlasVisual(
         utility,
         utilityLifecycleEndTick(utility),
         radarViewport,
-        trajectoryMode === "minimal" ? 2 : 1,
+        trajectoryMode === "minimal" ? (options?.emphasize ? 2 : 4) : 1,
+        { clampToActivation: false },
       )
     : [];
   if (trajectoryPoints.length >= 2) {
-    const trail = new Graphics();
-    trail.moveTo(trajectoryPoints[0].x, trajectoryPoints[0].y);
-    for (let index = 1; index < trajectoryPoints.length; index += 1) {
-      trail.lineTo(trajectoryPoints[index].x, trajectoryPoints[index].y);
-    }
-    trail.stroke({
-      color: utilityColorPixi(utilityKind),
-      width:
-        options?.emphasize
-          ? trajectoryMode === "primary"
-            ? 2.45
-            : 1.85
-          : trajectoryMode === "primary"
-            ? 1.7
-            : 1.25,
-      alpha: options?.trailAlpha ?? resolveAtlasTrailAlpha(utility.kind, options?.emphasize ?? false, trajectoryMode),
-      cap: "round",
-      join: "round",
-    });
-    trailLayer.addChild(trail);
+    drawAtlasTrajectoryTrail(
+      trailLayer,
+      trajectoryPoints,
+      teamAccent,
+      utility.kind,
+      trajectoryMode,
+      options?.emphasize ?? false,
+      options?.trailAlpha,
+    );
   }
 
   const activePoint = resolveUtilityAtlasOutcomePoint(replay, utility, radarViewport);
@@ -167,68 +236,9 @@ export function drawUtilityAtlasVisual(
     return;
   }
 
-  if (onSelect) {
-    const hitTarget = new Graphics();
-    hitTarget.circle(
-      activePoint.x,
-      activePoint.y,
-      utility.kind === "smoke" || utility.kind === "molotov" || utility.kind === "incendiary" ? 18 : 14,
-    );
-    hitTarget.fill({ color: 0xffffff, alpha: 0.001 });
-    hitTarget.eventMode = "static";
-    hitTarget.cursor = "pointer";
-    hitTarget.on("pointertap", (event) => {
-      event.stopPropagation();
-      onSelect();
-    });
-    overlayLayer.addChild(hitTarget);
-  }
-
-  if (utility.kind === "smoke") {
-    const cloud = new Graphics();
-    cloud.circle(activePoint.x, activePoint.y, options?.emphasize ? 11.5 : 9.2);
-    cloud.fill({ color: 0xe9f0f5, alpha: options?.endpointAlpha ?? (options?.emphasize ? 0.4 : 0.22) });
-    cloud.circle(activePoint.x, activePoint.y, options?.emphasize ? 15.8 : 13);
-    cloud.stroke({
-      color: throwerSide === "CT" ? 0x4faeff : throwerSide === "T" ? 0xf3a448 : 0xbac8d3,
-      width: options?.emphasize ? 1.8 : 1.3,
-      alpha: options?.emphasize ? 0.66 : 0.38,
-    });
-    overlayLayer.addChild(cloud);
-    return;
-  }
-
-  if (utility.kind === "molotov" || utility.kind === "incendiary") {
-    const fire = new Graphics();
-    fire.circle(activePoint.x, activePoint.y, options?.emphasize ? 10 : 8.2);
-    fire.fill({ color: 0xffb461, alpha: options?.endpointAlpha ?? (options?.emphasize ? 0.42 : 0.2) });
-    fire.circle(activePoint.x, activePoint.y, options?.emphasize ? 13.2 : 11.2);
-    fire.stroke({ color: 0xffd4a3, width: options?.emphasize ? 1.6 : 1.15, alpha: options?.emphasize ? 0.42 : 0.22 });
-    overlayLayer.addChild(fire);
-    return;
-  }
-
-  if (utility.kind === "flashbang") {
-    const flash = new Graphics();
-    flash.circle(activePoint.x, activePoint.y, options?.emphasize ? 12.6 : 10.4);
-    flash.fill({ color: 0xfff6d6, alpha: options?.endpointAlpha ?? (options?.emphasize ? 0.24 : 0.14) });
-    flash.circle(activePoint.x, activePoint.y, options?.emphasize ? 21.5 : 17.4);
-    flash.stroke({ color: 0xfff8e7, width: options?.emphasize ? 2.35 : 1.75, alpha: options?.emphasize ? 0.62 : 0.36 });
-    flash.circle(activePoint.x, activePoint.y, options?.emphasize ? 5.2 : 4.1);
-    flash.fill({ color: 0xfffef8, alpha: options?.emphasize ? 0.74 : 0.46 });
-    overlayLayer.addChild(flash);
-    return;
-  }
-
-  if (utility.kind === "hegrenade") {
-    const burst = new Graphics();
-    burst.circle(activePoint.x, activePoint.y, options?.emphasize ? 7.8 : 6.3);
-    burst.fill({ color: 0xff8c79, alpha: options?.endpointAlpha ?? (options?.emphasize ? 0.28 : 0.16) });
-    burst.circle(activePoint.x, activePoint.y, options?.emphasize ? 16.4 : 13.2);
-    burst.stroke({ color: 0xffb2a1, width: options?.emphasize ? 2.2 : 1.55, alpha: options?.emphasize ? 0.54 : 0.3 });
-    burst.circle(activePoint.x, activePoint.y, options?.emphasize ? 3.9 : 3.1);
-    burst.fill({ color: 0xffe1d7, alpha: options?.emphasize ? 0.64 : 0.36 });
-    overlayLayer.addChild(burst);
+  if (utilityKind) {
+    drawAtlasEndpointVisual(overlayLayer, activePoint, utility.kind, throwerSide, options?.emphasize ?? false, options?.endpointAlpha);
+    drawAtlasEndpointHitTarget(overlayLayer, activePoint, utility.kind, onSelect);
     return;
   }
 
@@ -237,6 +247,157 @@ export function drawUtilityAtlasVisual(
   if (endpoint) {
     endpoint.alpha = options?.endpointAlpha ?? (options?.emphasize ? 0.88 : 0.48);
     endpoint.scale.set(options?.emphasize ? 1.08 : 0.9);
+  }
+  drawAtlasEndpointHitTarget(overlayLayer, activePoint, utility.kind, onSelect);
+}
+
+function drawAtlasEndpointVisual(
+  layer: Container,
+  point: ScreenPoint,
+  kind: UtilityEntity["kind"],
+  throwerSide: "T" | "CT" | null,
+  emphasize: boolean,
+  endpointAlpha: number | undefined,
+) {
+  const style = utilityOverlayStyle(kind);
+  const teamAccent = utilityTeamAccentColor(throwerSide);
+  const plateFill = utilityTeamPlateFill(throwerSide);
+  const endpoint = new Graphics();
+  const plateSize = emphasize ? 25 : 21;
+  const half = plateSize / 2;
+
+  endpoint.roundRect(point.x - half, point.y - half, plateSize, plateSize, 3.4);
+  endpoint.fill({ color: plateFill, alpha: emphasize ? 0.74 : 0.56 });
+  endpoint.roundRect(point.x - half, point.y - half, plateSize, plateSize, 3.4);
+  endpoint.stroke({
+    color: teamAccent,
+    width: emphasize ? 2.4 : 1.85,
+    alpha: emphasize ? 0.92 : 0.72,
+  });
+
+  if (emphasize) {
+    endpoint.roundRect(point.x - half - 2, point.y - half - 2, plateSize + 4, plateSize + 4, 4.6);
+    endpoint.stroke({ color: style.coreColor, width: 1.05, alpha: 0.24 });
+  }
+
+  layer.addChild(endpoint);
+  drawUtilityAtlasIcon(layer, point, kind, style, emphasize, endpointAlpha);
+}
+
+function drawUtilityAtlasIcon(
+  layer: Container,
+  point: ScreenPoint,
+  kind: UtilityEntity["kind"],
+  style: UtilityOverlayStyle,
+  emphasize: boolean,
+  endpointAlpha: number | undefined,
+) {
+  const iconDefinition = utilitySvgIcon(kind);
+  const icon = new Graphics();
+  const maxWidth = emphasize ? 15.8 : 13.4;
+  const maxHeight = emphasize ? 16.8 : 14.2;
+  const iconScale = Math.min(maxWidth / iconDefinition.width, maxHeight / iconDefinition.height);
+
+  icon.svg(iconDefinition.svg);
+  icon.pivot.set(iconDefinition.width / 2, iconDefinition.height / 2);
+  icon.position.set(point.x, point.y);
+  icon.scale.set(iconScale);
+  icon.tint = style.endpointColor;
+  icon.alpha = endpointAlpha ?? (emphasize ? 0.98 : 0.9);
+
+  layer.addChild(icon);
+}
+
+function drawAtlasEndpointHitTarget(
+  layer: Container,
+  point: ScreenPoint,
+  kind: UtilityEntity["kind"],
+  onSelect: (() => void) | undefined,
+) {
+  if (!onSelect) {
+    return;
+  }
+
+  const hitTarget = new Graphics();
+  hitTarget.eventMode = "static";
+  hitTarget.cursor = "pointer";
+  hitTarget.hitArea = new Circle(
+    point.x,
+    point.y,
+    kind === "smoke" || kind === "molotov" || kind === "incendiary" ? 22 : 19,
+  );
+  hitTarget.on("pointertap", (event) => {
+    event.stopPropagation();
+  });
+  hitTarget.on("pointerdown", (event) => {
+    const nativeEvent = event.nativeEvent as (PointerEvent & { __drIgnoreStagePan?: boolean }) | undefined;
+    if (nativeEvent) {
+      nativeEvent.__drIgnoreStagePan = true;
+      nativeEvent.preventDefault();
+    }
+    event.stopPropagation();
+    onSelect();
+  });
+  layer.addChild(hitTarget);
+}
+
+function drawAtlasTrajectoryTrail(
+  layer: Container,
+  points: ScreenPoint[],
+  teamAccent: number,
+  utilityKind: UtilityEntity["kind"],
+  mode: "none" | "minimal" | "primary",
+  emphasize: boolean,
+  trailAlpha: number | undefined,
+) {
+  const visiblePoints = mode === "primary" ? points : [points[0], points[points.length - 1]];
+  const baseAlpha = trailAlpha ?? resolveAtlasTrailAlpha(utilityKind, emphasize, mode);
+  const shadow = new Graphics();
+  drawScreenPolyline(shadow, visiblePoints);
+  shadow.stroke({
+    color: 0x020405,
+    width: emphasize ? 4.2 : 2.35,
+    alpha: emphasize ? Math.min(0.36, baseAlpha + 0.1) : Math.min(0.25, baseAlpha + 0.07),
+    cap: "round",
+    join: "round",
+  });
+  layer.addChild(shadow);
+
+  const trail = new Graphics();
+  drawScreenPolyline(trail, visiblePoints);
+  trail.stroke({
+    color: teamAccent,
+    width:
+      emphasize
+        ? mode === "primary"
+          ? 2.15
+          : 1.75
+        : mode === "primary"
+          ? 1.65
+          : 1.15,
+    alpha: baseAlpha,
+    cap: "round",
+    join: "round",
+  });
+  layer.addChild(trail);
+
+  if (!emphasize) {
+    return;
+  }
+
+  const origin = points[0];
+  const originMarker = new Graphics();
+  originMarker.circle(origin.x, origin.y, emphasize ? 3.9 : 3.1);
+  originMarker.fill({ color: 0x050708, alpha: 0.72 });
+  originMarker.circle(origin.x, origin.y, emphasize ? 4.8 : 3.8);
+  originMarker.stroke({ color: teamAccent, width: emphasize ? 1.35 : 1.05, alpha: Math.min(0.78, baseAlpha + 0.34) });
+  layer.addChild(originMarker);
+}
+
+function drawScreenPolyline(graphics: Graphics, points: ScreenPoint[]) {
+  graphics.moveTo(points[0].x, points[0].y);
+  for (let index = 1; index < points.length; index += 1) {
+    graphics.lineTo(points[index].x, points[index].y);
   }
 }
 
@@ -311,11 +472,11 @@ function drawSmokeVisual(
   point: ScreenPoint,
   remainingSeconds: number | null,
   currentTick: number,
-  throwerSide: "T" | "CT" | null,
+  _throwerSide: "T" | "CT" | null,
   displacement: SmokeDisplacementVisual | null,
 ) {
   const pulse = 0.995 + ((Math.sin(currentTick / 28) + 1) / 2) * 0.014;
-  const ringColor = throwerSide === "CT" ? 0x3fa8ff : throwerSide === "T" ? 0xf3a448 : 0xe8edf2;
+  const ringColor = utilityOverlayStyle("smoke").ringColor;
   const smokeVeil = new Graphics();
   const cloudShadow = new Graphics();
   const smokeMass = new Graphics();
@@ -591,8 +752,9 @@ function drawProjectileVisual(
   throwerSide: "T" | "CT" | null,
 ) {
   const marker = new Graphics();
-  const sideFillColor = throwerSide === "CT" ? 0x4faeff : throwerSide === "T" ? 0xf3a448 : 0xd8e1e8;
-  const darkStroke = 0x081116;
+  const style = utilityOverlayStyle(kind);
+  const sideFillColor = style.endpointColor;
+  const darkStroke = utilityTeamAccentColor(throwerSide);
   const detailColor = 0x081116;
 
   switch (kind) {
@@ -632,15 +794,23 @@ function drawProjectileTrajectoryVisual(
   const points = trajectoryTrailPoints(replay, utility, currentTick, radarViewport);
   if (points.length >= 2) {
     const trail = new Graphics();
-    const trailColor = throwerSide === "CT" ? 0x4faeff : throwerSide === "T" ? 0xf3a448 : 0xd8e1e8;
+    const trailColor = utilityOverlayStyle(utility.kind).trailColor;
+    const teamAccent = utilityTeamAccentColor(throwerSide);
     trail.moveTo(points[0].x, points[0].y);
     for (let index = 1; index < points.length; index += 1) {
       trail.lineTo(points[index].x, points[index].y);
     }
     trail.stroke({
       color: trailColor,
-      width: 2.4,
-      alpha: 0.96,
+      width: 2.1,
+      alpha: 0.78,
+      cap: "round",
+      join: "round",
+    });
+    trail.stroke({
+      color: teamAccent,
+      width: 0.85,
+      alpha: 0.34,
       cap: "round",
       join: "round",
     });
@@ -655,13 +825,16 @@ function drawProjectileTrajectoryVisual(
     return;
   }
 
-  const trailColor = throwerSide === "CT" ? 0x4faeff : throwerSide === "T" ? 0xf3a448 : 0xd8e1e8;
+  const trailColor = utilityOverlayStyle(utility.kind).trailColor;
+  const teamAccent = utilityTeamAccentColor(throwerSide);
   const bounceMarkers = new Graphics();
   for (const point of bouncePoints) {
     bounceMarkers.circle(point.x, point.y, 6.2);
-    bounceMarkers.stroke({ color: trailColor, width: 1.9, alpha: 0.94 });
+    bounceMarkers.stroke({ color: trailColor, width: 1.65, alpha: 0.74 });
+    bounceMarkers.circle(point.x, point.y, 7.5);
+    bounceMarkers.stroke({ color: teamAccent, width: 0.75, alpha: 0.36 });
     bounceMarkers.circle(point.x, point.y, 1.6);
-    bounceMarkers.fill({ color: trailColor, alpha: 0.94 });
+    bounceMarkers.fill({ color: trailColor, alpha: 0.76 });
   }
   layer.addChild(bounceMarkers);
 }
@@ -967,8 +1140,14 @@ function trajectoryTrailPoints(
   currentTick: number,
   radarViewport: RadarViewport,
   sampleStride = 1,
+  options?: {
+    clampToActivation?: boolean;
+  },
 ) {
-  const endTick = Math.min(currentTick, utilityActivationTick(utility) ?? utilityLifecycleEndTick(utility));
+  const endTick =
+    options?.clampToActivation === false
+      ? currentTick
+      : Math.min(currentTick, utilityActivationTick(utility) ?? utilityLifecycleEndTick(utility));
   const points: ScreenPoint[] = [];
   const sampleInterval = Math.max(1, utility.trajectory.sampleIntervalTicks || 1);
   const sampleCount = utility.trajectory.x.length;
@@ -1006,7 +1185,7 @@ function resolveAtlasTrajectoryMode(
   emphasize: boolean,
 ): "none" | "minimal" | "primary" {
   if (utilityKind === "smoke" || utilityKind === "molotov" || utilityKind === "incendiary") {
-    return "primary";
+    return emphasize ? "primary" : "minimal";
   }
 
   if (utilityKind === "flashbang" || utilityKind === "hegrenade") {
@@ -1031,13 +1210,13 @@ function resolveAtlasTrailAlpha(
 
   if (mode === "minimal") {
     if (utilityKind === "flashbang" || utilityKind === "hegrenade") {
-      return emphasize ? 0.4 : 0.24;
+      return emphasize ? 0.38 : 0.19;
     }
 
-    return emphasize ? 0.32 : 0.18;
+    return emphasize ? 0.34 : 0.2;
   }
 
-  return emphasize ? 0.64 : 0.28;
+  return emphasize ? 0.62 : 0.22;
 }
 
 function isWorldPointNearMap(replay: Replay, worldX: number, worldY: number) {
@@ -1242,6 +1421,13 @@ function resolveUtilityAtlasOutcomePoint(
     return resolveSmokeActivePoint(replay, utility, radarViewport, resolveSmokeDetonationTick(utility));
   }
 
+  if (utility.kind === "molotov" || utility.kind === "incendiary") {
+    const firePoint = resolveFirstVisibleUtilityPhasePoint(replay, utility, radarViewport, "detonate");
+    if (firePoint) {
+      return firePoint;
+    }
+  }
+
   const outcomePhase =
     [...utility.phaseEvents]
       .filter((event) => event.x != null && event.y != null)
@@ -1267,6 +1453,24 @@ function resolveUtilityAtlasOutcomePoint(
         : "projectile";
 
   return utilityDisplayPoint(replay, utility, utilityLifecycleEndTick(utility), radarViewport, phaseKind)?.point ?? null;
+}
+
+function resolveFirstVisibleUtilityPhasePoint(
+  replay: Replay,
+  utility: UtilityEntity,
+  radarViewport: RadarViewport,
+  phaseType: UtilityEntity["phaseEvents"][number]["type"],
+) {
+  const event = [...utility.phaseEvents]
+    .filter((phaseEvent) => phaseEvent.type === phaseType && phaseEvent.x != null && phaseEvent.y != null)
+    .sort((left, right) => right.tick - left.tick)[0];
+
+  if (event?.x == null || event.y == null) {
+    return null;
+  }
+
+  const phasePoint = worldToScreen(replay, radarViewport, event.x, event.y);
+  return isScreenPointVisible(phasePoint, radarViewport) ? phasePoint : null;
 }
 
 function resolveSmokeDisplacementVisual(

@@ -24,6 +24,7 @@ export type ReplayStageProps = {
   positionsView: PositionsView;
   replay: Replay;
   round: Replay["rounds"][number];
+  selectedUtilityAtlasKey: string | null;
   selectedPlayerId: string | null;
   utilityAtlasEntries: UtilityAtlasEntry[];
   utilityFocus: UtilityFocus;

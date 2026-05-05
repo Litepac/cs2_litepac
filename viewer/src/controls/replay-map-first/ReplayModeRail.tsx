@@ -52,11 +52,16 @@ export function ReplayModeRail({
                     : "dr-mapfirst-rail-button dr-mapfirst-mode-button"
                 }
                 onClick={() => {
+                  if (active) {
+                    return;
+                  }
+
                   onSelectAnalysisMode(entry.mode);
                   if (entry.positionsView) {
                     onSelectPositionsView(entry.positionsView);
                   }
                 }}
+                aria-current={active ? "page" : undefined}
                 type="button"
               >
                 {entry.label}

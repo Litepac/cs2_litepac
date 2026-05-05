@@ -1,59 +1,32 @@
-import type { Side } from "../../replay/derived";
-import type { HeatmapTeamFilter } from "../../replay/heatmapAnalysis";
-import type { PositionsTeamFilter, PositionsView } from "../../replay/positionsAnalysis";
-import type { ReplayAnalysisMode, UtilityAtlasScope, UtilityAtlasTeamFilter } from "../../replay/replayAnalysis";
+import type { CSSProperties } from "react";
+
 import type { Round, Replay } from "../../replay/types";
 import type { TimelineEventItem } from "../../replay/timeline";
-import type { UtilityFocus } from "../../replay/utilityFilter";
 import { EquipmentIcon } from "../EquipmentIcon";
 import { UtilityIcon } from "../UtilityIcon";
 
+const PLAYBACK_SPEEDS = [0.5, 1, 1.5, 2];
+
 type ReplayDockProps = {
   activeRoundIndex: number;
-  analysisMode: ReplayAnalysisMode;
   currentTick: number;
   displayEndTick: number;
   displayStartTick: number;
-  heatmapTeamFilter: HeatmapTeamFilter;
   markers: TimelineEventItem[];
   playing: boolean;
-  positionsTeamFilter: PositionsTeamFilter;
-  positionsView: PositionsView;
   replay: Replay;
   round: Round;
   roundClock: string | null;
-  selectedPlayerName: string | null;
+  showFreezeTime: boolean;
+  speed: number;
   tickRate: number;
-  utilityAtlasScope: UtilityAtlasScope;
-  utilityAtlasTeamFilter: UtilityAtlasTeamFilter;
-  utilityFocus: UtilityFocus;
-  onHeatmapTeamFilterChange: (filter: HeatmapTeamFilter) => void;
+  onResetPlayback: () => void;
   onPlayToggle: () => void;
-  onPositionsTeamFilterChange: (filter: PositionsTeamFilter) => void;
   onSelectRound: (index: number) => void;
+  onSetSpeed: (speed: number) => void;
+  onShowFreezeTimeChange: (show: boolean) => void;
   onTickChange: (tick: number) => void;
-  onUtilityAtlasScopeChange: (scope: UtilityAtlasScope) => void;
-  onUtilityAtlasTeamFilterChange: (filter: UtilityAtlasTeamFilter) => void;
-  onUtilityFocusChange: (focus: UtilityFocus) => void;
 };
-
-const TEAM_FILTERS: Array<{ label: string; value: "all" | Side }> = [
-  { label: "All", value: "all" },
-  { label: "CT", value: "CT" },
-  { label: "T", value: "T" },
-];
-const UTILITY_OPTIONS: Array<{ label: string; value: UtilityFocus }> = [
-  { label: "Smoke", value: "smoke" },
-  { label: "Flash", value: "flashbang" },
-  { label: "HE", value: "hegrenade" },
-  { label: "Molotov", value: "fire" },
-  { label: "All", value: "all" },
-];
-const SCOPE_OPTIONS: Array<{ label: string; value: UtilityAtlasScope }> = [
-  { label: "Round", value: "round" },
-  { label: "Half", value: "sideBlock" },
-  { label: "Match", value: "match" },
-];
 
 type TimelineMarkerPresentation =
   | "bomb"
@@ -76,31 +49,23 @@ type PresentedTimelineMarker = {
 
 export function ReplayDock({
   activeRoundIndex,
-  analysisMode,
   currentTick,
   displayEndTick,
   displayStartTick,
-  heatmapTeamFilter,
   markers,
   playing,
-  positionsTeamFilter,
-  positionsView,
   replay,
   round,
   roundClock,
-  selectedPlayerName,
+  showFreezeTime,
+  speed,
   tickRate,
-  utilityAtlasScope,
-  utilityAtlasTeamFilter,
-  utilityFocus,
-  onHeatmapTeamFilterChange,
+  onResetPlayback,
   onPlayToggle,
-  onPositionsTeamFilterChange,
   onSelectRound,
+  onSetSpeed,
+  onShowFreezeTimeChange,
   onTickChange,
-  onUtilityAtlasScopeChange,
-  onUtilityAtlasTeamFilterChange,
-  onUtilityFocusChange,
 }: ReplayDockProps) {
   const range = Math.max(1, displayEndTick - displayStartTick);
   const safeTick = Math.min(displayEndTick, Math.max(displayStartTick, currentTick));
@@ -116,7 +81,6 @@ export function ReplayDock({
   const bombPhase = resolveBombPhase(presentedMarkers);
   const elapsedSeconds = Math.max(0, (safeTick - displayStartTick) / tickRate);
   const rulerMarks = buildRulerMarks(displayStartTick, displayEndTick, tickRate, replay, round);
-  const showAnalysisControls = analysisMode !== "live";
 
   return (
     <>
@@ -140,30 +104,6 @@ export function ReplayDock({
         </div>
       </div>
 
-      {showAnalysisControls ? (
-        <div className="dr-mapfirst-analysis-controls" aria-label="Analysis controls">
-          <div className="dr-mapfirst-analysis-copy">
-            <span>{resolveDockControlLabel(analysisMode, positionsView)}</span>
-            <strong>{selectedPlayerName ? `Focus: ${selectedPlayerName}` : "Round context"}</strong>
-          </div>
-          <div className="dr-mapfirst-analysis-actions">
-            {analysisMode === "utilityAtlas" ? (
-              <>
-                <Segmented items={SCOPE_OPTIONS} selectedValue={utilityAtlasScope} onChange={onUtilityAtlasScopeChange} />
-                <Segmented items={TEAM_FILTERS} selectedValue={utilityAtlasTeamFilter} onChange={onUtilityAtlasTeamFilterChange} />
-                <Segmented items={UTILITY_OPTIONS} selectedValue={utilityFocus} onChange={onUtilityFocusChange} />
-              </>
-            ) : null}
-            {analysisMode === "positions" ? (
-              <Segmented items={TEAM_FILTERS} selectedValue={positionsTeamFilter} onChange={onPositionsTeamFilterChange} />
-            ) : null}
-            {analysisMode === "heatmap" ? (
-              <Segmented items={TEAM_FILTERS} selectedValue={heatmapTeamFilter} onChange={onHeatmapTeamFilterChange} />
-            ) : null}
-          </div>
-        </div>
-      ) : null}
-
       <div className="dr-mapfirst-timeline-row">
         <button className="dr-mapfirst-play" onClick={onPlayToggle} type="button">
           <span
@@ -176,6 +116,27 @@ export function ReplayDock({
         <div className="dr-mapfirst-time-readout">
           <span>Round {round.roundNumber}</span>
           <strong>{roundClock ?? formatElapsed(elapsedSeconds)}</strong>
+          <div className="dr-mapfirst-time-controls" aria-label="Playback detail controls">
+            <button
+              aria-pressed={showFreezeTime}
+              className={showFreezeTime ? "dr-mapfirst-chip dr-mapfirst-chip-active" : "dr-mapfirst-chip"}
+              onClick={() => onShowFreezeTimeChange(!showFreezeTime)}
+              type="button"
+            >
+              Freeze
+            </button>
+            <button className="dr-mapfirst-chip" onClick={onResetPlayback} type="button">Reset</button>
+            {PLAYBACK_SPEEDS.map((entry) => (
+              <button
+                key={entry}
+                className={entry === speed ? "dr-mapfirst-chip dr-mapfirst-chip-active" : "dr-mapfirst-chip"}
+                onClick={() => onSetSpeed(entry)}
+                type="button"
+              >
+                {entry}x
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="dr-mapfirst-track">
@@ -226,7 +187,11 @@ export function ReplayDock({
               ))}
             </div>
           </div>
-          <div className="dr-mapfirst-current-needle" style={{ left: `${currentPercent}%` }} aria-hidden="true" />
+          <div
+            className="dr-mapfirst-current-needle"
+            style={{ "--dr-current-percent": currentPercent } as CSSProperties}
+            aria-hidden="true"
+          />
           <input
             aria-label="Replay timeline"
             max={displayEndTick}
@@ -237,12 +202,6 @@ export function ReplayDock({
           />
         </div>
 
-      </div>
-
-      <div className="dr-mapfirst-context-row">
-        <span>{replay.map.displayName}</span>
-        <span>{selectedPlayerName ? `Player focus: ${selectedPlayerName}` : "No player focus"}</span>
-        <span>{Math.round(elapsedSeconds)}s elapsed</span>
       </div>
     </>
   );
@@ -335,7 +294,7 @@ function buildRulerMarks(startTick: number, endTick: number, tickRate: number, r
   const range = Math.max(1, endTick - startTick);
   const durationSeconds = range / Math.max(1, tickRate);
   const endSeconds = Math.floor(durationSeconds / 15) * 15;
-  const marks: Array<{ key: string; label: string; percent: number }> = [{ key: "0", label: formatRulerTick(startTick, startTick, tickRate, replay, round), percent: 0 }];
+  const marks: Array<{ key: string; label: string; percent: number }> = [];
 
   for (let seconds = 15; seconds <= endSeconds; seconds += 15) {
     const tick = startTick + seconds * tickRate;
@@ -343,9 +302,14 @@ function buildRulerMarks(startTick: number, endTick: number, tickRate: number, r
       continue;
     }
 
+    const label = formatRulerCountdown(tick, tickRate, replay, round);
+    if (label == null) {
+      continue;
+    }
+
     marks.push({
       key: `${seconds}`,
-      label: formatRulerTick(tick, startTick, tickRate, replay, round),
+      label,
       percent: Math.min(100, Math.max(0, ((tick - startTick) / range) * 100)),
     });
   }
@@ -353,39 +317,16 @@ function buildRulerMarks(startTick: number, endTick: number, tickRate: number, r
   return marks;
 }
 
-function formatRulerTick(tick: number, startTick: number, tickRate: number, replay: Replay, round: Round) {
+function formatRulerCountdown(tick: number, tickRate: number, replay: Replay, round: Round) {
+  const roundTimeSeconds = replay.match.roundTimeSeconds;
   const freezeEndTick = round.freezeEndTick ?? round.startTick;
-  const roundTimeSeconds = replay.match.roundTimeSeconds ?? null;
 
-  if (roundTimeSeconds != null && Number.isFinite(roundTimeSeconds) && roundTimeSeconds > 0 && tick >= freezeEndTick) {
-    return formatElapsed(Math.max(0, roundTimeSeconds - (tick - freezeEndTick) / Math.max(1, tickRate)));
+  if (roundTimeSeconds == null || !Number.isFinite(roundTimeSeconds) || roundTimeSeconds <= 0) {
+    return null;
   }
 
-  const elapsedSeconds = Math.max(0, (tick - startTick) / Math.max(1, tickRate));
-  return `${Math.round(elapsedSeconds)}s`;
-}
-
-type SegmentedProps<T extends string> = {
-  items: Array<{ label: string; value: T }>;
-  selectedValue: T;
-  onChange: (value: T) => void;
-};
-
-function Segmented<T extends string>({ items, selectedValue, onChange }: SegmentedProps<T>) {
-  return (
-    <div className="dr-mapfirst-segmented">
-      {items.map((entry) => (
-        <button
-          key={entry.value}
-          className={entry.value === selectedValue ? "dr-mapfirst-chip dr-mapfirst-chip-active" : "dr-mapfirst-chip"}
-          onClick={() => onChange(entry.value)}
-          type="button"
-        >
-          {entry.label}
-        </button>
-      ))}
-    </div>
-  );
+  const elapsedLiveSeconds = Math.max(0, (tick - freezeEndTick) / Math.max(1, tickRate));
+  return formatElapsed(Math.max(0, roundTimeSeconds - elapsedLiveSeconds));
 }
 
 function formatElapsed(seconds: number) {
@@ -393,20 +334,4 @@ function formatElapsed(seconds: number) {
   const minutes = Math.floor(wholeSeconds / 60);
   const remainingSeconds = wholeSeconds % 60;
   return `${minutes}:${String(remainingSeconds).padStart(2, "0")}`;
-}
-
-function resolveDockControlLabel(analysisMode: ReplayAnalysisMode, positionsView: PositionsView) {
-  if (analysisMode === "utilityAtlas") {
-    return "Utility review";
-  }
-
-  if (analysisMode === "positions") {
-    return positionsView === "player" ? "Player study" : "Path review";
-  }
-
-  if (analysisMode === "heatmap") {
-    return "Heatmap";
-  }
-
-  return "Live review";
 }

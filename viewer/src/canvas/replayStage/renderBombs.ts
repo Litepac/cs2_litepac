@@ -7,6 +7,10 @@ import type { Replay, Round } from "../../replay/types";
 import { RECENT_BOMB_WINDOW_TICKS } from "./constants";
 import { clamp } from "./camera";
 
+const BOMB_EXPLOSION_OUTER_RADIUS_WORLD = 1750;
+const BOMB_EXPLOSION_MID_RADIUS_WORLD = 1100;
+const BOMB_EXPLOSION_CORE_RADIUS_WORLD = 620;
+
 export function renderBombOverlays(
   layer: Container,
   replay: Replay,
@@ -315,6 +319,7 @@ function drawBombEvent(
     marker.lineTo(point.x, point.y + 3.3);
     marker.stroke({ color: 0xd9f1ff, width: 1.5, alpha: 0.56 + ageRatio * 0.3, cap: "round" });
   } else {
+    drawBombExplosionRadius(marker, replay, radarViewport, point.x, point.y, ageRatio);
     marker.circle(point.x, point.y, 5.8 + ageRatio * 1.05);
     marker.fill({ color: 0xffb25a, alpha: 0.14 + ageRatio * 0.16 });
     marker.moveTo(point.x - 3.7, point.y - 3.7);
@@ -324,4 +329,42 @@ function drawBombEvent(
     marker.stroke({ color: 0xffb25a, width: 1.9, alpha: 0.54 + ageRatio * 0.24, cap: "round" });
   }
   layer.addChild(marker);
+}
+
+function drawBombExplosionRadius(
+  marker: Graphics,
+  replay: Replay,
+  radarViewport: RadarViewport,
+  centerX: number,
+  centerY: number,
+  ageRatio: number,
+) {
+  const outerRadius = worldRadiusToScreenRadius(replay, radarViewport, BOMB_EXPLOSION_OUTER_RADIUS_WORLD);
+  const midRadius = worldRadiusToScreenRadius(replay, radarViewport, BOMB_EXPLOSION_MID_RADIUS_WORLD);
+  const coreRadius = worldRadiusToScreenRadius(replay, radarViewport, BOMB_EXPLOSION_CORE_RADIUS_WORLD);
+  const pulseScale = 0.96 + (1 - ageRatio) * 0.06;
+  const alpha = clamp(ageRatio, 0, 1);
+
+  marker.circle(centerX, centerY, outerRadius * pulseScale);
+  marker.fill({ color: 0xffc05a, alpha: 0.018 + alpha * 0.026 });
+  marker.circle(centerX, centerY, midRadius * pulseScale);
+  marker.fill({ color: 0xff7a35, alpha: 0.032 + alpha * 0.048 });
+  marker.circle(centerX, centerY, coreRadius * pulseScale);
+  marker.fill({ color: 0xff3e34, alpha: 0.052 + alpha * 0.078 });
+
+  marker.circle(centerX, centerY, outerRadius * pulseScale);
+  marker.stroke({ color: 0xffd58a, width: 1.2, alpha: 0.18 + alpha * 0.28 });
+  marker.circle(centerX, centerY, midRadius * pulseScale);
+  marker.stroke({ color: 0xff8d45, width: 1.5, alpha: 0.22 + alpha * 0.36 });
+  marker.circle(centerX, centerY, coreRadius * pulseScale);
+  marker.stroke({ color: 0xffefc2, width: 1.15, alpha: 0.2 + alpha * 0.34 });
+}
+
+function worldRadiusToScreenRadius(replay: Replay, radarViewport: RadarViewport, worldRadius: number) {
+  const { worldXMin, worldXMax, worldYMin, worldYMax } = replay.map.coordinateSystem;
+  const worldWidth = Math.max(1, worldXMax - worldXMin);
+  const worldHeight = Math.max(1, worldYMax - worldYMin);
+  const pixelsPerWorldX = (radarViewport.imageWidth * radarViewport.scale) / worldWidth;
+  const pixelsPerWorldY = (radarViewport.imageHeight * radarViewport.scale) / worldHeight;
+  return worldRadius * ((pixelsPerWorldX + pixelsPerWorldY) / 2);
 }

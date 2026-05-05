@@ -11,12 +11,17 @@ import { clamp } from "./camera";
 
 type LivePlayerEntry = {
   hasBomb: boolean;
+  muted: boolean;
   player: Replay["players"][number];
   point: { x: number; y: number };
   selected: boolean;
   showLabel: boolean;
   side: "T" | "CT" | null;
 };
+
+const ESTIMATED_MOVEMENT_NOISE_RADIUS_WORLD = 1100;
+const MOVEMENT_NOISE_SPEED_START = 90;
+const MOVEMENT_NOISE_SPEED_FULL = 210;
 
 export function renderPlayers(
   playerLayer: Container,
@@ -61,10 +66,23 @@ export function renderPlayers(
     });
 
     const marker = new Graphics();
-    marker.alpha = contextModeActive && !selected ? 0.2 : 1;
+    marker.alpha = contextModeActive && !selected ? 0.55 : 1;
     marker.eventMode = "static";
     marker.cursor = "pointer";
     marker.on("pointertap", () => onSelectPlayer(stream.playerId));
+
+    if (contextModeActive && selected) {
+      const movementIntensity = resolveMovementCueIntensity(stream, currentTick, replay.match.tickRate);
+      drawSelectedPlayerMovementCue(
+        playerLayer,
+        replay,
+        radarViewport,
+        point.x,
+        point.y,
+        stream.side,
+        movementIntensity,
+      );
+    }
 
     drawPlayerMarker(
       marker,
@@ -90,15 +108,86 @@ export function renderPlayers(
     playerLayer.addChild(marker);
     livePlayers.push({
       hasBomb,
+      muted: contextModeActive && !selected,
       player,
       point,
       selected,
-      showLabel: !contextModeActive || selected,
+      showLabel: true,
       side: stream.side,
     });
   }
 
   drawPlayerLabels(eventLayer, livePlayers, radarViewport);
+}
+
+function resolveMovementCueIntensity(
+  stream: Round["playerStreams"][number],
+  currentTick: number,
+  tickRate: number,
+) {
+  const sampleWindowTicks = Math.max(8, Math.round(tickRate * 0.5));
+  const stepTicks = Math.max(2, Math.round(tickRate * 0.1));
+  let previous = interpolatePlayerStreamSample(stream, currentTick - sampleWindowTicks);
+  if (!previous?.alive || previous.x == null || previous.y == null) {
+    return 0;
+  }
+
+  let totalDistance = 0;
+  let measuredTicks = 0;
+  let previousX = previous.x;
+  let previousY = previous.y;
+  for (let tick = currentTick - sampleWindowTicks + stepTicks; tick <= currentTick; tick += stepTicks) {
+    const sample = interpolatePlayerStreamSample(stream, tick);
+    if (!sample?.alive || sample.x == null || sample.y == null) {
+      continue;
+    }
+
+    totalDistance += Math.hypot(sample.x - previousX, sample.y - previousY);
+    measuredTicks += stepTicks;
+    previousX = sample.x;
+    previousY = sample.y;
+  }
+
+  if (measuredTicks <= 0) {
+    return 0;
+  }
+
+  const unitsPerSecond = totalDistance / Math.max(0.01, measuredTicks / Math.max(1, tickRate));
+  return clamp((unitsPerSecond - MOVEMENT_NOISE_SPEED_START) / (MOVEMENT_NOISE_SPEED_FULL - MOVEMENT_NOISE_SPEED_START), 0, 1);
+}
+
+function drawSelectedPlayerMovementCue(
+  layer: Container,
+  replay: Replay,
+  radarViewport: RadarViewport,
+  x: number,
+  y: number,
+  side: "T" | "CT" | null,
+  intensity: number,
+) {
+  if (intensity <= 0.12) {
+    return;
+  }
+
+  const color = side === "CT" ? 0x4fb3ff : side === "T" ? 0xd59c36 : 0xd93628;
+  const radius = worldRadiusToScreenRadius(replay, radarViewport, ESTIMATED_MOVEMENT_NOISE_RADIUS_WORLD);
+  const cue = new Graphics();
+  cue.eventMode = "none";
+
+  cue.circle(x, y, radius);
+  cue.fill({ color, alpha: 0.014 + intensity * 0.018 });
+  cue.stroke({ color, width: 1.05, alpha: 0.22 + intensity * 0.12 });
+
+  layer.addChild(cue);
+}
+
+function worldRadiusToScreenRadius(replay: Replay, radarViewport: RadarViewport, worldRadius: number) {
+  const { worldXMin, worldXMax, worldYMin, worldYMax } = replay.map.coordinateSystem;
+  const worldWidth = Math.max(1, worldXMax - worldXMin);
+  const worldHeight = Math.max(1, worldYMax - worldYMin);
+  const pixelsPerWorldX = (radarViewport.imageWidth * radarViewport.scale) / worldWidth;
+  const pixelsPerWorldY = (radarViewport.imageHeight * radarViewport.scale) / worldHeight;
+  return worldRadius * ((pixelsPerWorldX + pixelsPerWorldY) / 2);
 }
 
 function drawPlayerLabel(
@@ -107,6 +196,7 @@ function drawPlayerLabel(
   labelY: number,
   displayName: string,
   selected: boolean,
+  muted: boolean,
   side: "T" | "CT" | null,
   hasBomb: boolean,
   fontSize: number,
@@ -123,6 +213,7 @@ function drawPlayerLabel(
   });
   text.roundPixels = true;
   text.resolution = 2.5;
+  text.alpha = muted ? 0.74 : 1;
 
   const paddingX = selected ? 6 : 5;
   const paddingY = 1.5;
@@ -131,12 +222,12 @@ function drawPlayerLabel(
 
   const background = new Graphics();
   background.roundRect(labelX, labelY, labelWidth, labelHeight, 2);
-  background.fill({ color: selected ? 0x121a22 : 0x0b1117, alpha: selected ? 0.95 : 0.86 });
+  background.fill({ color: selected ? 0x121a22 : 0x0b1117, alpha: selected ? 0.95 : muted ? 0.58 : 0.86 });
   background.stroke({
     color:
       hasBomb ? 0xffc56d : side === "CT" ? 0x3f95d4 : side === "T" ? 0xd68c2c : 0x2c3c49,
     width: 1,
-    alpha: 0.9,
+    alpha: muted ? 0.48 : 0.9,
   });
   layer.addChild(background);
 
@@ -680,7 +771,7 @@ function drawPlayerLabels(layer: Container, livePlayers: LivePlayerEntry[], rada
     const markerRadius = entry.selected ? 11 : 8;
     const labelX = Math.round(entry.point.x - labelWidth / 2);
     const labelY = Math.round(entry.point.y + markerRadius + 2);
-    drawPlayerLabel(layer, labelX, labelY, displayName, entry.selected, entry.side, entry.hasBomb, fontSize);
+    drawPlayerLabel(layer, labelX, labelY, displayName, entry.selected, entry.muted, entry.side, entry.hasBomb, fontSize);
   }
 }
 

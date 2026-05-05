@@ -1,6 +1,10 @@
 import type { StageState } from "./types";
 import { applyCameraTransform, clamp } from "./camera";
 
+type ReplayPointerEvent = PointerEvent & {
+  __drIgnoreStagePan?: boolean;
+};
+
 export function attachStageInteractions(hostElement: HTMLDivElement, stage: StageState) {
   let dragging = false;
   let lastClientX = 0;
@@ -19,6 +23,11 @@ export function attachStageInteractions(hostElement: HTMLDivElement, stage: Stag
   }
 
   function onPointerDown(event: PointerEvent) {
+    const replayEvent = event as ReplayPointerEvent;
+    if (event.defaultPrevented || replayEvent.__drIgnoreStagePan) {
+      return;
+    }
+
     dragging = true;
     lastClientX = event.clientX;
     lastClientY = event.clientY;

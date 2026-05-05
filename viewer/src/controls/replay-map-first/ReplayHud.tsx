@@ -2,7 +2,6 @@ type ReplayHudProps = {
   ctScore: number;
   ctTeamName: string;
   mapName: string;
-  modeLabel: string;
   roundNumber: number;
   tScore: number;
   tTeamName: string;
@@ -13,7 +12,6 @@ export function ReplayHud({
   ctScore,
   ctTeamName,
   mapName,
-  modeLabel,
   roundNumber,
   tScore,
   tTeamName,
@@ -32,7 +30,6 @@ export function ReplayHud({
           <i>-</i>
           <span className="dr-mapfirst-hud-score-t">{tScore}</span>
         </strong>
-        <small>{modeLabel}</small>
       </div>
       <div className="dr-mapfirst-hud-team dr-mapfirst-hud-team-t">
         <strong>{tTeamName}</strong>

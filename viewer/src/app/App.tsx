@@ -63,7 +63,8 @@ export function App() {
   const [utilityAtlasScope, setUtilityAtlasScope] = useState<UtilityAtlasScope>("round");
   const [utilityAtlasTeamFilter, setUtilityAtlasTeamFilter] = useState<UtilityAtlasTeamFilter>("all");
   const [utilityAtlasSourceFilter, setUtilityAtlasSourceFilter] = useState<UtilityAtlasSourceFilter>("all");
-  const positionsScope: PositionsScope = "round";
+  const [selectedUtilityAtlasKey, setSelectedUtilityAtlasKey] = useState<string | null>(null);
+  const [positionsScope, setPositionsScope] = useState<PositionsScope>("round");
   const [positionsTeamFilter, setPositionsTeamFilter] = useState<PositionsTeamFilter>("all");
   const [positionsSourceFilter, setPositionsSourceFilter] = useState<PositionsSourceFilter>("all");
   const [positionsView, setPositionsView] = useState<PositionsView>("paths");
@@ -71,7 +72,7 @@ export function App() {
   const [positionPlayerBroadCompareEnabled, setPositionPlayerBroadCompareEnabled] = useState(false);
   const [positionPlayerCompareEnabled, setPositionPlayerCompareEnabled] = useState(false);
   const [showPositionRoundNumbers, setShowPositionRoundNumbers] = useState(false);
-  const heatmapScope: HeatmapScope = "round";
+  const [heatmapScope, setHeatmapScope] = useState<HeatmapScope>("round");
   const [heatmapTeamFilter, setHeatmapTeamFilter] = useState<HeatmapTeamFilter>("all");
   const [heatmapSourceFilter, setHeatmapSourceFilter] = useState<HeatmapSourceFilter>("all");
   const [livePlayerContextMode, setLivePlayerContextMode] = useState(false);
@@ -148,6 +149,45 @@ export function App() {
   }, [heatmapSourceFilter, positionsSourceFilter, selectedPlayerId, utilityAtlasSourceFilter]);
 
   useEffect(() => {
+    if (!replay) {
+      return;
+    }
+
+    setAnalysisMode("live");
+    setUtilityFocus("all");
+    setShowFreezeTime(false);
+    setUtilityAtlasScope("round");
+    setUtilityAtlasTeamFilter("all");
+    setUtilityAtlasSourceFilter("all");
+    setSelectedUtilityAtlasKey(null);
+    setPositionsScope("round");
+    setPositionsTeamFilter("all");
+    setPositionsSourceFilter("all");
+    setPositionsView("paths");
+    setPositionPlayerSelections([]);
+    setPositionPlayerBroadCompareEnabled(false);
+    setPositionPlayerCompareEnabled(false);
+    setShowPositionRoundNumbers(false);
+    setHeatmapScope("round");
+    setHeatmapTeamFilter("all");
+    setHeatmapSourceFilter("all");
+    setLivePlayerContextMode(false);
+    setPendingUtilityJump(null);
+    setPendingPositionJump(null);
+  }, [replay?.sourceDemo.sha256]);
+
+  useEffect(() => {
+    if (analysisMode !== "utilityAtlas") {
+      setSelectedUtilityAtlasKey(null);
+      return;
+    }
+
+    if (selectedUtilityAtlasKey && !utilityAtlasEntries.some((entry) => entry.key === selectedUtilityAtlasKey)) {
+      setSelectedUtilityAtlasKey(null);
+    }
+  }, [analysisMode, selectedUtilityAtlasKey, utilityAtlasEntries]);
+
+  useEffect(() => {
     if (!pendingUtilityJump || !replay || !round || pendingUtilityJump.roundIndex !== roundIndex) {
       return;
     }
@@ -189,6 +229,10 @@ export function App() {
   }
 
   function handleAnalysisModeChange(mode: ReplayAnalysisMode) {
+    if (analysisMode === mode) {
+      return;
+    }
+
     if (analysisMode === "positions" && mode !== "positions") {
       // Manual mode switches should not preserve hidden Position Player compare state.
       setPositionPlayerSelections([]);
@@ -247,11 +291,16 @@ export function App() {
     if (positionPlayerSelections.length > 1) {
       updatePositionPlayerSelections(positionPlayerSelections.slice(0, 1));
     }
+    setPositionPlayerBroadCompareEnabled(false);
     setPositionPlayerCompareEnabled(false);
   }
 
   function handleReplayPlayerSelect(playerId: string) {
-    setLivePlayerContextMode(false);
+    const selectingLivePlayer = analysisMode === "live";
+    if (!selectingLivePlayer) {
+      setLivePlayerContextMode(false);
+    }
+
     if (analysisMode === "positions" && positionsView === "player") {
       const selection = replay ? resolvePositionPlayerSelection(replay, roundIndex, playerId) : null;
       if (!selection) {
@@ -289,7 +338,9 @@ export function App() {
 
     if (selectedPlayerId === playerId) {
       setSelectedPlayerId(null);
-      if (analysisMode === "utilityAtlas") {
+      if (selectingLivePlayer) {
+        setLivePlayerContextMode(false);
+      } else if (analysisMode === "utilityAtlas") {
         setUtilityAtlasSourceFilter("all");
       } else if (analysisMode === "positions") {
         setPositionsSourceFilter("all");
@@ -301,7 +352,9 @@ export function App() {
     }
 
     setSelectedPlayerId(playerId);
-    if (analysisMode === "utilityAtlas") {
+    if (selectingLivePlayer) {
+      setLivePlayerContextMode(true);
+    } else if (analysisMode === "utilityAtlas") {
       setUtilityAtlasSourceFilter("selected");
       setUtilityAtlasTeamFilter("all");
     } else if (analysisMode === "positions") {
@@ -313,6 +366,10 @@ export function App() {
   }
 
   function handlePositionsViewChange(view: PositionsView) {
+    if (analysisMode === "positions" && positionsView === view) {
+      return;
+    }
+
     setPositionsView(view);
     setLivePlayerContextMode(false);
 
@@ -341,7 +398,19 @@ export function App() {
     setPositionPlayerCompareEnabled(false);
   }
 
+  function handleShowFreezeTimeChange(show: boolean) {
+    setShowFreezeTime(show);
+    if (!show && playback.tick < playback.initialRoundTick) {
+      playback.changeTick(playback.initialRoundTick);
+    }
+  }
+
   function handleUtilityAtlasSelect(entry: UtilityAtlasEntry) {
+    if (analysisMode === "utilityAtlas") {
+      setSelectedUtilityAtlasKey((currentKey) => (currentKey === entry.key ? null : entry.key));
+      return;
+    }
+
     const targetRound = replay?.rounds[entry.roundIndex] ?? null;
     if (!targetRound) {
       return;
@@ -386,15 +455,18 @@ export function App() {
             livePlayerContextMode={livePlayerContextMode}
             markers={timelineMarkers}
             playback={playback}
+            positionPlayerBroadCompareEnabled={positionPlayerBroadCompareEnabled}
             positionPlayerCompareEnabled={positionPlayerCompareEnabled}
             positionPlayerSelectedCount={positionPlayerSelections.length}
             positionPlayerSnapshots={positionPlayerSnapshots}
+            positionsScope={positionsScope}
             positionsTeamFilter={positionsTeamFilter}
             positionsView={positionsView}
             replay={replay}
             round={round}
             selectedPlayerId={selectedPlayerId}
             selectedPlayerName={selectedPlayerName}
+            selectedUtilityAtlasKey={selectedUtilityAtlasKey}
             showFreezeTime={showFreezeTime}
             showPositionRoundNumbers={showPositionRoundNumbers}
             utilityAtlasEntries={utilityAtlasEntries}
@@ -413,6 +485,8 @@ export function App() {
               closeReplay();
               setShellPage("matches");
             }}
+            onHeatmapScopeChange={setHeatmapScope}
+            onPositionsScopeChange={setPositionsScope}
             onPositionsTeamFilterChange={setPositionsTeamFilter}
             onReplayPlayerSelect={handleReplayPlayerSelect}
             onSelectAnalysisMode={handleAnalysisModeChange}
@@ -420,7 +494,7 @@ export function App() {
             onSelectPositionSnapshot={handleSelectPositionSnapshot}
             onSelectPositionsView={handlePositionsViewChange}
             onSelectRound={setRoundIndex}
-            onShowFreezeTimeChange={setShowFreezeTime}
+            onShowFreezeTimeChange={handleShowFreezeTimeChange}
             onShowPositionRoundNumbersChange={setShowPositionRoundNumbers}
             onUtilityAtlasScopeChange={setUtilityAtlasScope}
             onUtilityAtlasTeamFilterChange={setUtilityAtlasTeamFilter}

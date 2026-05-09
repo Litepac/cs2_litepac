@@ -3,7 +3,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { applyCameraTransform, resolveViewportDimensions } from "./replayStage/camera";
 import { DEFAULT_STAGE_HEIGHT, DEFAULT_STAGE_WIDTH } from "./replayStage/constants";
 import { attachStageInteractions } from "./replayStage/interaction";
-import { createStageState, ensureStageMap } from "./replayStage/mapStage";
+import { createStageState, ensureStageMap, resolveStageRenderResolution } from "./replayStage/mapStage";
 import { renderDynamicFrame } from "./replayStage/renderFrame";
 import type { ReplayStageProps, StageState } from "./replayStage/types";
 
@@ -16,6 +16,8 @@ export function ReplayStage({
   heatmapBuckets,
   heatmapMaxSampleCount,
   livePlayerContextMode,
+  deathReviewEntries,
+  onSelectDeathReviewEntry,
   onSelectAtlasEntry,
   positionPlayerSnapshots,
   positionTrailEntries,
@@ -24,6 +26,7 @@ export function ReplayStage({
   replay,
   round,
   selectedUtilityAtlasKey,
+  selectedDeathReviewKey,
   selectedPlayerId,
   utilityAtlasEntries,
   utilityFocus,
@@ -39,9 +42,11 @@ export function ReplayStage({
   const playerByIdRef = useRef(playerById);
   const selectedPlayerIdRef = useRef(selectedPlayerId);
   const selectedUtilityAtlasKeyRef = useRef(selectedUtilityAtlasKey);
+  const selectedDeathReviewKeyRef = useRef(selectedDeathReviewKey);
   const activeRoundIndexRef = useRef(activeRoundIndex);
   const analysisModeRef = useRef(analysisMode);
   const utilityAtlasEntriesRef = useRef(utilityAtlasEntries);
+  const deathReviewEntriesRef = useRef(deathReviewEntries);
   const utilityFocusRef = useRef(utilityFocus);
   const positionPlayerSnapshotsRef = useRef(positionPlayerSnapshots);
   const positionTrailEntriesRef = useRef(positionTrailEntries);
@@ -54,6 +59,7 @@ export function ReplayStage({
   const livePlayerContextModeRef = useRef(livePlayerContextMode);
   const onSelectPlayerRef = useRef(onSelectPlayer);
   const onSelectAtlasEntryRef = useRef(onSelectAtlasEntry);
+  const onSelectDeathReviewEntryRef = useRef(onSelectDeathReviewEntry);
   const onSelectPositionSnapshotRef = useRef(onSelectPositionSnapshot);
   const renderErrorRef = useRef<string | null>(null);
   const [stageRevision, setStageRevision] = useState(0);
@@ -72,7 +78,9 @@ export function ReplayStage({
 
     const stage = stageRef.current;
     if (stage) {
-      stage.app.renderer.resize(nextViewportSize.width, nextViewportSize.height);
+      const renderResolution = resolveStageRenderResolution();
+      stage.app.renderer.resize(nextViewportSize.width, nextViewportSize.height, renderResolution);
+      stage.currentRenderResolution = renderResolution;
       applyCameraTransform(stage);
       setStageRevision((value) => value + 1);
     }
@@ -85,6 +93,7 @@ export function ReplayStage({
     playerByIdRef.current = playerById;
     selectedPlayerIdRef.current = selectedPlayerId;
     selectedUtilityAtlasKeyRef.current = selectedUtilityAtlasKey;
+    selectedDeathReviewKeyRef.current = selectedDeathReviewKey;
     activeRoundIndexRef.current = activeRoundIndex;
     analysisModeRef.current = analysisMode;
     positionPlayerSnapshotsRef.current = positionPlayerSnapshots;
@@ -97,11 +106,13 @@ export function ReplayStage({
     heatmapMaxSampleCountRef.current = heatmapMaxSampleCount;
     livePlayerContextModeRef.current = livePlayerContextMode;
     utilityAtlasEntriesRef.current = utilityAtlasEntries;
+    deathReviewEntriesRef.current = deathReviewEntries;
     utilityFocusRef.current = utilityFocus;
     onSelectPlayerRef.current = onSelectPlayer;
     onSelectAtlasEntryRef.current = onSelectAtlasEntry;
+    onSelectDeathReviewEntryRef.current = onSelectDeathReviewEntry;
     onSelectPositionSnapshotRef.current = onSelectPositionSnapshot;
-  }, [activeRoundIndex, analysisMode, currentTick, heatmapBuckets, heatmapCellSize, heatmapMaxSampleCount, heatmapScope, livePlayerContextMode, onSelectAtlasEntry, onSelectPlayer, onSelectPositionSnapshot, playerById, positionPlayerSnapshots, positionTrailEntries, positionsView, replay, round, selectedPlayerId, selectedUtilityAtlasKey, showPositionRoundNumbers, utilityAtlasEntries, utilityFocus]);
+  }, [activeRoundIndex, analysisMode, currentTick, deathReviewEntries, heatmapBuckets, heatmapCellSize, heatmapMaxSampleCount, heatmapScope, livePlayerContextMode, onSelectAtlasEntry, onSelectDeathReviewEntry, onSelectPlayer, onSelectPositionSnapshot, playerById, positionPlayerSnapshots, positionTrailEntries, positionsView, replay, round, selectedDeathReviewKey, selectedPlayerId, selectedUtilityAtlasKey, showPositionRoundNumbers, utilityAtlasEntries, utilityFocus]);
 
   useLayoutEffect(() => {
     if (!hostRef.current) {
@@ -119,8 +130,13 @@ export function ReplayStage({
       }
       syncViewportSizeFromHost(hostElement);
     });
+    const onWindowResize = () => syncViewportSizeFromHost(hostElement);
+    const removeDevicePixelRatioWatcher = watchDevicePixelRatio(() => syncViewportSizeFromHost(hostElement));
 
     observer.observe(hostElement);
+    window.addEventListener("resize", onWindowResize);
+    window.addEventListener("focus", onWindowResize);
+    window.visualViewport?.addEventListener("resize", onWindowResize);
     syncViewportSizeFromHost(hostElement);
     frameA = window.requestAnimationFrame(() => {
       syncViewportSizeFromHost(hostElement);
@@ -129,6 +145,10 @@ export function ReplayStage({
 
     return () => {
       observer.disconnect();
+      removeDevicePixelRatioWatcher();
+      window.removeEventListener("resize", onWindowResize);
+      window.removeEventListener("focus", onWindowResize);
+      window.visualViewport?.removeEventListener("resize", onWindowResize);
       if (frameA != null) {
         window.cancelAnimationFrame(frameA);
       }
@@ -197,7 +217,9 @@ export function ReplayStage({
       return;
     }
 
-    stage.app.renderer.resize(viewportSize.width, viewportSize.height);
+    const renderResolution = resolveStageRenderResolution();
+    stage.app.renderer.resize(viewportSize.width, viewportSize.height, renderResolution);
+    stage.currentRenderResolution = renderResolution;
     applyCameraTransform(stage);
     setStageRevision((value) => value + 1);
   }, [viewportSize]);
@@ -259,6 +281,8 @@ export function ReplayStage({
         heatmapBucketsRef.current,
         heatmapMaxSampleCountRef.current,
         livePlayerContextModeRef.current,
+        deathReviewEntriesRef.current,
+        selectedDeathReviewKeyRef.current,
         positionPlayerSnapshotsRef.current,
         positionTrailEntriesRef.current,
         showPositionRoundNumbersRef.current,
@@ -267,6 +291,7 @@ export function ReplayStage({
         utilityFocusRef.current,
         playerByIdRef.current,
         onSelectPlayerRef.current,
+        onSelectDeathReviewEntryRef.current,
         onSelectAtlasEntryRef.current,
         onSelectPositionSnapshotRef.current,
       );
@@ -281,7 +306,7 @@ export function ReplayStage({
         setRenderError(nextError);
       }
     }
-  }, [activeRoundIndex, analysisMode, currentTick, heatmapBuckets, heatmapCellSize, heatmapMaxSampleCount, heatmapScope, livePlayerContextMode, stageRevision, replay, round, selectedPlayerId, selectedUtilityAtlasKey, positionPlayerSnapshots, positionTrailEntries, positionsView, showPositionRoundNumbers, utilityAtlasEntries, utilityFocus, playerById]);
+  }, [activeRoundIndex, analysisMode, currentTick, deathReviewEntries, heatmapBuckets, heatmapCellSize, heatmapMaxSampleCount, heatmapScope, livePlayerContextMode, stageRevision, replay, round, selectedDeathReviewKey, selectedPlayerId, selectedUtilityAtlasKey, positionPlayerSnapshots, positionTrailEntries, positionsView, showPositionRoundNumbers, utilityAtlasEntries, utilityFocus, playerById]);
 
   return (
     <div className="stage-shell">
@@ -289,4 +314,37 @@ export function ReplayStage({
       {renderError ? <div className="stage-error">{renderError}</div> : null}
     </div>
   );
+}
+
+function watchDevicePixelRatio(onChange: () => void) {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+    return () => {};
+  }
+
+  let mediaQuery: MediaQueryList | null = null;
+  let removeListener: (() => void) | null = null;
+
+  const arm = () => {
+    removeListener?.();
+    const ratio = Number.isFinite(window.devicePixelRatio) ? window.devicePixelRatio || 1 : 1;
+    mediaQuery = window.matchMedia(`(resolution: ${ratio}dppx)`);
+    const listener = () => {
+      onChange();
+      arm();
+    };
+
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", listener);
+      removeListener = () => mediaQuery?.removeEventListener("change", listener);
+    } else {
+      mediaQuery.addListener(listener);
+      removeListener = () => mediaQuery?.removeListener(listener);
+    }
+  };
+
+  arm();
+  return () => {
+    removeListener?.();
+    mediaQuery = null;
+  };
 }

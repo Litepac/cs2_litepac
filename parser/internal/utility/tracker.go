@@ -25,6 +25,7 @@ type Tracker struct {
 const (
 	smokeDisplacementRadiusUnits = 240.0
 	smokeDisplacementSeconds     = 2.6
+	infernoFootprintSampleTicks  = 4
 )
 
 func NewTracker() *Tracker {
@@ -264,6 +265,8 @@ func (t *Tracker) SyncInfernos(tick int, infernos map[int]*common.Inferno) {
 			continue
 		}
 
+		t.appendInfernoFootprintSample(entry, tick, InfernoActiveFirePositions(inferno))
+
 		activeEntityIDs[entityID] = struct{}{}
 		t.byEntity[entityID] = entry.UtilityID
 		t.infernoEntityByUtility[entry.UtilityID] = entityID
@@ -434,6 +437,33 @@ func phaseEventWithDuration(tick int, phaseType string, pos r3.Vector, durationT
 	return event
 }
 
+func (t *Tracker) appendInfernoFootprintSample(entry *replay.UtilityEntity, tick int, fires []r3.Vector) {
+	if entry == nil || len(fires) == 0 {
+		return
+	}
+
+	if len(entry.FireFootprint) > 0 {
+		last := entry.FireFootprint[len(entry.FireFootprint)-1]
+		if tick-last.Tick < infernoFootprintSampleTicks {
+			return
+		}
+	}
+
+	sample := replay.FireFootprintSample{
+		Tick: tick,
+		X:    make([]*float64, 0, len(fires)),
+		Y:    make([]*float64, 0, len(fires)),
+		Z:    make([]*float64, 0, len(fires)),
+	}
+	for _, fire := range fires {
+		sample.X = append(sample.X, replay.Float64(fire.X))
+		sample.Y = append(sample.Y, replay.Float64(fire.Y))
+		sample.Z = append(sample.Z, replay.Float64(fire.Z))
+	}
+
+	entry.FireFootprint = append(entry.FireFootprint, sample)
+}
+
 func utilityPhaseCenter(entry *replay.UtilityEntity, phaseType string) (r3.Vector, bool) {
 	for index := len(entry.PhaseEvents) - 1; index >= 0; index -= 1 {
 		event := entry.PhaseEvents[index]
@@ -504,6 +534,23 @@ func InfernoActiveCenter(inferno *common.Inferno) (r3.Vector, int) {
 
 	count := float64(len(list))
 	return r3.Vector{X: sum.X / count, Y: sum.Y / count, Z: sum.Z / count}, len(fires.List())
+}
+
+func InfernoActiveFirePositions(inferno *common.Inferno) []r3.Vector {
+	if inferno == nil {
+		return nil
+	}
+
+	fires := inferno.Fires().Active().List()
+	if len(fires) == 0 {
+		return nil
+	}
+
+	positions := make([]r3.Vector, 0, len(fires))
+	for _, fire := range fires {
+		positions = append(positions, r3.Vector{X: fire.X, Y: fire.Y, Z: fire.Z})
+	}
+	return positions
 }
 
 func (t *Tracker) appendTrajectorySample(entry *replay.UtilityEntity, tick int, pos r3.Vector) {

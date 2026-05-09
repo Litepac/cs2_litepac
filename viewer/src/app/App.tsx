@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { ReplayMapFirstPage } from "../controls/ReplayMapFirstPage";
+import { collectDeathReviewEntries, type DeathReviewEntry } from "../replay/deathReview";
 import { type HeatmapScope, type HeatmapSourceFilter, type HeatmapTeamFilter } from "../replay/heatmapAnalysis";
 import {
   type PositionPlayerSnapshot,
@@ -78,6 +79,8 @@ export function App() {
   const [livePlayerContextMode, setLivePlayerContextMode] = useState(false);
   const [pendingUtilityJump, setPendingUtilityJump] = useState<{ roundIndex: number; tick: number } | null>(null);
   const [pendingPositionJump, setPendingPositionJump] = useState<{ roundIndex: number; tick: number } | null>(null);
+  const [pendingDeathJump, setPendingDeathJump] = useState<{ roundIndex: number; tick: number } | null>(null);
+  const [selectedDeathReviewKey, setSelectedDeathReviewKey] = useState<string | null>(null);
   const [statsMatchId, setStatsMatchId] = useState<string | null>(null);
 
   const round = replay?.rounds[roundIndex] ?? null;
@@ -85,6 +88,12 @@ export function App() {
   const timelineMarkers = useTimelineMarkers(replay, round, utilityFocus);
   const statsEntry = statsMatchId ? libraryEntries.find((entry) => entry.id === statsMatchId) ?? null : null;
   const selectedPlayerName = replay?.players.find((player) => player.playerId === selectedPlayerId)?.displayName ?? null;
+  const deathReviewEntries = useMemo(
+    () => (replay ? collectDeathReviewEntries(replay, roundIndex) : []),
+    [replay, roundIndex],
+  );
+  const selectedDeathReviewEntry =
+    selectedDeathReviewKey != null ? deathReviewEntries.find((entry) => entry.key === selectedDeathReviewKey) ?? null : null;
   const positionPlayerSelectedKeys = useMemo(
     () => positionPlayerSelections.map((player) => toPositionPlayerRosterSelectionKey(player.playerIds, player.side)),
     [positionPlayerSelections],
@@ -174,6 +183,8 @@ export function App() {
     setLivePlayerContextMode(false);
     setPendingUtilityJump(null);
     setPendingPositionJump(null);
+    setPendingDeathJump(null);
+    setSelectedDeathReviewKey(null);
   }, [replay?.sourceDemo.sha256]);
 
   useEffect(() => {
@@ -204,6 +215,26 @@ export function App() {
     playback.changeTick(pendingPositionJump.tick);
     setPendingPositionJump(null);
   }, [pendingPositionJump, playback, replay, round, roundIndex]);
+
+  useEffect(() => {
+    if (analysisMode !== "deathReview") {
+      setSelectedDeathReviewKey(null);
+      return;
+    }
+
+    if (selectedDeathReviewKey && !deathReviewEntries.some((entry) => entry.key === selectedDeathReviewKey)) {
+      setSelectedDeathReviewKey(null);
+    }
+  }, [analysisMode, deathReviewEntries, selectedDeathReviewKey]);
+
+  useEffect(() => {
+    if (!pendingDeathJump || !replay || !round || pendingDeathJump.roundIndex !== roundIndex) {
+      return;
+    }
+
+    playback.changeTick(pendingDeathJump.tick);
+    setPendingDeathJump(null);
+  }, [pendingDeathJump, playback, replay, round, roundIndex]);
 
   async function handleDemoFileChange(event: Parameters<typeof onDemoFileChange>[0]) {
     await onDemoFileChange(event);
@@ -429,6 +460,15 @@ export function App() {
     setRoundIndex(entry.roundIndex);
   }
 
+  function handleDeathReviewSelect(entry: DeathReviewEntry) {
+    setAnalysisMode("deathReview");
+    setLivePlayerContextMode(false);
+    setSelectedDeathReviewKey(entry.key);
+    setSelectedPlayerId(entry.victimPlayerId);
+    setPendingDeathJump({ roundIndex: entry.roundIndex, tick: entry.tick });
+    setRoundIndex(entry.roundIndex);
+  }
+
   function handleSelectPositionSnapshot(snapshot: PositionPlayerSnapshot) {
     setAnalysisMode("live");
     setLivePlayerContextMode(true);
@@ -448,6 +488,7 @@ export function App() {
           <ReplayMapFirstPage
             activeRoundIndex={roundIndex}
             analysisMode={analysisMode}
+            deathReviewEntries={deathReviewEntries}
             displayedPositionTrailEntries={displayedPositionTrailEntries}
             heatmapScope={heatmapScope}
             heatmapSnapshot={heatmapSnapshot}
@@ -466,6 +507,8 @@ export function App() {
             round={round}
             selectedPlayerId={selectedPlayerId}
             selectedPlayerName={selectedPlayerName}
+            selectedDeathReviewEntry={selectedDeathReviewEntry}
+            selectedDeathReviewKey={selectedDeathReviewKey}
             selectedUtilityAtlasKey={selectedUtilityAtlasKey}
             showFreezeTime={showFreezeTime}
             showPositionRoundNumbers={showPositionRoundNumbers}
@@ -491,6 +534,7 @@ export function App() {
             onReplayPlayerSelect={handleReplayPlayerSelect}
             onSelectAnalysisMode={handleAnalysisModeChange}
             onSelectAtlasEntry={handleUtilityAtlasSelect}
+            onSelectDeathReviewEntry={handleDeathReviewSelect}
             onSelectPositionSnapshot={handleSelectPositionSnapshot}
             onSelectPositionsView={handlePositionsViewChange}
             onSelectRound={setRoundIndex}

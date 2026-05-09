@@ -350,6 +350,18 @@ function normalizeLoaderIssue(
   const normalized = rawMessage.toLowerCase();
 
   if (context === "demo") {
+    if (
+      normalized.includes("unable to find existing entity") ||
+      (normalized.includes("entity data") && normalized.includes("cannot safely read"))
+    ) {
+      return {
+        context,
+        title: "Demo not supported by the current parser",
+        message: "This demo uses entity data the current review parser cannot safely read yet.",
+        hint: "This is a parser limitation for this demo, not an upload retry issue.",
+      };
+    }
+
     if (!parserBridgeAvailable || normalized.includes("failed to fetch") || normalized.includes("networkerror")) {
       return {
         context,

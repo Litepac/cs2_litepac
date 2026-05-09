@@ -129,6 +129,9 @@ type KillEvent struct {
 	AssisterPlayerID  *string  `json:"assisterPlayerId"`
 	WeaponName        string   `json:"weaponName"`
 	IsHeadshot        bool     `json:"isHeadshot"`
+	AssistedFlash     bool     `json:"assistedFlash"`
+	AttackerBlind     bool     `json:"attackerBlind"`
+	NoScope           bool     `json:"noScope"`
 	PenetratedObjects *int     `json:"penetratedObjects"`
 	ThroughSmoke      *bool    `json:"throughSmoke"`
 	KillerX           *float64 `json:"killerX"`
@@ -182,14 +185,15 @@ type BombEvent struct {
 }
 
 type UtilityEntity struct {
-	UtilityID       string              `json:"utilityId"`
-	Kind            string              `json:"kind"`
-	ThrowerPlayerID *string             `json:"throwerPlayerId"`
-	StartTick       int                 `json:"startTick"`
-	DetonateTick    *int                `json:"detonateTick"`
-	EndTick         *int                `json:"endTick"`
-	Trajectory      Trajectory          `json:"trajectory"`
-	PhaseEvents     []UtilityPhaseEvent `json:"phaseEvents"`
+	UtilityID       string                `json:"utilityId"`
+	Kind            string                `json:"kind"`
+	ThrowerPlayerID *string               `json:"throwerPlayerId"`
+	StartTick       int                   `json:"startTick"`
+	DetonateTick    *int                  `json:"detonateTick"`
+	EndTick         *int                  `json:"endTick"`
+	Trajectory      Trajectory            `json:"trajectory"`
+	PhaseEvents     []UtilityPhaseEvent   `json:"phaseEvents"`
+	FireFootprint   []FireFootprintSample `json:"fireFootprint,omitempty"`
 }
 
 type Trajectory struct {
@@ -198,6 +202,13 @@ type Trajectory struct {
 	X                   []*float64 `json:"x"`
 	Y                   []*float64 `json:"y"`
 	Z                   []*float64 `json:"z"`
+}
+
+type FireFootprintSample struct {
+	Tick int        `json:"tick"`
+	X    []*float64 `json:"x"`
+	Y    []*float64 `json:"y"`
+	Z    []*float64 `json:"z"`
 }
 
 type UtilityPhaseEvent struct {

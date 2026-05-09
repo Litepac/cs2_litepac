@@ -12,6 +12,8 @@ The replay product should answer four questions quickly:
 - What did one player actually do over time?
 - Which movement or utility patterns repeated across rounds?
 
+The next replay-analysis direction is captured in `docs/16-round-understanding-tooling.md`: DemoRead should evolve from showing replay overlays toward parser-backed round-understanding tools such as death review, trade/spacing review, timing review, utility impact, and a contextual review inspector.
+
 ## Non-negotiables
 - Parser and canonical replay own truth
 - Viewer only maps, interpolates, and presents that truth

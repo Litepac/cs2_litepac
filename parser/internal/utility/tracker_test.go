@@ -82,6 +82,35 @@ func TestSyncInfernosExpiresInfernoWithoutActiveFires(t *testing.T) {
 	}
 }
 
+func TestSyncInfernosSamplesActiveFireFootprint(t *testing.T) {
+	inferno := newInfernoWithFires(t, []bool{true, false})
+	tracker := NewTracker()
+	tracker.byID["utility-1"] = &replay.UtilityEntity{
+		UtilityID:    "utility-1",
+		Kind:         "molotov",
+		StartTick:    100,
+		DetonateTick: replay.Int(120),
+		PhaseEvents: []replay.UtilityPhaseEvent{
+			phaseEvent(120, "detonate", r3.Vector{X: 110, Y: 220, Z: 330}),
+		},
+	}
+	tracker.byEntity[88] = "utility-1"
+
+	tracker.SyncInfernos(121, map[int]*common.Inferno{88: inferno})
+	tracker.SyncInfernos(123, map[int]*common.Inferno{88: inferno})
+	tracker.SyncInfernos(125, map[int]*common.Inferno{88: inferno})
+
+	entry := tracker.byID["utility-1"]
+	if len(entry.FireFootprint) != 2 {
+		t.Fatalf("expected footprint samples at cadence, got %d", len(entry.FireFootprint))
+	}
+
+	first := entry.FireFootprint[0]
+	if first.Tick != 121 || len(first.X) != 1 || *first.X[0] != 110 || *first.Y[0] != 220 || *first.Z[0] != 330 {
+		t.Fatalf("unexpected first footprint sample: %+v", first)
+	}
+}
+
 func TestTrackSmokeDisplacementFromHEAddsDisplacedPhaseToActiveSmoke(t *testing.T) {
 	tracker := NewTracker()
 	tracker.byID["smoke-1"] = &replay.UtilityEntity{

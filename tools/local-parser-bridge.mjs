@@ -67,16 +67,17 @@ const server = createServer(async (request, response) => {
     try {
       await parseDemoUpload(request, response);
     } catch (error) {
+      const message = uploadParseError("uploaded-demo.dem", error);
       if (!response.headersSent) {
         writeJson(response, 400, {
-          error: error instanceof Error ? error.message : String(error),
+          error: message,
         });
         return;
       }
 
       response.write(`${JSON.stringify({
         type: "error",
-        error: error instanceof Error ? error.message : String(error),
+        error: message,
       })}\n`);
       response.end();
     }
@@ -174,6 +175,12 @@ async function parseDemoUpload(request, response) {
     response.write(`${JSON.stringify({
       type: "result",
       replay: JSON.parse(replayRaw),
+    })}\n`);
+    response.end();
+  } catch (error) {
+    response.write(`${JSON.stringify({
+      type: "error",
+      error: uploadParseError(safeFileName, error),
     })}\n`);
     response.end();
   } finally {
@@ -323,6 +330,40 @@ function formatParserRuntimeError(error) {
   }
 
   return message || `Unable to run ${path.relative(repoRoot, parserExe)}.`;
+}
+
+function uploadParseError(fileName, error) {
+  const safeFileName = sanitizeDemoFileName(fileName || "uploaded-demo.dem");
+  const raw = String(error instanceof Error ? error.message : error ?? "").trim();
+  if (!raw) {
+    return `Demo processing failed for ${safeFileName}.`;
+  }
+
+  const cleaned = stripGoStackTrace(raw);
+  const normalized = cleaned.toLowerCase();
+  if (normalized.includes("unable to find existing entity")) {
+    return `Demo processing failed for ${safeFileName}. This demo uses entity data the current review parser cannot safely read yet.`;
+  }
+
+  if (normalized.includes("parse demo crashed") || normalized.includes("crashed")) {
+    return `Demo processing failed for ${safeFileName}. The local review parser hit an unsupported demo state.`;
+  }
+
+  return `Demo processing failed for ${safeFileName}: ${cleaned}`;
+}
+
+function stripGoStackTrace(message) {
+  const markers = [" stacktrace:", "\nstacktrace:", "\ngoroutine ", " goroutine "];
+  const lowerMessage = message.toLowerCase();
+  let endIndex = -1;
+  for (const marker of markers) {
+    const index = lowerMessage.indexOf(marker);
+    if (index >= 0 && (endIndex < 0 || index < endIndex)) {
+      endIndex = index;
+    }
+  }
+
+  return (endIndex >= 0 ? message.slice(0, endIndex) : message).trim();
 }
 
 function applyCors(response) {

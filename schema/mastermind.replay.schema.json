@@ -309,6 +309,15 @@
         "isHeadshot": {
           "type": "boolean"
         },
+        "assistedFlash": {
+          "type": "boolean"
+        },
+        "attackerBlind": {
+          "type": "boolean"
+        },
+        "noScope": {
+          "type": "boolean"
+        },
         "penetratedObjects": {
           "$ref": "#/$defs/nullableInteger"
         },
@@ -550,6 +559,40 @@
         }
       }
     },
+    "fireFootprintSample": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tick",
+        "x",
+        "y",
+        "z"
+      ],
+      "properties": {
+        "tick": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "x": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nullableNumber"
+          }
+        },
+        "y": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nullableNumber"
+          }
+        },
+        "z": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nullableNumber"
+          }
+        }
+      }
+    },
     "utilityPhaseEvent": {
       "type": "object",
       "additionalProperties": false,
@@ -631,6 +674,12 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/utilityPhaseEvent"
+          }
+        },
+        "fireFootprint": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/fireFootprintSample"
           }
         }
       }

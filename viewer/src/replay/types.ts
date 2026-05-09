@@ -107,6 +107,9 @@ export type KillEvent = {
   assisterPlayerId: string | null;
   weaponName: string;
   isHeadshot: boolean;
+  assistedFlash?: boolean;
+  attackerBlind?: boolean;
+  noScope?: boolean;
   penetratedObjects: number | null;
   throughSmoke: boolean | null;
   killerX: number | null;
@@ -180,5 +183,11 @@ export type UtilityEntity = {
     y: number | null;
     z: number | null;
     durationTicks?: number | null;
+  }>;
+  fireFootprint?: Array<{
+    tick: number;
+    x: Array<number | null>;
+    y: Array<number | null>;
+    z: Array<number | null>;
   }>;
 };

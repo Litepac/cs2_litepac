@@ -34,6 +34,12 @@ type SmokeDisplacementVisual = {
   radius: number;
 };
 
+type FireFootprintVisual = {
+  firstSampleTick: number;
+  points: ScreenPoint[];
+  sampleTick: number;
+};
+
 type UtilityPhase = "projectile" | "active" | "burst";
 
 type UtilityOverlayStyle = {
@@ -119,9 +125,10 @@ export function drawUtilityVisual(
   currentTick: number,
   radarViewport: RadarViewport,
   tickRate: number,
+  mapClipMask: Container | null = null,
 ) {
   if (utility.kind === "smoke") {
-      drawSmokeUtilityVisual(
+    drawSmokeUtilityVisual(
       trailLayer,
       overlayLayer,
       replay,
@@ -131,6 +138,7 @@ export function drawUtilityVisual(
       currentTick,
       radarViewport,
       tickRate,
+      mapClipMask,
     );
     return;
   }
@@ -177,7 +185,14 @@ export function drawUtilityVisual(
 
   if (renderPhase === "active") {
     if (utility.kind === "molotov" || utility.kind === "incendiary") {
-      drawFireVisual(overlayLayer, point, state?.presentationRemainingSeconds ?? null);
+      drawFireVisual(
+        overlayLayer,
+        point,
+        state?.remainingSeconds ?? null,
+        throwerSide,
+        resolveFireFootprintVisual(replay, utility, currentTick, radarViewport),
+        currentTick,
+      );
       return;
     }
 
@@ -411,6 +426,7 @@ function drawSmokeUtilityVisual(
   currentTick: number,
   radarViewport: RadarViewport,
   tickRate: number,
+  mapClipMask: Container | null,
 ) {
   if (currentTick < utility.startTick) {
     return;
@@ -463,7 +479,10 @@ function drawSmokeUtilityVisual(
     state.remainingSeconds,
     currentTick,
     throwerSide,
+    detonateTick == null ? null : Math.max(0, (currentTick - detonateTick) / Math.max(1, tickRate)),
+    detonateTick == null ? null : Math.max(0.1, (endTick - detonateTick) / Math.max(1, tickRate)),
     resolveSmokeDisplacementVisual(replay, utility, currentTick, radarViewport),
+    mapClipMask,
   );
 }
 
@@ -472,229 +491,296 @@ function drawSmokeVisual(
   point: ScreenPoint,
   remainingSeconds: number | null,
   currentTick: number,
-  _throwerSide: "T" | "CT" | null,
+  throwerSide: "T" | "CT" | null,
+  activeAgeSeconds: number | null,
+  _activeDurationSeconds: number | null,
   displacement: SmokeDisplacementVisual | null,
+  mapClipMask: Container | null,
 ) {
-  const pulse = 0.995 + ((Math.sin(currentTick / 28) + 1) / 2) * 0.014;
-  const ringColor = utilityOverlayStyle("smoke").ringColor;
+  const pulse = 0.994 + ((Math.sin(currentTick / 42) + 1) / 2) * 0.01;
+  const fadeIn = activeAgeSeconds == null ? 1 : Math.min(1, 0.68 + (activeAgeSeconds / 0.45) * 0.32);
+  const fadeOut = remainingSeconds == null ? 1 : Math.max(0.08, Math.min(1, remainingSeconds / 1.25));
+  const smokeOpacity = Math.min(fadeIn, fadeOut);
+  const cloudScale = 0.96 + ((Math.sin(currentTick / 67) + 1) / 2) * 0.018;
+  const ringColor = utilityTeamAccentColor(throwerSide);
+  const volumeWidth = 48 * cloudScale;
+  const volumeHeight = 63 * cloudScale;
+  const smokeLayer = mapClipMask ? new Container() : layer;
+  if (mapClipMask) {
+    smokeLayer.mask = mapClipMask;
+    layer.addChild(smokeLayer);
+  }
   const smokeVeil = new Graphics();
   const cloudShadow = new Graphics();
+  const smokeBlock = new Graphics();
+  const smokeBody = new Graphics();
   const smokeMass = new Graphics();
   const smokeCore = new Graphics();
+  const smokeWisps = new Graphics();
   const smokeHighlights = new Graphics();
-  const smokeDisplacementCutout = new Graphics();
-  const smokeDisplacementRim = new Graphics();
-  const shadowPuffs = [
-    { dx: -15, dy: 12, width: 18, height: 9, alpha: 0.12 },
-    { dx: -1, dy: 13, width: 22, height: 11, alpha: 0.13 },
-    { dx: 16, dy: 11, width: 18, height: 9, alpha: 0.12 },
-    { dx: -3, dy: 4, width: 29, height: 14, alpha: 0.08 },
+  const smokePoint = (dx: number, dy: number, phase: number) => ({
+    x: point.x + (dx + Math.sin(currentTick / 83 + phase) * 0.22) * cloudScale,
+    y: point.y + (dy + Math.cos(currentTick / 91 + phase) * 0.18) * cloudScale,
+  });
+  const drawSmokeEllipse = (
+    graphics: Graphics,
+    puff: { dx: number; dy: number; width: number; height: number; alpha: number; color: number; phase?: number },
+    falloffScale: number,
+    widthScale = 1,
+    heightScale = 1,
+  ) => {
+    const position = smokePoint(puff.dx, puff.dy, puff.phase ?? 0);
+    const radiusX = puff.width * pulse * cloudScale * widthScale;
+    const radiusY = puff.height * pulse * cloudScale * heightScale;
+    const alpha = displacedSmokePuffAlpha(
+      position.x,
+      position.y,
+      radiusX,
+      radiusY,
+      puff.alpha * smokeOpacity,
+      displacement,
+      falloffScale,
+    );
+    if (alpha <= 0.01) {
+      return;
+    }
+    graphics.ellipse(position.x, position.y, radiusX, radiusY);
+    graphics.fill({ color: puff.color, alpha });
+    };
+    const shadowPuffs = [
+    { dx: -17, dy: 24, width: 18, height: 11, alpha: 0.15, color: 0x050709, phase: 0.2 },
+    { dx: 0, dy: 27, width: 26, height: 12, alpha: 0.16, color: 0x050709, phase: 1.8 },
+    { dx: 17, dy: 23, width: 18, height: 11, alpha: 0.14, color: 0x050709, phase: 3.4 },
+    { dx: -1, dy: 8, width: 38, height: 24, alpha: 0.11, color: 0x050709, phase: 4.5 },
   ];
   const veilPuffs = [
-    { dx: -9, dy: -6, width: 22, height: 17, alpha: 0.11, color: 0xf3f7fa },
-    { dx: 9, dy: -5, width: 21, height: 16, alpha: 0.11, color: 0xf3f7fa },
-    { dx: 0, dy: 8, width: 28, height: 19, alpha: 0.12, color: 0xe7edf2 },
-    { dx: -18, dy: 2, width: 15, height: 12, alpha: 0.09, color: 0xe9eef2 },
-    { dx: 18, dy: 1, width: 15, height: 12, alpha: 0.09, color: 0xe9eef2 },
+    { dx: -18, dy: -27, width: 16, height: 14, alpha: 0.39, color: 0x9ba5ab, phase: 0.4 },
+    { dx: -3, dy: -29, width: 21, height: 15, alpha: 0.42, color: 0xb7c0c5, phase: 1.1 },
+    { dx: 15, dy: -27, width: 18, height: 14, alpha: 0.39, color: 0xa2acb2, phase: 1.7 },
+    { dx: -24, dy: -15, width: 16, height: 15, alpha: 0.38, color: 0x8d989f, phase: 2.4 },
+    { dx: 23, dy: -15, width: 16, height: 15, alpha: 0.39, color: 0x98a3aa, phase: 2.9 },
+    { dx: -24, dy: 0, width: 16, height: 16, alpha: 0.38, color: 0x87939a, phase: 3.6 },
+    { dx: 24, dy: 1, width: 16, height: 16, alpha: 0.38, color: 0x96a1a8, phase: 5.0 },
+    { dx: -21, dy: 16, width: 16, height: 15, alpha: 0.36, color: 0x8f9aa1, phase: 5.7 },
+    { dx: 20, dy: 17, width: 16, height: 15, alpha: 0.35, color: 0x929da4, phase: 6.2 },
+    { dx: -3, dy: 27, width: 22, height: 15, alpha: 0.39, color: 0xaab4ba, phase: 4.3 },
+  ];
+  const bodyPuffs = [
+    { dx: -12, dy: -20, width: 20, height: 17, alpha: 0.58, color: 0xaab4ba, phase: 0.8 },
+    { dx: 4, dy: -21, width: 22, height: 17, alpha: 0.64, color: 0xd2dade, phase: 1.5 },
+    { dx: 17, dy: -14, width: 18, height: 16, alpha: 0.55, color: 0xb6c0c6, phase: 2.1 },
+    { dx: -19, dy: -8, width: 19, height: 17, alpha: 0.54, color: 0x98a4ab, phase: 2.8 },
+    { dx: -6, dy: -7, width: 23, height: 19, alpha: 0.67, color: 0xcbd3d8, phase: 3.5 },
+    { dx: 8, dy: -6, width: 23, height: 19, alpha: 0.67, color: 0xe0e6e9, phase: 4.2 },
+    { dx: 19, dy: 3, width: 18, height: 17, alpha: 0.52, color: 0xaab5bb, phase: 4.8 },
+    { dx: -19, dy: 8, width: 19, height: 17, alpha: 0.52, color: 0x98a4ab, phase: 5.5 },
+    { dx: -4, dy: 8, width: 24, height: 19, alpha: 0.65, color: 0xc2cbd0, phase: 6.1 },
+    { dx: 11, dy: 11, width: 22, height: 18, alpha: 0.61, color: 0xd0d8dc, phase: 6.8 },
+    { dx: -12, dy: 23, width: 19, height: 15, alpha: 0.47, color: 0x98a4ab, phase: 7.4 },
+    { dx: 5, dy: 25, width: 19, height: 15, alpha: 0.5, color: 0xb3bdc3, phase: 8.1 },
   ];
   const puffs = [
-    { dx: -15, dy: -11, radius: 7.6, alpha: 0.8, color: 0xe5ebef },
-    { dx: -5, dy: -14, radius: 8.4, alpha: 0.84, color: 0xf0f4f7 },
-    { dx: 8, dy: -13, radius: 8.2, alpha: 0.84, color: 0xf1f5f8 },
-    { dx: 19, dy: -7, radius: 7.2, alpha: 0.76, color: 0xe5ebef },
-    { dx: -21, dy: -1, radius: 7.2, alpha: 0.74, color: 0xdde5ea },
-    { dx: -11, dy: 0, radius: 8.7, alpha: 0.84, color: 0xebf0f4 },
-    { dx: 1, dy: 0, radius: 9.5, alpha: 0.9, color: 0xf6fafc },
-    { dx: 13, dy: -1, radius: 8.8, alpha: 0.84, color: 0xecf2f6 },
-    { dx: -17, dy: 11, radius: 6.8, alpha: 0.72, color: 0xdce5eb },
-    { dx: -6, dy: 11, radius: 8.2, alpha: 0.8, color: 0xeaf0f4 },
-    { dx: 8, dy: 11, radius: 8.2, alpha: 0.8, color: 0xeaf0f4 },
-    { dx: 18, dy: 10, radius: 6.9, alpha: 0.72, color: 0xdce5eb },
-    { dx: -2, dy: 20, radius: 6.7, alpha: 0.68, color: 0xd8e2e9 },
+    { dx: -10, dy: -18, width: 11, height: 10, alpha: 0.54, color: 0xc4ccd1, phase: 0.2 },
+    { dx: 1, dy: -19, width: 12, height: 10, alpha: 0.6, color: 0xe9eef1, phase: 0.9 },
+    { dx: 12, dy: -16, width: 11, height: 10, alpha: 0.54, color: 0xd1d9dd, phase: 1.4 },
+    { dx: -15, dy: -8, width: 11, height: 11, alpha: 0.5, color: 0xaab5bc, phase: 2.0 },
+    { dx: -5, dy: -8, width: 13, height: 11, alpha: 0.62, color: 0xd9e0e3, phase: 2.6 },
+    { dx: 6, dy: -8, width: 14, height: 11, alpha: 0.64, color: 0xf0f4f6, phase: 3.1 },
+    { dx: 16, dy: -6, width: 11, height: 10, alpha: 0.5, color: 0xbac4ca, phase: 3.7 },
+    { dx: -15, dy: 2, width: 11, height: 11, alpha: 0.49, color: 0x9ca8af, phase: 4.3 },
+    { dx: -4, dy: 2, width: 14, height: 12, alpha: 0.66, color: 0xe5eaed, phase: 4.8 },
+    { dx: 7, dy: 2, width: 14, height: 12, alpha: 0.63, color: 0xdce3e6, phase: 5.4 },
+    { dx: 17, dy: 4, width: 10, height: 10, alpha: 0.46, color: 0xaab5bb, phase: 6.0 },
+    { dx: -11, dy: 13, width: 11, height: 10, alpha: 0.46, color: 0xb0bac0, phase: 6.6 },
+    { dx: 1, dy: 13, width: 13, height: 11, alpha: 0.54, color: 0xd1d9dd, phase: 7.2 },
+    { dx: 13, dy: 13, width: 11, height: 10, alpha: 0.46, color: 0xb7c1c7, phase: 7.8 },
   ];
   const corePuffs = [
-    { dx: -6, dy: -5, radius: 4.8, alpha: 0.26, color: 0xffffff },
-    { dx: 5, dy: -4, radius: 5.1, alpha: 0.28, color: 0xffffff },
-    { dx: 0, dy: 5, radius: 5.8, alpha: 0.24, color: 0xfbfeff },
+    { dx: -4, dy: -8, width: 10, height: 8, alpha: 0.34, color: 0xffffff, phase: 0.6 },
+    { dx: 5, dy: -7, width: 10, height: 8, alpha: 0.32, color: 0xffffff, phase: 1.9 },
+    { dx: -1, dy: 2, width: 12, height: 9, alpha: 0.31, color: 0xfbfeff, phase: 3.2 },
+    { dx: 7, dy: 6, width: 9, height: 8, alpha: 0.22, color: 0xe4ecef, phase: 4.4 },
   ];
   const highlights = [
-    { dx: -7, dy: -8, radius: 4.2, alpha: 0.18, color: 0xffffff },
-    { dx: 8, dy: -7, radius: 4.1, alpha: 0.16, color: 0xffffff },
-    { dx: 2, dy: 7, radius: 4.5, alpha: 0.14, color: 0xf8fbfe },
+    { dx: -8, dy: -12, width: 5, height: 3, alpha: 0.11, color: 0xffffff, phase: 0.5 },
+    { dx: 7, dy: -10, width: 5, height: 3, alpha: 0.1, color: 0xffffff, phase: 2.1 },
+    { dx: 2, dy: 6, width: 6, height: 4, alpha: 0.1, color: 0xf8fbfe, phase: 3.8 },
   ];
+  const wisps = [
+    { sx: -15, sy: -9, c1x: -6, c1y: -16, c2x: 5, c2y: -2, ex: 15, ey: -10, alpha: 0.14, width: 1.7, color: 0xf5f8fa },
+    { sx: -14, sy: 5, c1x: -5, c1y: -3, c2x: 6, c2y: 12, ex: 15, ey: 4, alpha: 0.13, width: 1.6, color: 0xe9eef1 },
+    { sx: -7, sy: -16, c1x: 2, c1y: -21, c2x: 8, c2y: -7, ex: 15, ey: -14, alpha: 0.1, width: 1.35, color: 0xf7fafc },
+    { sx: -12, sy: 13, c1x: -3, c1y: 7, c2x: 7, c2y: 18, ex: 14, ey: 10, alpha: 0.08, width: 2.2, color: 0x6e7f88 },
+    { sx: -13, sy: -2, c1x: -4, c1y: 7, c2x: 5, c2y: -8, ex: 14, ey: 1, alpha: 0.08, width: 2.3, color: 0x596872 },
+  ];
+
   for (const puff of shadowPuffs) {
-    const x = point.x + puff.dx;
-    const y = point.y + puff.dy;
-    const alpha = displacedSmokeAlpha(x, y, puff.alpha, displacement, 1.1);
-    if (alpha <= 0.01) {
-      continue;
-    }
-    cloudShadow.ellipse(x, y, puff.width * pulse, puff.height * pulse);
-    cloudShadow.fill({ color: 0x090d11, alpha });
+    drawSmokeEllipse(cloudShadow, puff, 1.14, 1, 1);
   }
-  layer.addChild(cloudShadow);
+  smokeLayer.addChild(cloudShadow);
+
+  if (!displacement || displacement.ageRatio < 0.12) {
+    smokeBlock.roundRect(point.x - volumeWidth / 2, point.y - volumeHeight / 2, volumeWidth, volumeHeight, 7 * cloudScale);
+    smokeBlock.fill({ color: 0x929da3, alpha: 0.68 * smokeOpacity });
+    smokeBlock.roundRect(
+      point.x - volumeWidth * 0.42,
+      point.y - volumeHeight * 0.42,
+      volumeWidth * 0.84,
+      volumeHeight * 0.84,
+      6 * cloudScale,
+    );
+    smokeBlock.fill({ color: 0xc3ccd1, alpha: 0.54 * smokeOpacity });
+    smokeBlock.roundRect(
+      point.x - volumeWidth * 0.3,
+      point.y - volumeHeight * 0.31,
+      volumeWidth * 0.6,
+      volumeHeight * 0.62,
+      5 * cloudScale,
+    );
+    smokeBlock.fill({ color: 0xe8edf0, alpha: 0.32 * smokeOpacity });
+    smokeLayer.addChild(smokeBlock);
+  }
+
+  for (const puff of bodyPuffs) {
+    drawSmokeEllipse(smokeBody, puff, 1.08, 1, 1);
+  }
+  smokeLayer.addChild(smokeBody);
 
   for (const puff of veilPuffs) {
-    const x = point.x + puff.dx;
-    const y = point.y + puff.dy;
-    const alpha = displacedSmokeAlpha(x, y, puff.alpha, displacement, 1.05);
-    if (alpha <= 0.01) {
-      continue;
-    }
-    smokeVeil.ellipse(x, y, puff.width * pulse, puff.height * pulse);
-    smokeVeil.fill({ color: puff.color, alpha });
+    drawSmokeEllipse(smokeVeil, puff, 1.05, 1, 1);
   }
-  layer.addChild(smokeVeil);
+  smokeLayer.addChild(smokeVeil);
 
   for (const puff of puffs) {
-    const x = point.x + puff.dx;
-    const y = point.y + puff.dy;
-    const alpha = displacedSmokeAlpha(x, y, puff.alpha, displacement, 1);
-    if (alpha <= 0.01) {
-      continue;
-    }
-    smokeMass.circle(x, y, puff.radius * pulse);
-    smokeMass.fill({ color: puff.color, alpha });
+    drawSmokeEllipse(smokeMass, puff, 1, 1, 1);
   }
-  layer.addChild(smokeMass);
+  smokeLayer.addChild(smokeMass);
 
   for (const puff of corePuffs) {
-    const x = point.x + puff.dx;
-    const y = point.y + puff.dy;
-    const alpha = displacedSmokeAlpha(x, y, puff.alpha, displacement, 0.95);
+    drawSmokeEllipse(smokeCore, puff, 0.95, 1, 1);
+  }
+  smokeLayer.addChild(smokeCore);
+
+  for (const wisp of wisps) {
+    const sampleX = point.x + (wisp.sx + wisp.ex) / 2;
+    const sampleY = point.y + (wisp.sy + wisp.ey) / 2;
+    const alpha = displacedSmokeAlpha(sampleX, sampleY, wisp.alpha * smokeOpacity, displacement, 0.86);
     if (alpha <= 0.01) {
       continue;
     }
-    smokeCore.circle(x, y, puff.radius * pulse);
-    smokeCore.fill({ color: puff.color, alpha });
+    smokeWisps.moveTo(point.x + wisp.sx * cloudScale, point.y + wisp.sy * cloudScale);
+    smokeWisps.bezierCurveTo(
+      point.x + wisp.c1x * cloudScale,
+      point.y + wisp.c1y * cloudScale,
+      point.x + wisp.c2x * cloudScale,
+      point.y + wisp.c2y * cloudScale,
+      point.x + wisp.ex * cloudScale,
+      point.y + wisp.ey * cloudScale,
+    );
+    smokeWisps.stroke({
+      color: wisp.color,
+      width: wisp.width,
+      alpha,
+      cap: "round",
+      join: "round",
+    });
   }
-  layer.addChild(smokeCore);
+  smokeLayer.addChild(smokeWisps);
 
   for (const puff of highlights) {
-    const x = point.x + puff.dx;
-    const y = point.y + puff.dy;
-    const alpha = displacedSmokeAlpha(x, y, puff.alpha, displacement, 0.88);
-    if (alpha <= 0.01) {
-      continue;
-    }
-    smokeHighlights.circle(x, y, puff.radius * pulse);
-    smokeHighlights.fill({ color: puff.color, alpha });
+    drawSmokeEllipse(smokeHighlights, puff, 0.88, 1, 1);
   }
-  layer.addChild(smokeHighlights);
-
-  if (displacement) {
-    smokeDisplacementCutout.circle(displacement.center.x, displacement.center.y, displacement.radius * 0.9);
-    smokeDisplacementCutout.fill({
-      color: 0x131b22,
-      alpha: 0.012 + displacement.ageRatio * 0.028,
-    });
-    smokeDisplacementCutout.circle(displacement.center.x, displacement.center.y, displacement.radius * 0.5);
-    smokeDisplacementCutout.fill({
-      color: 0x0d141a,
-      alpha: 0.02 + displacement.ageRatio * 0.038,
-    });
-    layer.addChild(smokeDisplacementCutout);
-
-    smokeDisplacementRim.circle(displacement.center.x, displacement.center.y, displacement.radius * 0.84);
-    smokeDisplacementRim.stroke({
-      color: 0xf6fbff,
-      width: 1,
-      alpha: 0.016 + displacement.ageRatio * 0.03,
-    });
-    layer.addChild(smokeDisplacementRim);
-  }
+  smokeLayer.addChild(smokeHighlights);
 
   if (remainingSeconds != null) {
     const progress = Math.max(0, Math.min(1, remainingSeconds / 20));
-    const ringCenter = { x: point.x + 1, y: point.y - 1 };
-    drawProgressRing(layer, ringCenter, 17.5, progress, ringColor, {
-      backdropAlpha: 0.11,
-      backdropColor: 0xeff4f8,
-      width: 3.3,
-      alpha: 0.86,
+    drawProgressRing(smokeLayer, { x: point.x + 1, y: point.y }, 15.2, progress, ringColor, {
+      backdropAlpha: 0.12,
+      backdropColor: 0x121619,
+      width: 2.6,
+      alpha: 0.82,
     });
   }
 }
 
-function drawFireVisual(layer: Container, point: ScreenPoint, remainingSeconds: number | null) {
-  const scorch = new Graphics();
-  const fireMass = new Graphics();
-  const hotCore = new Graphics();
-  const flameTips = new Graphics();
-  const embers = new Graphics();
-
-  const scorchPatches = [
-    { dx: -12, dy: 9, width: 13, height: 7, alpha: 0.16 },
-    { dx: 1, dy: 10, width: 15, height: 8, alpha: 0.17 },
-    { dx: 14, dy: 8, width: 12, height: 7, alpha: 0.15 },
-    { dx: -2, dy: 2, width: 22, height: 10, alpha: 0.1 },
-  ];
-  for (const patch of scorchPatches) {
-    scorch.ellipse(point.x + patch.dx, point.y + patch.dy, patch.width, patch.height);
-    scorch.fill({ color: 0x150d08, alpha: patch.alpha });
+function drawFireVisual(
+  layer: Container,
+  point: ScreenPoint,
+  remainingSeconds: number | null,
+  throwerSide: "T" | "CT" | null,
+  footprint: FireFootprintVisual | null = null,
+  currentTick = 0,
+) {
+  const ringColor = utilityTeamAccentColor(throwerSide);
+  if (footprint && footprint.points.length > 0) {
+    const burnAgeTicks = Math.max(0, currentTick - footprint.firstSampleTick);
+    const fadeInIntensity = Math.min(1, 0.38 + (burnAgeTicks / 18) * 0.62);
+    const fadeOutIntensity = remainingSeconds == null ? 1 : Math.max(0.08, Math.min(1, remainingSeconds / 0.85));
+    const footprintIntensity = Math.min(fadeInIntensity, fadeOutIntensity);
+    drawFireFootprintVisual(layer, footprint.points, ringColor, footprintIntensity);
+  } else {
+    drawSingleFireVisual(layer, point, ringColor);
   }
-  layer.addChild(scorch);
-
-  const flamePuffs = [
-    { dx: -15, dy: 3, radius: 6.3, alpha: 0.72, color: 0xff8a37 },
-    { dx: -7, dy: -3, radius: 6.8, alpha: 0.76, color: 0xffa03f },
-    { dx: 2, dy: -5, radius: 7.3, alpha: 0.8, color: 0xffb34c },
-    { dx: 12, dy: -2, radius: 6.5, alpha: 0.74, color: 0xff983b },
-    { dx: 17, dy: 5, radius: 5.8, alpha: 0.68, color: 0xff7b31 },
-    { dx: -11, dy: 10, radius: 6.1, alpha: 0.68, color: 0xff8f39 },
-    { dx: 0, dy: 11, radius: 7.1, alpha: 0.74, color: 0xffa642 },
-    { dx: 11, dy: 10, radius: 6.2, alpha: 0.69, color: 0xff8d38 },
-    { dx: -1, dy: 2, radius: 8.3, alpha: 0.78, color: 0xffbf58 },
-  ];
-  for (const puff of flamePuffs) {
-    fireMass.circle(point.x + puff.dx, point.y + puff.dy, puff.radius);
-    fireMass.fill({ color: puff.color, alpha: puff.alpha });
-  }
-  layer.addChild(fireMass);
-
-  const corePuffs = [
-    { dx: -5, dy: 0, radius: 3.7, alpha: 0.52, color: 0xffe2a0 },
-    { dx: 4, dy: -1, radius: 4.2, alpha: 0.56, color: 0xfff0c6 },
-    { dx: 1, dy: 7, radius: 4.4, alpha: 0.46, color: 0xffd98c },
-  ];
-  for (const puff of corePuffs) {
-    hotCore.circle(point.x + puff.dx, point.y + puff.dy, puff.radius);
-    hotCore.fill({ color: puff.color, alpha: puff.alpha });
-  }
-  layer.addChild(hotCore);
-
-  const tongues = [
-    { dx: -9, dy: -10, width: 4.7, height: 8.6, color: 0xffc56a, alpha: 0.28 },
-    { dx: 1, dy: -13, width: 5.4, height: 10.2, color: 0xffe0a8, alpha: 0.26 },
-    { dx: 10, dy: -10, width: 4.5, height: 8.2, color: 0xffbf63, alpha: 0.24 },
-  ];
-  for (const tongue of tongues) {
-    flameTips.ellipse(point.x + tongue.dx, point.y + tongue.dy, tongue.width, tongue.height);
-    flameTips.fill({ color: tongue.color, alpha: tongue.alpha });
-  }
-  layer.addChild(flameTips);
-
-  const emberDots = [
-    { dx: -16, dy: -3, radius: 1, color: 0xffcd78, alpha: 0.28 },
-    { dx: 15, dy: -1, radius: 0.95, color: 0xffc167, alpha: 0.25 },
-    { dx: -4, dy: -11, radius: 0.95, color: 0xffe1af, alpha: 0.22 },
-    { dx: 7, dy: -9, radius: 0.8, color: 0xffefcf, alpha: 0.18 },
-  ];
-  for (const ember of emberDots) {
-    embers.circle(point.x + ember.dx, point.y + ember.dy, ember.radius);
-    embers.fill({ color: ember.color, alpha: ember.alpha });
-  }
-  layer.addChild(embers);
 
   if (remainingSeconds != null) {
     const progress = Math.max(0, Math.min(1, remainingSeconds / 7));
-    drawProgressRing(layer, { x: point.x + 1, y: point.y + 1 }, 18.5, progress, 0xffc467, {
+    drawProgressRing(layer, { x: point.x + 1, y: point.y + 1 }, 18.5, progress, ringColor, {
       backdropAlpha: 0.08,
-      backdropColor: 0xffefcf,
-      width: 3,
-      alpha: 0.84,
+      backdropColor: ringColor,
+      width: 2.7,
+      alpha: 0.8,
     });
   }
+}
+
+function drawFireFootprintVisual(
+  layer: Container,
+  footprintPoints: ScreenPoint[],
+  _ringColor: number,
+  intensity: number,
+) {
+  const clampedIntensity = Math.max(0.05, Math.min(1, intensity));
+  const heat = new Graphics();
+  const core = new Graphics();
+  const ember = new Graphics();
+
+  for (const point of footprintPoints) {
+    heat.circle(point.x, point.y, 13.5);
+    heat.fill({ color: 0xff7d2d, alpha: 0.22 * clampedIntensity });
+    heat.circle(point.x + 1.5, point.y - 1.5, 9.2);
+    heat.fill({ color: 0xffa642, alpha: 0.34 * clampedIntensity });
+
+    core.circle(point.x, point.y, 5.7);
+    core.fill({ color: 0xffcf72, alpha: 0.62 * clampedIntensity });
+    core.circle(point.x + 1.2, point.y - 1.6, 3.1);
+    core.fill({ color: 0xfff0c6, alpha: 0.46 * clampedIntensity });
+
+    ember.circle(point.x - 4.8, point.y + 3.5, 1.1);
+    ember.fill({ color: 0xffe1af, alpha: 0.34 * clampedIntensity });
+    ember.circle(point.x + 4.6, point.y - 3.3, 0.9);
+    ember.fill({ color: 0xffefcf, alpha: 0.28 * clampedIntensity });
+  }
+
+  layer.addChild(heat);
+  layer.addChild(core);
+  layer.addChild(ember);
+}
+
+function drawSingleFireVisual(layer: Container, point: ScreenPoint, ringColor: number) {
+  const field = new Graphics();
+  field.circle(point.x, point.y, 16.5);
+  field.fill({ color: 0xff8f2f, alpha: 0.15 });
+  field.circle(point.x, point.y, 12.2);
+  field.fill({ color: 0xffb24c, alpha: 0.22 });
+  field.circle(point.x, point.y, 7.2);
+  field.fill({ color: 0xffdf8e, alpha: 0.34 });
+  field.circle(point.x, point.y, 3.8);
+  field.fill({ color: 0xfff0bf, alpha: 0.55 });
+  field.circle(point.x, point.y, 17.8);
+  field.stroke({ color: ringColor, width: 2.15, alpha: 0.62 });
+  field.circle(point.x, point.y, 10.2);
+  field.stroke({ color: 0xffd27a, width: 1, alpha: 0.26 });
+  layer.addChild(field);
 }
 
 function drawDecoyVisual(layer: Container, point: ScreenPoint, remainingSeconds: number | null) {
@@ -751,36 +837,21 @@ function drawProjectileVisual(
   kind: UtilityEntity["kind"],
   throwerSide: "T" | "CT" | null,
 ) {
-  const marker = new Graphics();
-  const style = utilityOverlayStyle(kind);
-  const sideFillColor = style.endpointColor;
-  const darkStroke = utilityTeamAccentColor(throwerSide);
-  const detailColor = 0x081116;
+  const iconDefinition = utilitySvgIcon(kind);
+  const icon = new Graphics();
+  const teamAccent = utilityTeamAccentColor(throwerSide);
+  const maxWidth = 15;
+  const maxHeight = 16;
+  const iconScale = Math.min(maxWidth / iconDefinition.width, maxHeight / iconDefinition.height);
 
-  switch (kind) {
-    case "flashbang":
-      drawFlashbangProjectileIcon(marker, point, sideFillColor, darkStroke, detailColor);
-      break;
-    case "hegrenade":
-      drawHEProjectileIcon(marker, point, sideFillColor, darkStroke, detailColor);
-      break;
-    case "decoy":
-      drawDecoyProjectileIcon(marker, point, sideFillColor, darkStroke, detailColor);
-      break;
-    case "smoke":
-      drawSmokeProjectileIcon(marker, point, sideFillColor, darkStroke, detailColor);
-      break;
-    case "molotov":
-    case "incendiary":
-      drawMolotovProjectileIcon(marker, point, sideFillColor, darkStroke, detailColor);
-      break;
-    default:
-      marker.rect(point.x - 5, point.y - 5, 10, 10);
-      marker.fill({ color: 0xffffff, alpha: 0.9 });
-      break;
-  }
+  icon.svg(iconDefinition.svg);
+  icon.pivot.set(iconDefinition.width / 2, iconDefinition.height / 2);
+  icon.position.set(point.x, point.y);
+  icon.scale.set(iconScale);
+  icon.tint = teamAccent;
+  icon.alpha = throwerSide == null ? 0.82 : 0.96;
 
-  layer.addChild(marker);
+  layer.addChild(icon);
 }
 
 function drawProjectileTrajectoryVisual(
@@ -794,23 +865,26 @@ function drawProjectileTrajectoryVisual(
   const points = trajectoryTrailPoints(replay, utility, currentTick, radarViewport);
   if (points.length >= 2) {
     const trail = new Graphics();
-    const trailColor = utilityOverlayStyle(utility.kind).trailColor;
     const teamAccent = utilityTeamAccentColor(throwerSide);
     trail.moveTo(points[0].x, points[0].y);
     for (let index = 1; index < points.length; index += 1) {
       trail.lineTo(points[index].x, points[index].y);
     }
     trail.stroke({
-      color: trailColor,
-      width: 2.1,
-      alpha: 0.78,
+      color: 0x020507,
+      width: 3.2,
+      alpha: 0.46,
       cap: "round",
       join: "round",
     });
+    trail.moveTo(points[0].x, points[0].y);
+    for (let index = 1; index < points.length; index += 1) {
+      trail.lineTo(points[index].x, points[index].y);
+    }
     trail.stroke({
       color: teamAccent,
-      width: 0.85,
-      alpha: 0.34,
+      width: 1.45,
+      alpha: 0.78,
       cap: "round",
       join: "round",
     });
@@ -825,196 +899,17 @@ function drawProjectileTrajectoryVisual(
     return;
   }
 
-  const trailColor = utilityOverlayStyle(utility.kind).trailColor;
   const teamAccent = utilityTeamAccentColor(throwerSide);
   const bounceMarkers = new Graphics();
   for (const point of bouncePoints) {
-    bounceMarkers.circle(point.x, point.y, 6.2);
-    bounceMarkers.stroke({ color: trailColor, width: 1.65, alpha: 0.74 });
-    bounceMarkers.circle(point.x, point.y, 7.5);
-    bounceMarkers.stroke({ color: teamAccent, width: 0.75, alpha: 0.36 });
+    bounceMarkers.circle(point.x, point.y, 6.5);
+    bounceMarkers.stroke({ color: 0x020507, width: 2.8, alpha: 0.5 });
+    bounceMarkers.circle(point.x, point.y, 5.9);
+    bounceMarkers.stroke({ color: teamAccent, width: 1.35, alpha: 0.72 });
     bounceMarkers.circle(point.x, point.y, 1.6);
-    bounceMarkers.fill({ color: trailColor, alpha: 0.76 });
+    bounceMarkers.fill({ color: teamAccent, alpha: 0.82 });
   }
   layer.addChild(bounceMarkers);
-}
-
-function fillAndStrokeShape(
-  marker: Graphics,
-  drawShape: () => void,
-  fillColor: number,
-  strokeColor: number,
-  strokeWidth: number,
-) {
-  drawShape();
-  marker.fill({ color: fillColor, alpha: 0.98 });
-  drawShape();
-  marker.stroke({ color: strokeColor, width: strokeWidth, alpha: 0.96, cap: "round", join: "round" });
-}
-
-function drawFlashbangProjectileIcon(
-  marker: Graphics,
-  point: ScreenPoint,
-  fillColor: number,
-  strokeColor: number,
-  detailColor: number,
-) {
-  fillAndStrokeShape(
-    marker,
-    () => marker.roundRect(point.x - 3.95, point.y - 8.35, 7.9, 15.9, 1.72),
-    fillColor,
-    strokeColor,
-    1.58,
-  );
-  fillAndStrokeShape(
-    marker,
-    () => marker.rect(point.x - 1.95, point.y - 10.95, 3.9, 2.05),
-    fillColor,
-    strokeColor,
-    1.1,
-  );
-  marker.moveTo(point.x + 1.65, point.y - 10.05);
-  marker.lineTo(point.x + 3.05, point.y - 10.05);
-  marker.lineTo(point.x + 3.05, point.y - 8.0);
-  marker.stroke({ color: strokeColor, width: 1.08, alpha: 0.96, cap: "round", join: "round" });
-  marker.circle(point.x + 5.6, point.y - 9.4, 1.9);
-  marker.stroke({ color: strokeColor, width: 1.14, alpha: 0.96 });
-  marker.moveTo(point.x, point.y - 4.85);
-  marker.lineTo(point.x, point.y + 3.55);
-  marker.stroke({ color: detailColor, width: 1.1, alpha: 0.7, cap: "round" });
-}
-
-function drawHEProjectileIcon(
-  marker: Graphics,
-  point: ScreenPoint,
-  fillColor: number,
-  strokeColor: number,
-  detailColor: number,
-) {
-  fillAndStrokeShape(
-    marker,
-    () => marker.circle(point.x - 0.25, point.y + 0.6, 5.15),
-    fillColor,
-    strokeColor,
-    1.44,
-  );
-  fillAndStrokeShape(
-    marker,
-    () => marker.rect(point.x - 0.95, point.y - 6.45, 1.9, 1.8),
-    fillColor,
-    strokeColor,
-    1.06,
-  );
-  marker.moveTo(point.x + 1.55, point.y - 4.15);
-  marker.lineTo(point.x + 4.45, point.y - 6.8);
-  marker.stroke({ color: detailColor, width: 1.02, alpha: 0.9, cap: "round" });
-  marker.circle(point.x + 5.35, point.y - 7.15, 1.02);
-  marker.stroke({ color: detailColor, width: 0.86, alpha: 0.88 });
-  marker.moveTo(point.x - 1.7, point.y + 0.55);
-  marker.lineTo(point.x + 1.35, point.y + 0.55);
-  marker.moveTo(point.x - 0.18, point.y - 0.95);
-  marker.lineTo(point.x - 0.18, point.y + 2.05);
-  marker.stroke({ color: detailColor, width: 0.94, alpha: 0.72, cap: "round" });
-}
-
-function drawDecoyProjectileIcon(
-  marker: Graphics,
-  point: ScreenPoint,
-  fillColor: number,
-  strokeColor: number,
-  detailColor: number,
-) {
-  fillAndStrokeShape(
-    marker,
-    () => marker.roundRect(point.x - 2.45, point.y - 2.45, 4.9, 4.9, 1.08),
-    fillColor,
-    strokeColor,
-    1.14,
-  );
-  marker.moveTo(point.x - 1.6, point.y);
-  marker.lineTo(point.x + 1.6, point.y);
-  marker.stroke({ color: detailColor, width: 0.88, alpha: 0.84, cap: "round" });
-  marker.moveTo(point.x, point.y - 1.55);
-  marker.lineTo(point.x, point.y + 1.55);
-  marker.stroke({ color: detailColor, width: 0.74, alpha: 0.72, cap: "round" });
-}
-
-function drawSmokeProjectileIcon(
-  marker: Graphics,
-  point: ScreenPoint,
-  fillColor: number,
-  strokeColor: number,
-  detailColor: number,
-) {
-  fillAndStrokeShape(
-    marker,
-    () => marker.roundRect(point.x - 3.55, point.y - 8.95, 7.1, 17.9, 1.58),
-    fillColor,
-    strokeColor,
-    1.58,
-  );
-  fillAndStrokeShape(
-    marker,
-    () => marker.rect(point.x - 2.15, point.y - 10.9, 4.3, 1.65),
-    fillColor,
-    strokeColor,
-    1.08,
-  );
-  fillAndStrokeShape(
-    marker,
-    () => marker.roundRect(point.x + 3.25, point.y - 5.2, 2.5, 8.85, 0.48),
-    fillColor,
-    strokeColor,
-    1.12,
-  );
-  marker.moveTo(point.x - 1.95, point.y - 5.6);
-  marker.lineTo(point.x + 1.95, point.y - 5.6);
-  marker.moveTo(point.x - 1.95, point.y - 2.3);
-  marker.lineTo(point.x + 1.95, point.y - 2.3);
-  marker.moveTo(point.x - 1.95, point.y + 1);
-  marker.lineTo(point.x + 1.95, point.y + 1);
-  marker.moveTo(point.x - 1.95, point.y + 4.3);
-  marker.lineTo(point.x + 1.95, point.y + 4.3);
-  marker.stroke({ color: detailColor, width: 1.12, alpha: 0.76, cap: "round" });
-}
-
-function drawMolotovProjectileIcon(
-  marker: Graphics,
-  point: ScreenPoint,
-  fillColor: number,
-  strokeColor: number,
-  detailColor: number,
-) {
-  fillAndStrokeShape(
-    marker,
-    () => marker.roundRect(point.x - 3.15, point.y - 4.55, 6.3, 10.2, 1.34),
-    fillColor,
-    strokeColor,
-    1.38,
-  );
-  fillAndStrokeShape(
-    marker,
-    () => marker.rect(point.x - 0.95, point.y - 7.45, 1.9, 3.15),
-    fillColor,
-    strokeColor,
-    1.02,
-  );
-  fillAndStrokeShape(
-    marker,
-    () => {
-      marker.moveTo(point.x - 2.15, point.y - 4.45);
-      marker.lineTo(point.x - 0.95, point.y - 6.15);
-      marker.lineTo(point.x + 0.95, point.y - 6.15);
-      marker.lineTo(point.x + 2.15, point.y - 4.45);
-      marker.closePath();
-    },
-    fillColor,
-    strokeColor,
-    1,
-  );
-  marker.moveTo(point.x + 0.45, point.y - 7.6);
-  marker.lineTo(point.x + 2.15, point.y - 9.45);
-  marker.stroke({ color: detailColor, width: 1.12, alpha: 0.9, cap: "round" });
 }
 
 function drawTimerLabel(
@@ -1125,12 +1020,47 @@ function displacedSmokeAlpha(
     return baseAlpha;
   }
 
-  if (distance <= displacement.radius * 0.62) {
-    return 0;
+  const clearStrength = Math.max(0, Math.min(1, displacement.ageRatio));
+  if (distance <= displacement.radius * 0.56) {
+    return Math.max(0, baseAlpha * (1 - clearStrength));
   }
 
   const openness = 1 - distance / Math.max(1, falloffRadius);
-  const reduction = Math.min(1, 1.42 * displacement.ageRatio * Math.pow(openness, 0.96));
+  const reduction = Math.min(1, 1.35 * clearStrength * Math.pow(openness, 0.82));
+  return Math.max(0, baseAlpha * (1 - reduction));
+}
+
+function displacedSmokePuffAlpha(
+  x: number,
+  y: number,
+  radiusX: number,
+  radiusY: number,
+  baseAlpha: number,
+  displacement: SmokeDisplacementVisual | null,
+  falloffScale: number,
+) {
+  if (!displacement) {
+    return baseAlpha;
+  }
+
+  const dx = x - displacement.center.x;
+  const dy = y - displacement.center.y;
+  const distance = Math.hypot(dx, dy);
+  const puffReach = Math.min(radiusX, radiusY) * 0.72;
+  const clearStrength = Math.max(0, Math.min(1, displacement.ageRatio));
+  const hardClearRadius = displacement.radius * 0.74 + puffReach;
+  const falloffRadius = displacement.radius * falloffScale + puffReach;
+
+  if (distance >= falloffRadius) {
+    return baseAlpha;
+  }
+
+  if (distance <= hardClearRadius) {
+    return Math.max(0, baseAlpha * (1 - clearStrength));
+  }
+
+  const openness = 1 - (distance - hardClearRadius) / Math.max(1, falloffRadius - hardClearRadius);
+  const reduction = Math.min(1, 1.28 * clearStrength * Math.pow(openness, 0.86));
   return Math.max(0, baseAlpha * (1 - reduction));
 }
 
@@ -1412,6 +1342,59 @@ function resolveSmokeActivePoint(replay: Replay, utility: UtilityEntity, radarVi
   return null;
 }
 
+function resolveFireFootprintVisual(
+  replay: Replay,
+  utility: UtilityEntity,
+  currentTick: number,
+  radarViewport: RadarViewport,
+) {
+  const samples = utility.fireFootprint ?? [];
+  if (samples.length === 0) {
+    return null;
+  }
+
+  let sample: (typeof samples)[number] | null = null;
+  let firstSampleTick: number | null = null;
+  for (const candidate of samples) {
+    if (candidate.tick > currentTick) {
+      continue;
+    }
+
+    if (firstSampleTick == null || candidate.tick < firstSampleTick) {
+      firstSampleTick = candidate.tick;
+    }
+
+    if (!sample || candidate.tick > sample.tick) {
+      sample = candidate;
+    }
+  }
+
+  if (!sample) {
+    return null;
+  }
+
+  const count = Math.min(sample.x.length, sample.y.length, sample.z.length);
+  const points: ScreenPoint[] = [];
+  for (let index = 0; index < count; index += 1) {
+    const x = sample.x[index];
+    const y = sample.y[index];
+    if (x == null || y == null || !isWorldPointNearMap(replay, x, y)) {
+      continue;
+    }
+
+    const point = worldToScreen(replay, radarViewport, x, y);
+    if (isScreenPointVisible(point, radarViewport)) {
+      points.push(point);
+    }
+  }
+
+  return {
+    firstSampleTick: firstSampleTick ?? sample.tick,
+    points,
+    sampleTick: sample.tick,
+  };
+}
+
 function resolveUtilityAtlasOutcomePoint(
   replay: Replay,
   utility: UtilityEntity,
@@ -1508,6 +1491,6 @@ function resolveSmokeDisplacementVisual(
   return {
     ageRatio,
     center,
-    radius: 12 + ageRatio * 10,
+    radius: 15 + ageRatio * 14,
   };
 }

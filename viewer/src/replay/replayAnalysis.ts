@@ -3,7 +3,7 @@ import type { UtilityFocus } from "./utilityFilter";
 import { utilityMatchesFocus } from "./utilityFilter";
 import type { Replay, UtilityEntity } from "./types";
 
-export type ReplayAnalysisMode = "live" | "utilityAtlas" | "positions" | "heatmap";
+export type ReplayAnalysisMode = "live" | "deathReview" | "utilityAtlas" | "positions" | "heatmap";
 export type ReplayAnalysisScope = "round" | "sideBlock" | "match";
 export type ReplayAnalysisTeamFilter = "all" | Side;
 export type ReplayAnalysisSourceFilter = "all" | "selected";

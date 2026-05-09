@@ -1,7 +1,9 @@
 import type { HeatmapBucket, HeatmapScope } from "../../replay/heatmapAnalysis";
+import type { DeathReviewEntry } from "../../replay/deathReview";
 import type { PositionPlayerSnapshot, PositionTrailEntry } from "../../replay/positionsAnalysis";
 import type { ReplayAnalysisMode, UtilityAtlasEntry } from "../../replay/replayAnalysis";
 import type { Replay, Round } from "../../replay/types";
+import { drawDeathReviewMarker } from "../deathReviewVisuals";
 import { buildHeatmapVisualCells, drawHeatmapCellVisual } from "../heatmapVisuals";
 import { utilityMatchesFocus, type UtilityFocus } from "../../replay/utilityFilter";
 import { drawPositionPlayerSnapshotVisual, drawPositionTrailVisual } from "../positionsVisuals";
@@ -25,6 +27,8 @@ export function renderDynamicFrame(
   heatmapBuckets: HeatmapBucket[],
   heatmapMaxSampleCount: number,
   livePlayerContextMode: boolean,
+  deathReviewEntries: DeathReviewEntry[],
+  selectedDeathReviewKey: string | null,
   positionPlayerSnapshots: PositionPlayerSnapshot[],
   positionTrailEntries: PositionTrailEntry[],
   showPositionRoundNumbers: boolean,
@@ -33,6 +37,7 @@ export function renderDynamicFrame(
   utilityFocus: UtilityFocus,
   playerById: Map<string, Replay["players"][number]>,
   onSelectPlayer: (playerId: string) => void,
+  onSelectDeathReviewEntry?: (entry: DeathReviewEntry) => void,
   onSelectAtlasEntry?: (entry: UtilityAtlasEntry) => void,
   onSelectPositionSnapshot?: (snapshot: PositionPlayerSnapshot) => void,
 ) {
@@ -200,11 +205,22 @@ export function renderDynamicFrame(
       currentTick,
       radarViewport,
       tickRate,
+      stage.mapClipMask,
     );
   }
   stage.utilityTrailLayer.visible = stage.utilityTrailLayer.children.length > 0;
 
   if (!needsFullRender) {
+    if (analysisMode === "deathReview" && onSelectDeathReviewEntry) {
+      renderDeathReviewMarkers(
+        stage.utilityOverlayLayer,
+        replay,
+        deathReviewEntries,
+        radarViewport,
+        selectedDeathReviewKey,
+        onSelectDeathReviewEntry,
+      );
+    }
     return;
   }
 
@@ -226,6 +242,17 @@ export function renderDynamicFrame(
     playerById,
     onSelectPlayer,
   );
+
+  if (analysisMode === "deathReview" && onSelectDeathReviewEntry) {
+    renderDeathReviewMarkers(
+      stage.utilityOverlayLayer,
+      replay,
+      deathReviewEntries,
+      radarViewport,
+      selectedDeathReviewKey,
+      onSelectDeathReviewEntry,
+    );
+  }
 }
 
 function resolveUtilityThrowerSide(round: Round, throwerPlayerId: string | null) {
@@ -234,4 +261,29 @@ function resolveUtilityThrowerSide(round: Round, throwerPlayerId: string | null)
   }
 
   return round.playerStreams.find((stream) => stream.playerId === throwerPlayerId)?.side ?? null;
+}
+
+function renderDeathReviewMarkers(
+  layer: StageState["utilityOverlayLayer"],
+  replay: Replay,
+  entries: DeathReviewEntry[],
+  radarViewport: NonNullable<StageState["radarViewport"]>,
+  selectedKey: string | null,
+  onSelect: (entry: DeathReviewEntry) => void,
+) {
+  const orderedEntries = selectedKey
+    ? [...entries].sort((left, right) => {
+        if (left.key === selectedKey) {
+          return 1;
+        }
+        if (right.key === selectedKey) {
+          return -1;
+        }
+        return 0;
+      })
+    : entries;
+
+  for (const entry of orderedEntries) {
+    drawDeathReviewMarker(layer, replay, entry, radarViewport, entry.key === selectedKey, onSelect);
+  }
 }

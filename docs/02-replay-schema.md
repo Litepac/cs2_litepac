@@ -236,6 +236,7 @@ Each utility object covers its lifecycle:
 - end tick if applicable
 - sampled trajectory
 - phase events such as bounce, detonate, expire, and parser-derived smoke displacement windows
+- optional sampled fire footprint for molotov/incendiary entities when the parser can read active inferno fire cells
 
 This gives the viewer enough data to render grenade travel plus active smoke or fire windows without touching raw demo state.
 

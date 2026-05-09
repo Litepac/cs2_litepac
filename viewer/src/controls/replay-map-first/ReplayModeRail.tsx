@@ -12,6 +12,7 @@ type ReplayModeRailProps = {
 
 const MODE_OPTIONS: Array<{ label: string; mode: ReplayAnalysisMode; positionsView?: PositionsView }> = [
   { label: "Live", mode: "live" },
+  { label: "Deaths", mode: "deathReview" },
   { label: "Utility", mode: "utilityAtlas" },
   { label: "Paths", mode: "positions", positionsView: "paths" },
   { label: "Player", mode: "positions", positionsView: "player" },

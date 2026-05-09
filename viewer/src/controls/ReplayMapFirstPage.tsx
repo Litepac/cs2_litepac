@@ -1,6 +1,7 @@
 import { useEffect, useState, type PointerEvent as ReactPointerEvent } from "react";
 
 import { ReplayStage } from "../canvas/ReplayStage";
+import type { DeathReviewEntry } from "../replay/deathReview";
 import { scoreForSide, sideTeam, type Side } from "../replay/derived";
 import type { HeatmapScope, HeatmapSnapshot, HeatmapTeamFilter } from "../replay/heatmapAnalysis";
 import { livePlayersAtTick, type LivePlayerState } from "../replay/live";
@@ -85,6 +86,7 @@ type Props = {
   heatmapScope: HeatmapScope;
   heatmapSnapshot: HeatmapSnapshot;
   heatmapTeamFilter: HeatmapTeamFilter;
+  deathReviewEntries: DeathReviewEntry[];
   livePlayerContextMode: boolean;
   markers: TimelineEventItem[];
   playback: PlaybackState;
@@ -100,6 +102,8 @@ type Props = {
   selectedPlayerId: string | null;
   selectedPlayerName: string | null;
   selectedUtilityAtlasKey: string | null;
+  selectedDeathReviewEntry: DeathReviewEntry | null;
+  selectedDeathReviewKey: string | null;
   showFreezeTime: boolean;
   showPositionRoundNumbers: boolean;
   utilityAtlasEntries: UtilityAtlasEntry[];
@@ -117,6 +121,7 @@ type Props = {
   onReplayPlayerSelect: (playerId: string) => void;
   onSelectAnalysisMode: (mode: ReplayAnalysisMode) => void;
   onSelectAtlasEntry: (entry: UtilityAtlasEntry) => void;
+  onSelectDeathReviewEntry: (entry: DeathReviewEntry) => void;
   onSelectPositionSnapshot: (snapshot: PositionPlayerSnapshot) => void;
   onSelectPositionsView: (view: PositionsView) => void;
   onSelectRound: (index: number) => void;
@@ -135,6 +140,7 @@ export function ReplayMapFirstPage({
   heatmapScope,
   heatmapSnapshot,
   heatmapTeamFilter,
+  deathReviewEntries,
   livePlayerContextMode,
   markers,
   playback,
@@ -150,6 +156,8 @@ export function ReplayMapFirstPage({
   selectedPlayerId,
   selectedPlayerName,
   selectedUtilityAtlasKey,
+  selectedDeathReviewEntry,
+  selectedDeathReviewKey,
   showFreezeTime,
   showPositionRoundNumbers,
   utilityAtlasEntries,
@@ -167,6 +175,7 @@ export function ReplayMapFirstPage({
   onReplayPlayerSelect,
   onSelectAnalysisMode,
   onSelectAtlasEntry,
+  onSelectDeathReviewEntry,
   onSelectPositionSnapshot,
   onSelectPositionsView,
   onSelectRound,
@@ -181,6 +190,7 @@ export function ReplayMapFirstPage({
   const [drawingStrokes, setDrawingStrokes] = useState<DrawingStroke[]>([]);
   const [activeDrawingId, setActiveDrawingId] = useState<number | null>(null);
   const liveMode = analysisMode === "live";
+  const deathReviewMode = analysisMode === "deathReview";
   const timer = resolveRoundTimer(replay, round, playback.renderTickRounded);
   const livePlayers = livePlayersAtTick(replay, round, playback.renderTickRounded);
   const selectedLivePlayer = livePlayers.find((entry) => entry.playerId === selectedPlayerId) ?? null;
@@ -286,6 +296,39 @@ export function ReplayMapFirstPage({
     setActiveDrawingId(null);
   }
 
+  const analysisControls =
+    analysisMode !== "live" ? (
+      <StageAnalysisControls
+        analysisMode={analysisMode}
+        deathReviewEntries={deathReviewEntries}
+        selectedDeathReviewEntry={selectedDeathReviewEntry}
+        heatmapScope={heatmapScope}
+        heatmapTeamFilter={heatmapTeamFilter}
+        positionPlayerBroadCompareEnabled={positionPlayerBroadCompareEnabled}
+        positionPlayerCompareEnabled={positionPlayerCompareEnabled}
+        positionPlayerSelectedCount={positionPlayerSelectedCount}
+        positionsScope={positionsScope}
+        positionsTeamFilter={positionsTeamFilter}
+        positionsView={positionsView}
+        selectedPlayerName={selectedPlayerName}
+        showPositionRoundNumbers={showPositionRoundNumbers}
+        utilityAtlasScope={utilityAtlasScope}
+        utilityAtlasTeamFilter={utilityAtlasTeamFilter}
+        utilityFocus={utilityFocus}
+        onDisablePositionPlayerCompare={onDisablePositionPlayerCompare}
+        onEnablePositionPlayerBroadCompare={onEnablePositionPlayerBroadCompare}
+        onEnablePositionPlayerCompare={onEnablePositionPlayerCompare}
+        onHeatmapScopeChange={onHeatmapScopeChange}
+        onHeatmapTeamFilterChange={onHeatmapTeamFilterChange}
+        onPositionsScopeChange={onPositionsScopeChange}
+        onPositionsTeamFilterChange={onPositionsTeamFilterChange}
+        onShowPositionRoundNumbersChange={onShowPositionRoundNumbersChange}
+        onUtilityAtlasScopeChange={onUtilityAtlasScopeChange}
+        onUtilityAtlasTeamFilterChange={onUtilityAtlasTeamFilterChange}
+        onUtilityFocusChange={onUtilityFocusChange}
+      />
+    ) : null;
+
   return (
     <div className="dr-mapfirst-page">
       <ReplayModeRail
@@ -308,7 +351,10 @@ export function ReplayMapFirstPage({
           heatmapBuckets={heatmapSnapshot.buckets}
           heatmapMaxSampleCount={heatmapSnapshot.maxSampleCount}
           livePlayerContextMode={liveMode && livePlayerContextMode}
+          deathReviewEntries={deathReviewEntries}
+          selectedDeathReviewKey={selectedDeathReviewKey}
           onSelectAtlasEntry={onSelectAtlasEntry}
+          onSelectDeathReviewEntry={onSelectDeathReviewEntry}
           positionPlayerSnapshots={positionPlayerSnapshots}
           positionTrailEntries={displayedPositionTrailEntries}
           showPositionRoundNumbers={showPositionRoundNumbers}
@@ -323,36 +369,10 @@ export function ReplayMapFirstPage({
           onSelectPlayer={onReplayPlayerSelect}
         />
 
+        {deathReviewMode ? <div className="dr-mapfirst-death-review-inspector">{analysisControls}</div> : null}
+
         <div className="dr-mapfirst-stage-tool-stack">
-          {analysisMode !== "live" ? (
-            <StageAnalysisControls
-              analysisMode={analysisMode}
-              heatmapScope={heatmapScope}
-              heatmapTeamFilter={heatmapTeamFilter}
-              positionPlayerBroadCompareEnabled={positionPlayerBroadCompareEnabled}
-              positionPlayerCompareEnabled={positionPlayerCompareEnabled}
-              positionPlayerSelectedCount={positionPlayerSelectedCount}
-              positionsScope={positionsScope}
-              positionsTeamFilter={positionsTeamFilter}
-              positionsView={positionsView}
-              selectedPlayerName={selectedPlayerName}
-              showPositionRoundNumbers={showPositionRoundNumbers}
-              utilityAtlasScope={utilityAtlasScope}
-              utilityAtlasTeamFilter={utilityAtlasTeamFilter}
-              utilityFocus={utilityFocus}
-              onDisablePositionPlayerCompare={onDisablePositionPlayerCompare}
-              onEnablePositionPlayerBroadCompare={onEnablePositionPlayerBroadCompare}
-              onEnablePositionPlayerCompare={onEnablePositionPlayerCompare}
-              onHeatmapScopeChange={onHeatmapScopeChange}
-              onHeatmapTeamFilterChange={onHeatmapTeamFilterChange}
-              onPositionsScopeChange={onPositionsScopeChange}
-              onPositionsTeamFilterChange={onPositionsTeamFilterChange}
-              onShowPositionRoundNumbersChange={onShowPositionRoundNumbersChange}
-              onUtilityAtlasScopeChange={onUtilityAtlasScopeChange}
-              onUtilityAtlasTeamFilterChange={onUtilityAtlasTeamFilterChange}
-              onUtilityFocusChange={onUtilityFocusChange}
-            />
-          ) : null}
+          {deathReviewMode ? null : analysisControls}
 
           <div className="dr-mapfirst-stage-toolbar">
             <ReplayDrawingToolbar
@@ -495,6 +515,8 @@ function LivePlayerFocusStrip({
 
 function StageAnalysisControls({
   analysisMode,
+  deathReviewEntries,
+  selectedDeathReviewEntry,
   heatmapScope,
   heatmapTeamFilter,
   positionPlayerBroadCompareEnabled,
@@ -521,6 +543,8 @@ function StageAnalysisControls({
   onUtilityFocusChange,
 }: {
   analysisMode: ReplayAnalysisMode;
+  deathReviewEntries: DeathReviewEntry[];
+  selectedDeathReviewEntry: DeathReviewEntry | null;
   heatmapScope: HeatmapScope;
   heatmapTeamFilter: HeatmapTeamFilter;
   positionPlayerBroadCompareEnabled: boolean;
@@ -563,7 +587,10 @@ function StageAnalysisControls({
   }
 
   return (
-    <div className={`dr-mapfirst-analysis-controls dr-mapfirst-analysis-controls-${analysisMode}-${positionsView}`} aria-label="Analysis controls">
+    <div
+      className={`dr-mapfirst-analysis-controls dr-mapfirst-analysis-controls-${analysisMode} dr-mapfirst-analysis-controls-${analysisMode}-${positionsView}`}
+      aria-label="Analysis controls"
+    >
       <div className="dr-mapfirst-analysis-copy">
         <span>{resolveDockControlLabel(analysisMode, positionsView)}</span>
         {selectedPlayerName ? <strong>Focus: {selectedPlayerName}</strong> : null}
@@ -575,6 +602,9 @@ function StageAnalysisControls({
             <Segmented items={TEAM_FILTERS} selectedValue={utilityAtlasTeamFilter} onChange={onUtilityAtlasTeamFilterChange} />
             <Segmented items={UTILITY_OPTIONS} selectedValue={utilityFocus} onChange={onUtilityFocusChange} />
           </>
+        ) : null}
+        {analysisMode === "deathReview" ? (
+          <DeathReviewSummary entry={selectedDeathReviewEntry} deathCount={deathReviewEntries.length} />
         ) : null}
         {analysisMode === "positions" && positionsView === "paths" ? (
           <Segmented items={ROUND_SET_OPTIONS} selectedValue={positionsRoundSet} onChange={setPositionsRoundSet} />
@@ -618,6 +648,66 @@ function StageAnalysisControls({
           <Segmented items={ROUND_SET_OPTIONS} selectedValue={heatmapRoundSet} onChange={setHeatmapRoundSet} />
         ) : null}
       </div>
+    </div>
+  );
+}
+
+function DeathReviewSummary({
+  deathCount,
+  entry,
+}: {
+  deathCount: number;
+  entry: DeathReviewEntry | null;
+}) {
+  if (!entry) {
+    return (
+      <div className="dr-mapfirst-death-review-card dr-mapfirst-death-review-card-empty">
+        <strong>{deathCount} deaths in round</strong>
+        <span>Select a death marker on the map.</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`dr-mapfirst-death-review-card dr-mapfirst-death-review-card-${entry.victimSide?.toLowerCase() ?? "neutral"}`}>
+      <div className="dr-mapfirst-death-review-main">
+        <strong>{entry.victimName}</strong>
+        <span>{entry.timeDisplay ?? "Round clock unknown"}</span>
+      </div>
+      <div className="dr-mapfirst-death-review-row">
+        <span>Killed by</span>
+        <b>{entry.killerName}</b>
+      </div>
+      <div className="dr-mapfirst-death-review-row">
+        <span>Weapon</span>
+        <b>{entry.weaponLabel}{entry.headshot ? " HS" : ""}</b>
+      </div>
+      <div className="dr-mapfirst-death-review-row">
+        <span>5s trade</span>
+        <b>{tradeStateLabel(entry)}</b>
+      </div>
+      <div className="dr-mapfirst-death-review-row">
+        <span>Support nearby</span>
+        <b>{entry.nearbyTeammates == null ? "Unknown" : `${entry.nearbyTeammates}`}</b>
+      </div>
+      <div className="dr-mapfirst-death-review-row">
+        <span>Victim flashed</span>
+        <b>{booleanFactLabel(entry.victimFlashed)}</b>
+      </div>
+      <div className="dr-mapfirst-death-review-row">
+        <span>Killer flashed</span>
+        <b>{booleanFactLabel(entry.killerFlashed)}</b>
+      </div>
+      <div className="dr-mapfirst-death-review-row">
+        <span>Utility left</span>
+        <b>{entry.victimUtilityCount == null ? "Unknown" : `${entry.victimUtilityCount}`}</b>
+      </div>
+      {entry.assisterName ? (
+        <div className="dr-mapfirst-death-review-row">
+          <span>Assist</span>
+          <b>{entry.assisterName}</b>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -689,6 +779,10 @@ function countKnownUtility(player: LivePlayerState) {
 }
 
 function resolveDockControlLabel(analysisMode: ReplayAnalysisMode, positionsView: PositionsView) {
+  if (analysisMode === "deathReview") {
+    return "Death review";
+  }
+
   if (analysisMode === "utilityAtlas") {
     return "Utility review";
   }
@@ -702,6 +796,26 @@ function resolveDockControlLabel(analysisMode: ReplayAnalysisMode, positionsView
   }
 
   return "Live review";
+}
+
+function tradeStateLabel(entry: DeathReviewEntry) {
+  if (entry.tradeState === "unknown") {
+    return "Unknown";
+  }
+
+  if (entry.tradeState === "traded") {
+    return entry.tradeTickDelaySeconds == null ? "Traded" : `Traded ${entry.tradeTickDelaySeconds}s`;
+  }
+
+  return "Untraded";
+}
+
+function booleanFactLabel(value: boolean | null) {
+  if (value == null) {
+    return "Unknown";
+  }
+
+  return value ? "Yes" : "No";
 }
 
 function pointerEventToDrawingPoint(event: ReactPointerEvent<SVGSVGElement>) {

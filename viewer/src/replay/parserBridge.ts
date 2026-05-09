@@ -228,7 +228,7 @@ function consumeStreamLine(
   }
 
   if (event.type === "error") {
-    throw new Error(event.error || "Demo parse failed.");
+    throw new Error(sanitizeParserErrorMessage(event.error || "Demo parse failed."));
   }
 
   return currentReplay;
@@ -262,7 +262,7 @@ async function parseParserError(response: Response) {
   try {
     const payload = (await response.json()) as { error?: string };
     if (payload.error) {
-      return payload.error;
+      return sanitizeParserErrorMessage(payload.error);
     }
   } catch {
     // Fall through to generic response text.
@@ -277,4 +277,41 @@ function formatReplayErrors(errors: string[]) {
   }
 
   return ["Replay validation failed:", ...errors].join("\n");
+}
+
+function sanitizeParserErrorMessage(message: string) {
+  const trimmed = message.trim();
+  if (!trimmed) {
+    return "Demo processing failed.";
+  }
+
+  const cleaned = stripGoStackTrace(trimmed);
+  const normalized = cleaned.toLowerCase();
+  if (
+    normalized.includes("unable to find existing entity") ||
+    (normalized.includes("entity data") && normalized.includes("cannot safely read"))
+  ) {
+    return "This demo uses entity data the current review parser cannot safely read yet.";
+  }
+
+  if (normalized.includes("parse demo crashed") || normalized.includes("crashed")) {
+    return "The local review parser hit an unsupported demo state.";
+  }
+
+  return cleaned;
+}
+
+function stripGoStackTrace(message: string) {
+  const lowerMessage = message.toLowerCase();
+  const markers = [" stacktrace:", "\nstacktrace:", "\ngoroutine ", " goroutine "];
+  let endIndex = -1;
+
+  for (const marker of markers) {
+    const index = lowerMessage.indexOf(marker);
+    if (index >= 0 && (endIndex < 0 || index < endIndex)) {
+      endIndex = index;
+    }
+  }
+
+  return (endIndex >= 0 ? message.slice(0, endIndex) : message).trim();
 }

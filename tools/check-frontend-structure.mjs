@@ -62,6 +62,10 @@ const retiredClassPatterns = [
   /\.header-meta(?:[\s.{:#,[>+~-]|$)/,
 ];
 
+const retiredGlobalClassPatterns = [
+  /\.feedback-/,
+];
+
 const textExtensions = new Set([".css", ".go", ".html", ".js", ".json", ".md", ".mjs", ".ts", ".tsx"]);
 
 for (const relativePath of bannedDirectories) {
@@ -108,6 +112,14 @@ for (const filePath of files) {
     for (const pattern of retiredClassPatterns) {
       if (pattern.test(content)) {
         fail(relativePath, `Retired global selector matched ${pattern}. Remove stale CSS instead of carrying it forward.`);
+      }
+    }
+
+    if (!relativePath.endsWith(".module.css")) {
+      for (const pattern of retiredGlobalClassPatterns) {
+        if (pattern.test(content)) {
+          fail(relativePath, `Component-owned selector matched ${pattern}. Move it to a CSS Module instead of global CSS.`);
+        }
       }
     }
   }

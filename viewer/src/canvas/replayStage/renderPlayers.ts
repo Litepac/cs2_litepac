@@ -267,14 +267,7 @@ export function drawPlayerMarker(
 
   drawBlindedRing(marker, x, y, radius, selected, blindEffect);
 
-  const healthLossHeight = innerRadius * 2 * (1 - healthRatio);
-  if (healthLossHeight > 0.01) {
-    const shade = new Graphics();
-    const shadeWidth = innerRadius * 1.42;
-    shade.roundRect(x - shadeWidth / 2, y - innerRadius, shadeWidth, healthLossHeight, 1.4);
-    shade.fill({ color: 0x081017, alpha: 0.8 });
-    marker.addChild(shade);
-  }
+  drawHealthLossSegment(marker, x, y, innerRadius, healthRatio);
 
   const innerOutline = new Graphics();
   innerOutline.circle(x, y, innerRadius);
@@ -282,6 +275,39 @@ export function drawPlayerMarker(
   marker.addChild(innerOutline);
 
   drawPlayerTokenMode(marker, x, y, yaw, radius, fillColor, strokeColor, selected, mode, activeUtilityKind);
+}
+
+function drawHealthLossSegment(
+  marker: Graphics,
+  x: number,
+  y: number,
+  radius: number,
+  healthRatio: number,
+) {
+  const lossRatio = 1 - healthRatio;
+  if (lossRatio <= 0.01) {
+    return;
+  }
+
+  if (lossRatio >= 0.99) {
+    marker.circle(x, y, radius);
+    marker.fill({ color: 0x081017, alpha: 0.82 });
+    return;
+  }
+
+  const cutoffOffsetY = -radius + radius * 2 * lossRatio;
+  const rightAngle = Math.asin(clamp(cutoffOffsetY / radius, -1, 1));
+  const leftAngle = -Math.PI - rightAngle;
+  const angleSpan = rightAngle - leftAngle;
+  const steps = Math.max(8, Math.ceil(angleSpan * 8));
+
+  marker.moveTo(x + Math.cos(leftAngle) * radius, y + Math.sin(leftAngle) * radius);
+  for (let index = 1; index <= steps; index += 1) {
+    const angle = leftAngle + (angleSpan * index) / steps;
+    marker.lineTo(x + Math.cos(angle) * radius, y + Math.sin(angle) * radius);
+  }
+  marker.closePath();
+  marker.fill({ color: 0x081017, alpha: 0.82 });
 }
 
 function drawBlindedRing(

@@ -75,7 +75,7 @@ export function renderPlayers(
       recentUtilityThrow,
     });
 
-    const marker = new Graphics();
+    const marker = new Container();
     marker.alpha = contextModeActive && !selected ? 0.55 : 1;
     attachReplayHitTarget(marker, {
       hitArea: new Circle(point.x, point.y, selected ? 16 : 13),
@@ -244,7 +244,7 @@ function drawPlayerLabel(
 }
 
 export function drawPlayerMarker(
-  marker: Graphics,
+  marker: Container,
   x: number,
   y: number,
   side: "T" | "CT" | null,
@@ -260,21 +260,21 @@ export function drawPlayerMarker(
   const radius = selected ? 9 : 7;
   const healthRatio = health == null ? 1 : clamp(health / 100, 0, 1);
   const innerRadius = Math.max(1.9, radius - 1.7);
+  const body = new Graphics();
 
-  marker.circle(x, y, radius);
-  marker.fill({ color: fillColor, alpha: selected ? 1 : 0.94 });
-  marker.stroke({ color: strokeColor, width: selected ? 1.12 : 0.86, alpha: selected ? 0.98 : 0.9 });
+  body.circle(x, y, radius);
+  body.fill({ color: fillColor, alpha: selected ? 1 : 0.94 });
+  body.stroke({ color: strokeColor, width: selected ? 1.12 : 0.86, alpha: selected ? 0.98 : 0.9 });
 
-  drawBlindedRing(marker, x, y, radius, selected, blindEffect);
+  drawBlindedRing(body, x, y, radius, selected, blindEffect);
 
-  drawHealthLossSegment(marker, x, y, innerRadius, healthRatio);
+  drawHealthLossSegment(body, x, y, innerRadius, healthRatio);
 
-  const innerOutline = new Graphics();
-  innerOutline.circle(x, y, innerRadius);
-  innerOutline.stroke({ color: 0x0a1117, width: selected ? 0.52 : 0.4, alpha: selected ? 0.22 : 0.16 });
-  marker.addChild(innerOutline);
+  body.circle(x, y, innerRadius);
+  body.stroke({ color: 0x0a1117, width: selected ? 0.52 : 0.4, alpha: selected ? 0.22 : 0.16 });
 
-  drawPlayerTokenMode(marker, x, y, yaw, radius, fillColor, strokeColor, selected, mode, activeUtilityKind);
+  marker.addChild(body);
+  drawPlayerTokenMode(body, marker, x, y, yaw, radius, fillColor, strokeColor, selected, mode, activeUtilityKind);
 }
 
 function drawHealthLossSegment(
@@ -354,6 +354,7 @@ function drawBlindedRing(
 
 function drawPlayerTokenMode(
   marker: Graphics,
+  iconLayer: Container,
   x: number,
   y: number,
   yaw: number | null,
@@ -367,7 +368,7 @@ function drawPlayerTokenMode(
   if (mode === "utility") {
     const badgeX = x + radius * 0.72;
     const badgeY = y + radius * 0.58;
-    drawHeldUtilityTokenMarker(marker, badgeX, badgeY, fillColor, strokeColor, selected, activeUtilityKind);
+    drawHeldUtilityTokenMarker(marker, iconLayer, badgeX, badgeY, fillColor, strokeColor, selected, activeUtilityKind);
 
     if (yaw == null) {
       return;
@@ -501,6 +502,7 @@ function drawPlayerTokenTail(
 
 function drawHeldUtilityTokenMarker(
   marker: Graphics,
+  iconLayer: Container,
   x: number,
   y: number,
   fillColor: number,
@@ -517,7 +519,7 @@ function drawHeldUtilityTokenMarker(
   }
 
   drawTintedEquipmentIcon(
-    marker,
+    iconLayer,
     utilityTokenSvgIcon(utilityKind),
     x,
     y,

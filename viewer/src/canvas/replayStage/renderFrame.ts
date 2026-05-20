@@ -8,7 +8,7 @@ import type { Replay, Round } from "../../replay/types";
 import { drawDeathReviewMarker } from "../deathReviewVisuals";
 import { buildHeatmapVisualCells, drawHeatmapCellVisual } from "../heatmapVisuals";
 import { utilityMatchesFocus, type UtilityFocus } from "../../replay/utilityFilter";
-import { utilityActivationTick, utilityLifecycleEndTick } from "../../replay/utility";
+import { utilityActivationTick, utilityLifecycleEndTick, utilitySceneStateAtTick } from "../../replay/utility";
 import { drawPositionPlayerSnapshotVisual, drawPositionTrailVisual } from "../positionsVisuals";
 import { drawUtilityAtlasVisual, drawUtilityVisual } from "../utilityVisuals";
 import { clearLayer, showLayerWhenPopulated } from "./layers";
@@ -340,7 +340,7 @@ function renderLiveUtilityContainers(stage: StageState, context: StageRenderCont
       continue;
     }
 
-    if (fullRenderTick < utility.startTick || fullRenderTick > utilityLifecycleEndTick(utility)) {
+    if (!utilitySceneStateAtTick(utility, fullRenderTick, tickRate)) {
       continue;
     }
 

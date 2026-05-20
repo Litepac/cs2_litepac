@@ -110,7 +110,7 @@ export function MatchesPage({
   }
 
   return (
-    <section className={`matches-page matches-page-library ${styles["matches-page-redline"]}`}>
+    <section className={styles["matches-page-redline"]}>
       <header className={styles["matches-redline-header"]}>
         <div className={styles["matches-redline-heading"]}>
           <span className={styles["matches-redline-kicker"]}>Local match library</span>
@@ -355,11 +355,11 @@ export function MatchesPage({
             <span className={styles["matches-redline-kicker"]}>Sample demos</span>
             <strong>Try a prepared review</strong>
           </summary>
-          <div className={`entry-fixture-list ${styles["matches-redline-fixture-list"]}`}>
+          <div className={styles["matches-redline-fixture-list"]}>
             {fixtures.map((fixture) => (
               <button
                 key={fixture.fileName}
-                className={`entry-fixture-item ${styles["matches-redline-fixture-item"]}`}
+                className={styles["matches-redline-fixture-item"]}
                 onClick={() => void onFixtureLoad(fixture.fileName)}
                 disabled={loadingSource != null}
               >

@@ -63,6 +63,7 @@ const retiredClassPatterns = [
 ];
 
 const retiredGlobalClassPatterns = [
+  /\.entry-fixture-/,
   /\.feedback-/,
 ];
 

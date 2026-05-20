@@ -2836,7 +2836,6 @@ h1 {
 .entry-card input:focus-visible,
 .home-primary-button:focus-visible,
 .match-action-button:focus-visible,
-.entry-fixture-item:focus-visible,
 .shell-nav-item:focus-visible,
 .sidebar-link-button:focus-visible {
   outline: 2px solid rgba(79, 179, 255, 0.9);
@@ -3328,34 +3327,6 @@ h1 {
   font-size: 13px;
 }
 
-.entry-fixture-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 8px;
-}
-
-.matches-fixture-list {
-  grid-template-columns: 1fr;
-}
-
-.entry-fixture-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid var(--line);
-  background: rgba(16, 24, 31, 0.94);
-  color: var(--text);
-  text-align: left;
-}
-
-.entry-fixture-item:hover {
-  border-color: var(--line-strong);
-  background: rgba(20, 30, 39, 0.98);
-}
-
 .matches-library-header-shell {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -3757,17 +3728,6 @@ h1 {
   font-size: 13px;
   font-weight: 600;
 }
-
-.matches-secondary-tools[open] .entry-fixture-list {
-  padding-top: 4px;
-}
-
-.matches-secondary-tools .entry-fixture-item {
-  border-radius: 0;
-  border-color: rgba(24, 54, 58, 0.78);
-}
-
-
 
 @media (max-width: 1500px) {
   .sky-shell {

@@ -43,9 +43,9 @@ func ResolveAssetsRoot(explicit string) (string, error) {
 	}
 
 	candidates := []string{
-		filepath.Join("assets", "maps"),
-		filepath.Join("..", "assets", "maps"),
-		filepath.Join("..", "..", "assets", "maps"),
+		filepath.Join("public", "maps"),
+		filepath.Join("..", "public", "maps"),
+		filepath.Join("..", "..", "public", "maps"),
 	}
 
 	for _, candidate := range candidates {
@@ -54,5 +54,5 @@ func ResolveAssetsRoot(explicit string) (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("could not locate assets/maps directory")
+	return "", fmt.Errorf("could not locate public/maps directory")
 }

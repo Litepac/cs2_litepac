@@ -8,6 +8,7 @@
     "dev:local": "node ../tools/start-local-dev.mjs",
     "dev:bridge": "npm run dev:local",
     "build": "tsc -b && vite build",
+    "check:structure": "node ../tools/check-frontend-structure.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

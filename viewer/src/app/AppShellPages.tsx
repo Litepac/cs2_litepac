@@ -3,7 +3,7 @@ import type { ChangeEvent, RefObject } from "react";
 import { HomePage } from "../controls/HomePage";
 import { MatchesPage } from "../controls/MatchesPage";
 import { ShellTopNav } from "../controls/ShellTopNav";
-import { StatsPage } from "../controls/StatsPage";
+import { StatsPage, StatsPageUnavailable } from "../controls/StatsPage";
 import type { LoaderIssue } from "./useReplayLoader";
 import type { FixtureIndex } from "../replay/fixtures";
 import type { DemoIngestState } from "../replay/ingestState";
@@ -146,9 +146,7 @@ export function StatsShellPage({
           onOpenReplay={onOpenReplay}
         />
       ) : (
-        <section className="matches-page stats-page">
-          <div className="match-library-empty">This match is no longer available in your local library.</div>
-        </section>
+        <StatsPageUnavailable />
       )}
     </section>
   );

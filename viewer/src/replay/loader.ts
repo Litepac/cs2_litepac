@@ -1,17 +1,6 @@
 import { validateReplay } from "./schema";
 import type { Replay } from "./types";
 
-export async function loadReplayFile(file: File): Promise<Replay> {
-  const raw = await file.text();
-  const parsed = JSON.parse(raw) as unknown;
-  const result = validateReplay(parsed);
-  if (!result.ok) {
-    throw new Error(formatReplayErrors(result.errors));
-  }
-
-  return result.replay;
-}
-
 export async function loadReplayURL(url: string): Promise<Replay> {
   const separator = url.includes("?") ? "&" : "?";
   const response = await fetch(`${url}${separator}ts=${Date.now()}`, { cache: "no-store" });

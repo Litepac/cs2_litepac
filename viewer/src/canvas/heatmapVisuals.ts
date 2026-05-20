@@ -1,6 +1,6 @@
 import { Graphics, type Container } from "pixi.js";
 
-import { worldToScreen, type RadarViewport } from "../maps/transform";
+import { worldToScreen, type RadarViewport } from "../mapGeometry/transform";
 import type { HeatmapBucket, HeatmapScope } from "../replay/heatmapAnalysis";
 import type { Replay } from "../replay/types";
 

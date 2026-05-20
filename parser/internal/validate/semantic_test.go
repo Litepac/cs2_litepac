@@ -125,6 +125,200 @@ func TestValidateReplayRejectsInvalidStreamBounds(t *testing.T) {
 	})
 }
 
+func TestValidateReplayRejectsInvalidUtilityTruth(t *testing.T) {
+	t.Run("end before start", func(t *testing.T) {
+		data := replayWithUtilityEntity(replay.UtilityEntity{
+			UtilityID: "utility:flash",
+			Kind:      "flashbang",
+			StartTick: 2,
+			EndTick:   replay.Int(1),
+			Trajectory: replay.Trajectory{
+				SampleOriginTick:    2,
+				SampleIntervalTicks: 1,
+				X:                   []*float64{replay.Float64(1)},
+				Y:                   []*float64{replay.Float64(2)},
+				Z:                   []*float64{replay.Float64(3)},
+			},
+			PhaseEvents: []replay.UtilityPhaseEvent{{Tick: 0, Type: "thrown"}},
+		})
+
+		assertValidationErrorContains(t, ValidateReplay(data), "ends before it starts")
+	})
+
+	t.Run("trajectory non-finite position", func(t *testing.T) {
+		data := replayWithUtilityEntity(replay.UtilityEntity{
+			UtilityID: "utility:he",
+			Kind:      "he",
+			StartTick: 0,
+			Trajectory: replay.Trajectory{
+				SampleOriginTick:    0,
+				SampleIntervalTicks: 1,
+				X:                   []*float64{replay.Float64(math.NaN())},
+				Y:                   []*float64{replay.Float64(2)},
+				Z:                   []*float64{replay.Float64(3)},
+			},
+			PhaseEvents: []replay.UtilityPhaseEvent{{Tick: 0, Type: "thrown"}},
+		})
+
+		assertValidationErrorContains(t, ValidateReplay(data), "trajectory has non-finite position")
+	})
+
+	t.Run("unsorted phase events", func(t *testing.T) {
+		data := replayWithUtilityEntity(replay.UtilityEntity{
+			UtilityID: "utility:smoke",
+			Kind:      "smoke",
+			StartTick: 0,
+			Trajectory: replay.Trajectory{
+				SampleOriginTick:    0,
+				SampleIntervalTicks: 1,
+				X:                   []*float64{replay.Float64(1)},
+				Y:                   []*float64{replay.Float64(2)},
+				Z:                   []*float64{replay.Float64(3)},
+			},
+			PhaseEvents: []replay.UtilityPhaseEvent{
+				{Tick: 2, Type: "expired"},
+				{Tick: 1, Type: "detonated"},
+			},
+		})
+
+		assertValidationErrorContains(t, ValidateReplay(data), "phase events are not sorted")
+	})
+
+	t.Run("non-fire footprint", func(t *testing.T) {
+		data := replayWithUtilityEntity(replay.UtilityEntity{
+			UtilityID: "utility:smoke",
+			Kind:      "smoke",
+			StartTick: 0,
+			Trajectory: replay.Trajectory{
+				SampleOriginTick:    0,
+				SampleIntervalTicks: 1,
+				X:                   []*float64{replay.Float64(1)},
+				Y:                   []*float64{replay.Float64(2)},
+				Z:                   []*float64{replay.Float64(3)},
+			},
+			PhaseEvents: []replay.UtilityPhaseEvent{{Tick: 0, Type: "thrown"}},
+			FireFootprint: []replay.FireFootprintSample{
+				{
+					Tick: 0,
+					X:    []*float64{replay.Float64(10)},
+					Y:    []*float64{replay.Float64(20)},
+					Z:    []*float64{replay.Float64(30)},
+				},
+			},
+		})
+
+		assertValidationErrorContains(t, ValidateReplay(data), "has fire footprint for non-fire utility")
+	})
+
+	t.Run("fire footprint cell arrays differ", func(t *testing.T) {
+		data := replayWithUtilityEntity(replay.UtilityEntity{
+			UtilityID: "utility:molotov",
+			Kind:      "molotov",
+			StartTick: 0,
+			Trajectory: replay.Trajectory{
+				SampleOriginTick:    0,
+				SampleIntervalTicks: 1,
+				X:                   []*float64{replay.Float64(1)},
+				Y:                   []*float64{replay.Float64(2)},
+				Z:                   []*float64{replay.Float64(3)},
+			},
+			PhaseEvents: []replay.UtilityPhaseEvent{{Tick: 0, Type: "thrown"}},
+			FireFootprint: []replay.FireFootprintSample{
+				{
+					Tick: 0,
+					X:    []*float64{replay.Float64(10)},
+					Y:    []*float64{},
+					Z:    []*float64{replay.Float64(30)},
+				},
+			},
+		})
+
+		assertValidationErrorContains(t, ValidateReplay(data), "fire footprint sample at tick 0 array lengths differ")
+	})
+
+	t.Run("displaced phase on non-smoke", func(t *testing.T) {
+		data := replayWithUtilityEntity(replay.UtilityEntity{
+			UtilityID: "utility:molotov",
+			Kind:      "molotov",
+			StartTick: 0,
+			Trajectory: replay.Trajectory{
+				SampleOriginTick:    0,
+				SampleIntervalTicks: 1,
+				X:                   []*float64{replay.Float64(1)},
+				Y:                   []*float64{replay.Float64(2)},
+				Z:                   []*float64{replay.Float64(3)},
+			},
+			PhaseEvents: []replay.UtilityPhaseEvent{
+				{
+					Tick:          0,
+					Type:          "displaced",
+					DurationTicks: replay.Int(10),
+					X:             replay.Float64(10),
+					Y:             replay.Float64(20),
+					Z:             replay.Float64(30),
+				},
+			},
+		})
+
+		assertValidationErrorContains(t, ValidateReplay(data), "has displaced phase for non-smoke utility")
+	})
+
+	t.Run("displaced phase missing position", func(t *testing.T) {
+		data := replayWithUtilityEntity(replay.UtilityEntity{
+			UtilityID: "utility:smoke",
+			Kind:      "smoke",
+			StartTick: 0,
+			Trajectory: replay.Trajectory{
+				SampleOriginTick:    0,
+				SampleIntervalTicks: 1,
+				X:                   []*float64{replay.Float64(1)},
+				Y:                   []*float64{replay.Float64(2)},
+				Z:                   []*float64{replay.Float64(3)},
+			},
+			PhaseEvents: []replay.UtilityPhaseEvent{
+				{
+					Tick:          0,
+					Type:          "displaced",
+					DurationTicks: replay.Int(10),
+					X:             replay.Float64(10),
+					Y:             nil,
+					Z:             replay.Float64(30),
+				},
+			},
+		})
+
+		assertValidationErrorContains(t, ValidateReplay(data), "displaced phase at tick 0 is missing position")
+	})
+}
+
+func TestValidateReplayRejectsInvalidBombTruth(t *testing.T) {
+	t.Run("unsorted bomb events", func(t *testing.T) {
+		data := replayWithYawSample(func(stream *replay.PlayerStream) {
+			_ = stream
+		})
+		data.Rounds[0].EndTick = 4
+		data.Rounds[0].BombEvents = []replay.BombEvent{
+			bombEvent(2, "drop", nil),
+			bombEvent(1, "pickup", nil),
+		}
+
+		assertValidationErrorContains(t, ValidateReplay(data), "bomb events are not sorted")
+	})
+
+	t.Run("terminal bomb event before plant", func(t *testing.T) {
+		data := replayWithYawSample(func(stream *replay.PlayerStream) {
+			_ = stream
+		})
+		data.Rounds[0].EndTick = 4
+		site := "A"
+		data.Rounds[0].BombEvents = []replay.BombEvent{
+			bombEvent(2, "exploded", &site),
+		}
+
+		assertValidationErrorContains(t, ValidateReplay(data), "occurs before planted")
+	})
+}
+
 func replayWithYawSample(mutator func(stream *replay.PlayerStream)) replay.Replay {
 	stream := replay.PlayerStream{
 		PlayerID:            "player:test",
@@ -173,6 +367,26 @@ func replayWithYawSample(mutator func(stream *replay.PlayerStream)) replay.Repla
 				UtilityEntities: []replay.UtilityEntity{},
 			},
 		},
+	}
+}
+
+func replayWithUtilityEntity(utility replay.UtilityEntity) replay.Replay {
+	data := replayWithYawSample(func(stream *replay.PlayerStream) {
+		_ = stream
+	})
+	data.Rounds[0].EndTick = 4
+	data.Rounds[0].UtilityEntities = []replay.UtilityEntity{utility}
+	return data
+}
+
+func bombEvent(tick int, eventType string, site *string) replay.BombEvent {
+	return replay.BombEvent{
+		Tick: tick,
+		Type: eventType,
+		Site: site,
+		X:    replay.Float64(1),
+		Y:    replay.Float64(2),
+		Z:    replay.Float64(3),
 	}
 }
 

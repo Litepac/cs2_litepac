@@ -14,7 +14,7 @@ import (
 func main() {
 	demoDir := flag.String("demo-dir", filepath.Join("..", "testdata", "demos"), "Directory containing .dem files")
 	outDir := flag.String("out-dir", filepath.Join("..", "testdata", "replays"), "Directory to write replay json files")
-	assetsRoot := flag.String("assets-root", filepath.Join("..", "assets", "maps"), "Directory containing map assets")
+	assetsRoot := flag.String("assets-root", filepath.Join("..", "public", "maps"), "Directory containing map assets")
 	schemaPath := flag.String("schema", filepath.Join("..", "schema", "mastermind.replay.schema.json"), "Path to replay schema")
 	progressNDJSON := flag.Bool("progress-ndjson", false, "Write parser progress events to stdout as NDJSON")
 	flag.Parse()

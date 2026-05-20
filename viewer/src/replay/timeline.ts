@@ -1,6 +1,6 @@
-import type { Replay, Round, UtilityEntity } from "./types";
+import type { Replay, UtilityEntity } from "./types";
 import { utilityMatchesFocus, type UtilityFocus } from "./utilityFilter";
-import { utilityActivationTick, utilityEventTick, utilityLifecycleEndTick } from "./utility";
+import { utilityEventTick } from "./utility";
 
 export type TimelineEventItem = {
   bombType?: "defuse_start" | "defused" | "exploded" | "plant_start" | "planted";
@@ -11,14 +11,6 @@ export type TimelineEventItem = {
   tick: number;
   utilityKind?: UtilityEntity["kind"];
   utilitySide?: "CT" | "T" | null;
-};
-
-export type TimelineUtilityWindow = {
-  key: string;
-  kind: "decoy" | "fire" | "smoke";
-  label: string;
-  startTick: number;
-  endTick: number;
 };
 
 export function buildTimelineMarkers(
@@ -89,67 +81,6 @@ const utilityMarkers = round.utilityEntities
     ...stageBombMarkers,
     ...utilityMarkers,
   ].sort((left, right) => left.tick - right.tick);
-}
-
-export function buildUtilityWindows(replay: Replay | null, round: Round | null, utilityFocus: UtilityFocus): TimelineUtilityWindow[] {
-  if (!replay || !round) {
-    return [];
-  }
-
-  const playerName = (playerId: string | null) => {
-    if (!playerId) {
-      return "World";
-    }
-
-    return replay.players.find((player) => player.playerId === playerId)?.displayName ?? playerId;
-  };
-
-  return round.utilityEntities
-    .map((utility) => {
-      if (!utilityMatchesFocus(utility.kind, utilityFocus)) {
-        return null;
-      }
-
-      const activationTick = utilityActivationTick(utility);
-      const endTick = utilityLifecycleEndTick(utility);
-      if (activationTick == null || endTick <= activationTick) {
-        return null;
-      }
-
-      const clippedStart = Math.max(round.startTick, activationTick);
-      const clippedEnd = Math.min(round.endTick, endTick);
-      if (clippedEnd <= clippedStart) {
-        return null;
-      }
-
-      const kind = utilityWindowKind(utility.kind);
-      if (kind == null) {
-        return null;
-      }
-
-      return {
-        key: `utility-window-${utility.utilityId}`,
-        kind,
-        label: `${playerName(utility.throwerPlayerId)}: ${utilityLabel(utility.kind)}`,
-        startTick: clippedStart,
-        endTick: clippedEnd,
-      } satisfies TimelineUtilityWindow;
-    })
-    .filter(isPresent);
-}
-
-function utilityWindowKind(kind: UtilityEntity["kind"]) {
-  switch (kind) {
-    case "smoke":
-      return "smoke";
-    case "molotov":
-    case "incendiary":
-      return "fire";
-    case "decoy":
-      return "decoy";
-    default:
-      return null;
-  }
 }
 
 function utilityLabel(kind: UtilityEntity["kind"]) {

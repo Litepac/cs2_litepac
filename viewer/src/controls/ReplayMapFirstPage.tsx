@@ -1,5 +1,3 @@
-import { useEffect, useState, type PointerEvent as ReactPointerEvent } from "react";
-
 import { ReplayStage } from "../canvas/ReplayStage";
 import type { DeathReviewEntry } from "../replay/deathReview";
 import { scoreForSide, sideTeam, type Side } from "../replay/derived";
@@ -23,11 +21,13 @@ import type { Replay, Round } from "../replay/types";
 import type { TimelineEventItem } from "../replay/timeline";
 import type { UtilityFocus } from "../replay/utilityFilter";
 import { KillFeed } from "./KillFeed";
-import { ReplayDrawingToolbar, type StageToolMode } from "./replay-map-first/ReplayDrawingToolbar";
+import { ReplayDrawingToolbar } from "./replay-map-first/ReplayDrawingToolbar";
 import { ReplayDock } from "./replay-map-first/ReplayDock";
 import { ReplayHud } from "./replay-map-first/ReplayHud";
 import { ReplayModeRail } from "./replay-map-first/ReplayModeRail";
 import { ReplayRosterColumn } from "./replay-map-first/ReplayRosterColumn";
+import { useReplayDrawing } from "./replay-map-first/useReplayDrawing";
+import { useReplayHotkeys } from "./replay-map-first/useReplayHotkeys";
 import "./ReplayMapFirstPage.css";
 
 const TEAM_FILTERS: Array<{ label: string; value: "all" | Side }> = [
@@ -69,16 +69,6 @@ type PlaybackState = {
   togglePlayback: () => void;
 };
 
-type DrawingPoint = {
-  x: number;
-  y: number;
-};
-
-type DrawingStroke = {
-  id: number;
-  points: DrawingPoint[];
-};
-
 type Props = {
   activeRoundIndex: number;
   analysisMode: ReplayAnalysisMode;
@@ -113,6 +103,7 @@ type Props = {
   onDisablePositionPlayerCompare: () => void;
   onEnablePositionPlayerBroadCompare: () => void;
   onEnablePositionPlayerCompare: () => void;
+  onOpenSelectedDeathProof: (entry: DeathReviewEntry) => void;
   onHeatmapScopeChange: (scope: HeatmapScope) => void;
   onHeatmapTeamFilterChange: (filter: HeatmapTeamFilter) => void;
   onOpenHome: () => void;
@@ -167,6 +158,7 @@ export function ReplayMapFirstPage({
   onDisablePositionPlayerCompare,
   onEnablePositionPlayerBroadCompare,
   onEnablePositionPlayerCompare,
+  onOpenSelectedDeathProof,
   onHeatmapScopeChange,
   onHeatmapTeamFilterChange,
   onOpenHome,
@@ -186,9 +178,18 @@ export function ReplayMapFirstPage({
   onUtilityAtlasTeamFilterChange,
   onUtilityFocusChange,
 }: Props) {
-  const [stageToolMode, setStageToolMode] = useState<StageToolMode>("move");
-  const [drawingStrokes, setDrawingStrokes] = useState<DrawingStroke[]>([]);
-  const [activeDrawingId, setActiveDrawingId] = useState<number | null>(null);
+  const {
+    clearDrawings,
+    continueDrawing,
+    drawingStrokes,
+    setStageToolMode,
+    stageToolMode,
+    startDrawing,
+    stopDrawing,
+  } = useReplayDrawing({
+    activeRoundIndex,
+    replayId: replay.sourceDemo.sha256,
+  });
   const liveMode = analysisMode === "live";
   const deathReviewMode = analysisMode === "deathReview";
   const timer = resolveRoundTimer(replay, round, playback.renderTickRounded);
@@ -201,100 +202,11 @@ export function ReplayMapFirstPage({
   const ctScore = scoreForSide(round, "CT", "before");
   const tScore = scoreForSide(round, "T", "before");
 
-  useEffect(() => {
-    setStageToolMode("move");
-    setDrawingStrokes([]);
-    setActiveDrawingId(null);
-  }, [activeRoundIndex, replay.sourceDemo.sha256]);
-
-  useEffect(() => {
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.defaultPrevented) {
-        return;
-      }
-
-      const key = event.key.toLowerCase();
-      if (key === " " || event.code === "Space") {
-        if (!isTextEntryKeyboardTarget(event.target)) {
-          event.preventDefault();
-          playback.togglePlayback();
-        }
-        return;
-      }
-
-      if (isInteractiveKeyboardTarget(event.target)) {
-        return;
-      }
-
-      if (key === "c") {
-        event.preventDefault();
-        setDrawingStrokes([]);
-        setActiveDrawingId(null);
-        return;
-      }
-
-      if (key === "d") {
-        event.preventDefault();
-        setStageToolMode("draw");
-        return;
-      }
-
-      if (key === "m") {
-        event.preventDefault();
-        setStageToolMode("move");
-      }
-    }
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [playback]);
-
-  function startDrawing(event: ReactPointerEvent<SVGSVGElement>) {
-    if (stageToolMode !== "draw") {
-      return;
-    }
-
-    event.preventDefault();
-    const point = pointerEventToDrawingPoint(event);
-    const id = Date.now();
-    event.currentTarget.setPointerCapture(event.pointerId);
-    setActiveDrawingId(id);
-    setDrawingStrokes((strokes) => [...strokes, { id, points: [point] }]);
-  }
-
-  function continueDrawing(event: ReactPointerEvent<SVGSVGElement>) {
-    if (stageToolMode !== "draw" || activeDrawingId == null) {
-      return;
-    }
-
-    event.preventDefault();
-    const point = pointerEventToDrawingPoint(event);
-    setDrawingStrokes((strokes) =>
-      strokes.map((stroke) => {
-        if (stroke.id !== activeDrawingId) {
-          return stroke;
-        }
-
-        const previous = stroke.points[stroke.points.length - 1];
-        if (previous && Math.hypot(previous.x - point.x, previous.y - point.y) < 0.15) {
-          return stroke;
-        }
-
-        return { ...stroke, points: [...stroke.points, point] };
-      }),
-    );
-  }
-
-  function stopDrawing(event: ReactPointerEvent<SVGSVGElement>) {
-    if (activeDrawingId == null) {
-      return;
-    }
-
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    }
-    setActiveDrawingId(null);
-  }
+  useReplayHotkeys({
+    clearDrawings,
+    setStageToolMode,
+    togglePlayback: playback.togglePlayback,
+  });
 
   const analysisControls =
     analysisMode !== "live" ? (
@@ -311,13 +223,16 @@ export function ReplayMapFirstPage({
         positionsTeamFilter={positionsTeamFilter}
         positionsView={positionsView}
         selectedPlayerName={selectedPlayerName}
+        selectedUtilityAtlasKey={selectedUtilityAtlasKey}
         showPositionRoundNumbers={showPositionRoundNumbers}
+        utilityAtlasCount={utilityAtlasEntries.length}
         utilityAtlasScope={utilityAtlasScope}
         utilityAtlasTeamFilter={utilityAtlasTeamFilter}
         utilityFocus={utilityFocus}
         onDisablePositionPlayerCompare={onDisablePositionPlayerCompare}
         onEnablePositionPlayerBroadCompare={onEnablePositionPlayerBroadCompare}
         onEnablePositionPlayerCompare={onEnablePositionPlayerCompare}
+        onOpenSelectedDeathProof={onOpenSelectedDeathProof}
         onHeatmapScopeChange={onHeatmapScopeChange}
         onHeatmapTeamFilterChange={onHeatmapTeamFilterChange}
         onPositionsScopeChange={onPositionsScopeChange}
@@ -378,10 +293,7 @@ export function ReplayMapFirstPage({
             <ReplayDrawingToolbar
               mode={stageToolMode}
               hasDrawings={drawingStrokes.length > 0}
-              onClear={() => {
-                setDrawingStrokes([]);
-                setActiveDrawingId(null);
-              }}
+              onClear={clearDrawings}
               onSelectDraw={() => setStageToolMode("draw")}
               onSelectMove={() => setStageToolMode("move")}
             />
@@ -526,13 +438,16 @@ function StageAnalysisControls({
   positionsTeamFilter,
   positionsView,
   selectedPlayerName,
+  selectedUtilityAtlasKey,
   showPositionRoundNumbers,
+  utilityAtlasCount,
   utilityAtlasScope,
   utilityAtlasTeamFilter,
   utilityFocus,
   onDisablePositionPlayerCompare,
   onEnablePositionPlayerBroadCompare,
   onEnablePositionPlayerCompare,
+  onOpenSelectedDeathProof,
   onHeatmapScopeChange,
   onHeatmapTeamFilterChange,
   onPositionsScopeChange,
@@ -554,13 +469,16 @@ function StageAnalysisControls({
   positionsTeamFilter: PositionsTeamFilter;
   positionsView: PositionsView;
   selectedPlayerName: string | null;
+  selectedUtilityAtlasKey: string | null;
   showPositionRoundNumbers: boolean;
+  utilityAtlasCount: number;
   utilityAtlasScope: UtilityAtlasScope;
   utilityAtlasTeamFilter: UtilityAtlasTeamFilter;
   utilityFocus: UtilityFocus;
   onDisablePositionPlayerCompare: () => void;
   onEnablePositionPlayerBroadCompare: () => void;
   onEnablePositionPlayerCompare: () => void;
+  onOpenSelectedDeathProof: (entry: DeathReviewEntry) => void;
   onHeatmapScopeChange: (scope: HeatmapScope) => void;
   onHeatmapTeamFilterChange: (filter: HeatmapTeamFilter) => void;
   onPositionsScopeChange: (scope: PositionsScope) => void;
@@ -573,6 +491,18 @@ function StageAnalysisControls({
   const positionsRoundSet = roundSetFromScope(positionsScope, positionsTeamFilter);
   const heatmapRoundSet = roundSetFromScope(heatmapScope, heatmapTeamFilter);
   const playerSingleActive = !positionPlayerBroadCompareEnabled && !positionPlayerCompareEnabled;
+  const playerStudyMessage = resolvePlayerStudyMessage({
+    positionsView,
+    positionPlayerBroadCompareEnabled,
+    positionPlayerCompareEnabled,
+    positionPlayerSelectedCount,
+    selectedPlayerName,
+  });
+  const utilityReviewMessage = resolveUtilityReviewMessage({
+    selectedUtilityAtlasKey,
+    utilityAtlasCount,
+    utilityFocus,
+  });
 
   function setPositionsRoundSet(next: RoundSetFilter) {
     const { scope, teamFilter } = roundSetToScope(next);
@@ -598,19 +528,25 @@ function StageAnalysisControls({
       <div className="dr-mapfirst-analysis-actions">
         {analysisMode === "utilityAtlas" ? (
           <>
+            <p className="dr-mapfirst-analysis-hint">{utilityReviewMessage}</p>
             <Segmented items={SCOPE_OPTIONS} selectedValue={utilityAtlasScope} onChange={onUtilityAtlasScopeChange} />
             <Segmented items={TEAM_FILTERS} selectedValue={utilityAtlasTeamFilter} onChange={onUtilityAtlasTeamFilterChange} />
             <Segmented items={UTILITY_OPTIONS} selectedValue={utilityFocus} onChange={onUtilityFocusChange} />
           </>
         ) : null}
         {analysisMode === "deathReview" ? (
-          <DeathReviewSummary entry={selectedDeathReviewEntry} deathCount={deathReviewEntries.length} />
+          <DeathReviewSummary
+            entry={selectedDeathReviewEntry}
+            deathCount={deathReviewEntries.length}
+            onOpenProof={onOpenSelectedDeathProof}
+          />
         ) : null}
         {analysisMode === "positions" && positionsView === "paths" ? (
           <Segmented items={ROUND_SET_OPTIONS} selectedValue={positionsRoundSet} onChange={setPositionsRoundSet} />
         ) : null}
         {analysisMode === "positions" && positionsView === "player" ? (
           <>
+            <p className="dr-mapfirst-analysis-hint">{playerStudyMessage}</p>
             <Segmented items={TEAM_FILTERS} selectedValue={positionsTeamFilter} onChange={onPositionsTeamFilterChange} />
             <div className="dr-mapfirst-analysis-player-actions">
               <button
@@ -655,15 +591,17 @@ function StageAnalysisControls({
 function DeathReviewSummary({
   deathCount,
   entry,
+  onOpenProof,
 }: {
   deathCount: number;
   entry: DeathReviewEntry | null;
+  onOpenProof: (entry: DeathReviewEntry) => void;
 }) {
   if (!entry) {
     return (
       <div className="dr-mapfirst-death-review-card dr-mapfirst-death-review-card-empty">
         <strong>{deathCount} deaths in round</strong>
-        <span>Select a death marker on the map.</span>
+        <span>Select a death marker to inspect victim, killer, trade, flash, and support evidence.</span>
       </div>
     );
   }
@@ -672,42 +610,56 @@ function DeathReviewSummary({
     <div className={`dr-mapfirst-death-review-card dr-mapfirst-death-review-card-${entry.victimSide?.toLowerCase() ?? "neutral"}`}>
       <div className="dr-mapfirst-death-review-main">
         <strong>{entry.victimName}</strong>
-        <span>{entry.timeDisplay ?? "Round clock unknown"}</span>
+        <span>{entry.timeDisplay ?? "Clock unknown"}</span>
       </div>
-      <div className="dr-mapfirst-death-review-row">
-        <span>Killed by</span>
-        <b>{entry.killerName}</b>
+      <div className="dr-mapfirst-death-review-status-row">
+        <span className={`dr-mapfirst-death-review-status dr-mapfirst-death-review-status-${entry.tradeState}`}>
+          {tradeStateLabel(entry)}
+        </span>
+        {entry.victimFlashed ? <span className="dr-mapfirst-death-review-status">Flashed</span> : null}
+        {entry.victimUtilityCount != null && entry.victimUtilityCount > 0 ? (
+          <span className="dr-mapfirst-death-review-status">{entry.victimUtilityCount} util left</span>
+        ) : null}
       </div>
-      <div className="dr-mapfirst-death-review-row">
-        <span>Weapon</span>
-        <b>{entry.weaponLabel}{entry.headshot ? " HS" : ""}</b>
-      </div>
-      <div className="dr-mapfirst-death-review-row">
-        <span>5s trade</span>
-        <b>{tradeStateLabel(entry)}</b>
-      </div>
-      <div className="dr-mapfirst-death-review-row">
-        <span>Support nearby</span>
-        <b>{entry.nearbyTeammates == null ? "Unknown" : `${entry.nearbyTeammates}`}</b>
-      </div>
-      <div className="dr-mapfirst-death-review-row">
-        <span>Victim flashed</span>
-        <b>{booleanFactLabel(entry.victimFlashed)}</b>
-      </div>
-      <div className="dr-mapfirst-death-review-row">
-        <span>Killer flashed</span>
-        <b>{booleanFactLabel(entry.killerFlashed)}</b>
-      </div>
-      <div className="dr-mapfirst-death-review-row">
-        <span>Utility left</span>
-        <b>{entry.victimUtilityCount == null ? "Unknown" : `${entry.victimUtilityCount}`}</b>
-      </div>
+      <span className="dr-mapfirst-death-review-section">Canonical event</span>
+      <DeathReviewFactRow label="Killed by" value={entry.killerName} />
+      <DeathReviewFactRow label="Weapon" value={`${entry.weaponLabel}${entry.headshot ? " HS" : ""}`} />
       {entry.assisterName ? (
-        <div className="dr-mapfirst-death-review-row">
-          <span>Assist</span>
-          <b>{entry.assisterName}</b>
-        </div>
+        <DeathReviewFactRow label="Assist" value={entry.assisterName} />
       ) : null}
+      <span className="dr-mapfirst-death-review-section">Measured evidence</span>
+      <DeathReviewFactRow label="5s trade" value={tradeStateLabel(entry)} estimated />
+      <DeathReviewFactRow
+        label="Support nearby"
+        value={entry.nearbyTeammates == null ? "Unknown" : `${entry.nearbyTeammates}`}
+        estimated
+      />
+      <DeathReviewFactRow label="Victim flashed" value={booleanFactLabel(entry.victimFlashed)} />
+      <DeathReviewFactRow label="Killer flashed" value={booleanFactLabel(entry.killerFlashed)} />
+      <DeathReviewFactRow
+        label="Utility left"
+        value={entry.victimUtilityCount == null ? "Unknown" : `${entry.victimUtilityCount}`}
+        estimated
+      />
+      <button className="dr-mapfirst-death-review-proof" type="button" onClick={() => onOpenProof(entry)}>
+        Open proof tick
+      </button>
+    </div>
+  );
+}
+
+function DeathReviewFactRow({ estimated, label, value }: { estimated?: boolean; label: string; value: string }) {
+  return (
+    <div className={estimated ? "dr-mapfirst-death-review-row dr-mapfirst-death-review-row-estimated" : "dr-mapfirst-death-review-row"}>
+      <span className="dr-mapfirst-death-review-label">
+        {label}
+        {estimated ? (
+          <em className="dr-mapfirst-death-review-estimate-tag" title="Viewer-derived estimate">
+            EST
+          </em>
+        ) : null}
+      </span>
+      <b>{value}</b>
     </div>
   );
 }
@@ -818,44 +770,57 @@ function booleanFactLabel(value: boolean | null) {
   return value ? "Yes" : "No";
 }
 
-function pointerEventToDrawingPoint(event: ReactPointerEvent<SVGSVGElement>) {
-  const bounds = event.currentTarget.getBoundingClientRect();
-  return {
-    x: ((event.clientX - bounds.left) / Math.max(1, bounds.width)) * 100,
-    y: ((event.clientY - bounds.top) / Math.max(1, bounds.height)) * 100,
-  };
-}
-
-function isInteractiveKeyboardTarget(target: EventTarget | null) {
-  if (!(target instanceof HTMLElement)) {
-    return false;
+function resolvePlayerStudyMessage({
+  positionsView,
+  positionPlayerBroadCompareEnabled,
+  positionPlayerCompareEnabled,
+  positionPlayerSelectedCount,
+  selectedPlayerName,
+}: {
+  positionsView: PositionsView;
+  positionPlayerBroadCompareEnabled: boolean;
+  positionPlayerCompareEnabled: boolean;
+  positionPlayerSelectedCount: number;
+  selectedPlayerName: string | null;
+}) {
+  if (positionsView !== "player") {
+    return "";
   }
 
-  const tagName = target.tagName.toLowerCase();
-  return (
-    target.isContentEditable ||
-    tagName === "button" ||
-    tagName === "input" ||
-    tagName === "textarea" ||
-    tagName === "select" ||
-    tagName === "a" ||
-    target.closest('[role="button"], [role="slider"], input[type="range"]') != null
-  );
-}
-
-function isTextEntryKeyboardTarget(target: EventTarget | null) {
-  if (!(target instanceof HTMLElement)) {
-    return false;
+  if (positionPlayerBroadCompareEnabled) {
+    return "All-player comparison is noisy by design. Pick one player when you want a clean timing study.";
   }
 
-  const tagName = target.tagName.toLowerCase();
-  return target.isContentEditable || tagName === "textarea" || tagName === "select" || isTextInput(target);
-}
-
-function isTextInput(target: HTMLElement) {
-  if (!(target instanceof HTMLInputElement)) {
-    return false;
+  if (positionPlayerCompareEnabled) {
+    return positionPlayerSelectedCount > 0
+      ? "Click player cards to add or remove comparison targets. Click a ghost to open the proof tick."
+      : "Pick up to three players from the rosters to compare their same-clock positions.";
   }
 
-  return !["button", "checkbox", "radio", "range", "reset", "submit"].includes(target.type);
+  if (!selectedPlayerName) {
+    return "Select a player from either roster to study where they are at this same round clock across rounds.";
+  }
+
+  return "Click a ghost marker to jump into the exact round and tick. If the map is empty, this player was not alive at this clock in the filtered rounds.";
+}
+
+function resolveUtilityReviewMessage({
+  selectedUtilityAtlasKey,
+  utilityAtlasCount,
+  utilityFocus,
+}: {
+  selectedUtilityAtlasKey: string | null;
+  utilityAtlasCount: number;
+  utilityFocus: UtilityFocus;
+}) {
+  if (selectedUtilityAtlasKey) {
+    return "One throw selected. Click the marker again to clear, or use the filters to inspect a different family.";
+  }
+
+  if (utilityAtlasCount === 0) {
+    return "No parser-backed utility matches this filter for the current scope.";
+  }
+
+  const family = utilityFocus === "all" ? "utility" : UTILITY_OPTIONS.find((entry) => entry.value === utilityFocus)?.label.toLowerCase() ?? "utility";
+  return `${utilityAtlasCount} ${family} ${utilityAtlasCount === 1 ? "throw" : "throws"} visible. Click one marker to isolate its path and jump into Live.`;
 }

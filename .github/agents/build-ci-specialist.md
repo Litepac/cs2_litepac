@@ -12,11 +12,13 @@ Keep the project shippable while the parser and viewer evolve.
 - `go test ./...`
 - `go build ./...`
 - viewer production builds
+- frontend structure checks with `npm.cmd run check:structure`
 - fixture staging flows
 - keeping the repo runnable after structural changes
 
 ## Do
 - Run builds after meaningful parser or viewer changes.
+- Run `npm.cmd run check:structure` after moving assets, deleting components, or changing CSS ownership.
 - Keep fixture generation and staging commands working.
 - Prefer small refactors that preserve local workflows.
 

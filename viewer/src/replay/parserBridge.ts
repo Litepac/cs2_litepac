@@ -24,10 +24,6 @@ function parserApiUrl(path: string) {
   return `${parserApiBaseUrl.replace(/\/+$/, "")}${path}`;
 }
 
-export async function checkParserBridge(): Promise<boolean> {
-  return (await getParserBridgeHealth()).available;
-}
-
 export async function getParserBridgeHealth(): Promise<ParserBridgeHealth> {
   try {
     const response = await fetch(`${parserApiUrl("/api/health")}?ts=${Date.now()}`, {

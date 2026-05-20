@@ -1,11 +1,11 @@
-import type { Application, Container } from "pixi.js";
+import type { Application, Container, Texture } from "pixi.js";
 
 import type { HeatmapBucket } from "../../replay/heatmapAnalysis";
 import type { PositionPlayerSnapshot, PositionTrailEntry, PositionsView } from "../../replay/positionsAnalysis";
 import type { ReplayAnalysisMode, UtilityAtlasEntry } from "../../replay/replayAnalysis";
 import type { DeathReviewEntry } from "../../replay/deathReview";
 import type { HeatmapScope } from "../../replay/heatmapAnalysis";
-import type { RadarViewport } from "../../maps/transform";
+import type { RadarViewport } from "../../mapGeometry/transform";
 import type { UtilityFocus } from "../../replay/utilityFilter";
 import type { Replay } from "../../replay/types";
 
@@ -42,6 +42,7 @@ export type StageState = {
   mapLayer: Container;
   utilityOverlayLayer: Container;
   utilityTrailLayer: Container;
+  deathReviewLayer: Container;
   bombLayer: Container;
   killLayer: Container;
   mapClipMask: Container | null;
@@ -49,6 +50,7 @@ export type StageState = {
   playerLayer: Container;
   eventLayer: Container;
   lastAtlasEntryKey: string | null;
+  mapLoadRequestId: number;
   currentMapKey: string | null;
   currentRenderResolution: number;
   currentViewportHeight: number | null;
@@ -56,10 +58,24 @@ export type StageState = {
   lastFullRenderTick: number | null;
   lastRoundNumber: number | null;
   lastSelectedPlayerId: string | null;
+  lastDeathReviewRenderKey: string | null;
+  lastUtilityRenderKey: string | null;
+  liveUtilityContainers: Map<string, LiveUtilityRenderContainers>;
   radarViewport: RadarViewport | null;
+  ownedMapTextures: {
+    alphaMaskTexture: Texture | null;
+    croppedTexture: Texture | null;
+  };
+  destroyed: boolean;
   cameraOffsetX: number;
   cameraOffsetY: number;
   cameraScale: number;
+};
+
+export type LiveUtilityRenderContainers = {
+  overlay: Container;
+  renderKey: string;
+  trail: Container;
 };
 
 export type BlindEffectState = {

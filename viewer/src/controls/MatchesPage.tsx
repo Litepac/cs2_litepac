@@ -6,6 +6,7 @@ import type { DemoIngestState } from "../replay/ingestState";
 import type { MatchLibraryEntry } from "../replay/matchLibrary";
 import type { ParserBridgeHealth } from "../replay/parserBridge";
 import { IngestTracker } from "./IngestTracker";
+import styles from "./MatchesPage.module.css";
 
 type Props = {
   demoIngestState: DemoIngestState | null;
@@ -109,17 +110,17 @@ export function MatchesPage({
   }
 
   return (
-    <section className="matches-page matches-page-library matches-page-redline">
-      <header className="matches-redline-header">
-        <div className="matches-redline-heading">
-          <span className="matches-redline-kicker">Local match library</span>
+    <section className={`matches-page matches-page-library ${styles["matches-page-redline"]}`}>
+      <header className={styles["matches-redline-header"]}>
+        <div className={styles["matches-redline-heading"]}>
+          <span className={styles["matches-redline-kicker"]}>Local match library</span>
           <h1>Matches</h1>
           <p>Upload local CS2 demos, then open a clean 2D review when the round data is ready.</p>
         </div>
 
-        <div className="matches-redline-header-panel" aria-label="Match library actions and status">
+        <div className={styles["matches-redline-header-panel"]} aria-label="Match library actions and status">
           <label
-            className={`matches-redline-upload ${uploadDisabled ? "matches-redline-upload-disabled" : ""}`}
+            className={cx("matches-redline-upload", uploadDisabled ? "matches-redline-upload-disabled" : null)}
             aria-disabled={uploadDisabled}
           >
             <span>
@@ -136,13 +137,13 @@ export function MatchesPage({
             />
           </label>
 
-          <section className="matches-redline-header-status">
-            <span className="matches-redline-kicker">Current state</span>
+          <section className={styles["matches-redline-header-status"]}>
+            <span className={styles["matches-redline-kicker"]}>Current state</span>
             <strong>{loadingLabel ?? libraryStatus}</strong>
             <p>{reviewStatusCopy}</p>
           </section>
 
-          <section className="matches-redline-header-metrics" aria-label="Library metrics">
+          <section className={styles["matches-redline-header-metrics"]} aria-label="Library metrics">
             <div>
               <span>Saved</span>
               <strong>{savedMatchLabel}</strong>
@@ -163,8 +164,8 @@ export function MatchesPage({
         </div>
       </header>
 
-      <section className="matches-redline-controls" aria-label="Match library controls">
-        <label className="matches-redline-control matches-redline-search">
+      <section className={styles["matches-redline-controls"]} aria-label="Match library controls">
+        <label className={cx("matches-redline-control", "matches-redline-search")}>
           <span>Search</span>
           <input
             type="search"
@@ -174,7 +175,7 @@ export function MatchesPage({
           />
         </label>
 
-        <label className="matches-redline-control">
+        <label className={styles["matches-redline-control"]}>
           <span>Map</span>
           <select value={mapFilter} onChange={(event) => setMapFilter(event.target.value)}>
             <option value="all">All maps</option>
@@ -188,7 +189,7 @@ export function MatchesPage({
 
         <button
           type="button"
-          className="matches-redline-clear"
+          className={styles["matches-redline-clear"]}
           onClick={clearFilters}
           disabled={!filtersActive}
         >
@@ -198,7 +199,7 @@ export function MatchesPage({
 
       {demoIngestState || ingestError ? <IngestTracker issue={ingestError} state={demoIngestState} /> : null}
       {showParserOfflineNotice ? (
-        <section className="matches-redline-notice matches-redline-notice-warning">
+        <section className={cx("matches-redline-notice", "matches-redline-notice-warning")}>
           <div>
             <strong>Local demo processing paused</strong>
             <p>Uploads are disabled until the local review service is available again.</p>
@@ -209,7 +210,7 @@ export function MatchesPage({
         </section>
       ) : null}
       {error && error.context !== "demo" ? (
-        <section className="matches-redline-notice matches-redline-notice-error">
+        <section className={cx("matches-redline-notice", "matches-redline-notice-error")}>
           <div>
             <strong>{error.title}</strong>
             <p>{error.message}</p>
@@ -218,23 +219,23 @@ export function MatchesPage({
         </section>
       ) : null}
 
-      <section className="matches-redline-library" aria-labelledby="matches-redline-library-heading">
-        <div className="matches-redline-library-head">
+      <section className={styles["matches-redline-library"]} aria-labelledby="matches-redline-library-heading">
+        <div className={styles["matches-redline-library-head"]}>
           <div>
-            <span className="matches-redline-kicker">Reviewable demos</span>
+            <span className={styles["matches-redline-kicker"]}>Reviewable demos</span>
             <h2 id="matches-redline-library-heading">{libraryStatus}</h2>
           </div>
           <p>Map, teams, score, uploaded time, and direct replay actions.</p>
         </div>
 
         {!libraryHydrated ? (
-          <div className="matches-redline-empty">
+          <div className={styles["matches-redline-empty"]}>
             <strong>Loading local match library</strong>
             <p>Reading saved matches from browser storage before the library opens.</p>
           </div>
         ) : filteredMatches.length > 0 ? (
-          <div className="matches-redline-table">
-            <div className="matches-redline-table-head" aria-hidden="true">
+          <div className={styles["matches-redline-table"]}>
+            <div className={styles["matches-redline-table-head"]} aria-hidden="true">
               <span>Match</span>
               <span>Teams</span>
               <span>Score</span>
@@ -245,7 +246,7 @@ export function MatchesPage({
             {filteredMatches.map((entry) => (
               <article
                 key={entry.id}
-                className={`matches-redline-row matches-redline-row-${winnerAccent(entry.summary.teamAResult, entry.summary.teamBResult)}`}
+                className={cx("matches-redline-row", `matches-redline-row-${winnerAccent(entry.summary.teamAResult, entry.summary.teamBResult)}`)}
                 role="button"
                 tabIndex={loadingSource != null ? -1 : 0}
                 aria-label={`Open ${entry.summary.mapName}: ${entry.summary.teamAName} versus ${entry.summary.teamBName}`}
@@ -256,29 +257,29 @@ export function MatchesPage({
                 }}
                 onKeyDown={(event) => handleRowKeyDown(event, () => onOpenMatch(entry.id), loadingSource != null)}
               >
-                <div className="matches-redline-row-map">
+                <div className={styles["matches-redline-row-map"]}>
                   <span>{entry.replay.map.mapId}</span>
                   <strong>{entry.summary.mapName}</strong>
                   <small>{entry.summary.sourceLabel}</small>
                 </div>
 
-                <div className="matches-redline-row-teams">
-                  <div className="matches-redline-team">
-                    <strong className={`matches-redline-team-name matches-redline-team-name-${entry.summary.teamAResult}`}>
+                <div className={styles["matches-redline-row-teams"]}>
+                  <div className={styles["matches-redline-team"]}>
+                    <strong className={cx("matches-redline-team-name", `matches-redline-team-name-${entry.summary.teamAResult}`)}>
                       {entry.summary.teamAName}
                     </strong>
                     <small>{entry.summary.teamAPlayersLabel}</small>
                   </div>
-                  <span className="matches-redline-versus">vs</span>
-                  <div className="matches-redline-team">
-                    <strong className={`matches-redline-team-name matches-redline-team-name-${entry.summary.teamBResult}`}>
+                  <span className={styles["matches-redline-versus"]}>vs</span>
+                  <div className={styles["matches-redline-team"]}>
+                    <strong className={cx("matches-redline-team-name", `matches-redline-team-name-${entry.summary.teamBResult}`)}>
                       {entry.summary.teamBName}
                     </strong>
                     <small>{entry.summary.teamBPlayersLabel}</small>
                   </div>
                 </div>
 
-                <div className="matches-redline-score">
+                <div className={styles["matches-redline-score"]}>
                   <span>{entry.summary.winnerTeamName ? `${entry.summary.winnerTeamName} won` : "Match draw"}</span>
                   <strong>
                     {entry.summary.teamAScore}
@@ -287,7 +288,7 @@ export function MatchesPage({
                   </strong>
                 </div>
 
-                <div className="matches-redline-time">
+                <div className={styles["matches-redline-time"]}>
                   {entry.summary.playedLabel ? (
                     <span>
                       <small>{entry.summary.playedStatusLabel}</small>
@@ -300,10 +301,10 @@ export function MatchesPage({
                   </span>
                 </div>
 
-                <div className="matches-redline-actions">
+                <div className={styles["matches-redline-actions"]}>
                   <button
                     type="button"
-                    className="matches-redline-action matches-redline-action-secondary"
+                    className={cx("matches-redline-action", "matches-redline-action-secondary")}
                     onClick={(event) => handleActionClick(event, () => onOpenStats(entry.id))}
                     disabled={loadingSource != null}
                   >
@@ -311,7 +312,7 @@ export function MatchesPage({
                   </button>
                   <button
                     type="button"
-                    className="matches-redline-action matches-redline-action-primary"
+                    className={cx("matches-redline-action", "matches-redline-action-primary")}
                     onClick={(event) => handleActionClick(event, () => onOpenMatch(entry.id))}
                     disabled={loadingSource != null}
                   >
@@ -319,7 +320,7 @@ export function MatchesPage({
                   </button>
                   <button
                     type="button"
-                    className="matches-redline-action matches-redline-action-danger"
+                    className={cx("matches-redline-action", "matches-redline-action-danger")}
                     onClick={(event) => handleActionClick(event, () => void onDeleteMatch(entry.id))}
                     disabled={loadingSource != null}
                   >
@@ -330,7 +331,7 @@ export function MatchesPage({
             ))}
           </div>
         ) : (
-          <div className="matches-redline-empty">
+          <div className={styles["matches-redline-empty"]}>
             <strong>{filtersActive ? "No matches match the current filters" : "No local matches yet"}</strong>
             <p>
               {filtersActive
@@ -340,7 +341,7 @@ export function MatchesPage({
                   : "Bring local demo processing back online first, then upload a `.dem` to build the match library."}
             </p>
             {filtersActive ? (
-              <button type="button" className="matches-redline-clear matches-redline-empty-action" onClick={clearFilters}>
+              <button type="button" className={cx("matches-redline-clear", "matches-redline-empty-action")} onClick={clearFilters}>
                 Clear filters
               </button>
             ) : null}
@@ -349,16 +350,16 @@ export function MatchesPage({
       </section>
 
       {fixtures.length > 0 ? (
-        <details className="matches-redline-secondary-tools">
+        <details className={styles["matches-redline-secondary-tools"]}>
           <summary>
-            <span className="matches-redline-kicker">Sample demos</span>
+            <span className={styles["matches-redline-kicker"]}>Sample demos</span>
             <strong>Try a prepared review</strong>
           </summary>
-          <div className="entry-fixture-list matches-redline-fixture-list">
+          <div className={`entry-fixture-list ${styles["matches-redline-fixture-list"]}`}>
             {fixtures.map((fixture) => (
               <button
                 key={fixture.fileName}
-                className="entry-fixture-item matches-redline-fixture-item"
+                className={`entry-fixture-item ${styles["matches-redline-fixture-item"]}`}
                 onClick={() => void onFixtureLoad(fixture.fileName)}
                 disabled={loadingSource != null}
               >
@@ -371,6 +372,10 @@ export function MatchesPage({
       ) : null}
     </section>
   );
+}
+
+function cx(...classNames: Array<string | null | undefined>) {
+  return classNames.map((className) => (className ? styles[className] : "")).filter(Boolean).join(" ");
 }
 
 function winnerAccent(teamAResult: "win" | "loss" | "draw", teamBResult: "win" | "loss" | "draw") {

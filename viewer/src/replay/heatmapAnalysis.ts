@@ -1,5 +1,4 @@
 import {
-  analysisScopeLabel,
   collectAnalysisRounds,
   type ReplayAnalysisScope,
   type ReplayAnalysisSourceFilter,
@@ -43,15 +42,6 @@ type CellAccumulator = {
   row: number;
   tCount: number;
 };
-
-export function heatmapScopeLabel(
-  replay: Replay,
-  activeRoundIndex: number,
-  sideBlocks: ReplaySideBlock[],
-  scope: HeatmapScope,
-) {
-  return analysisScopeLabel(replay, activeRoundIndex, sideBlocks, scope);
-}
 
 export function collectHeatmapSnapshot(
   replay: Replay,

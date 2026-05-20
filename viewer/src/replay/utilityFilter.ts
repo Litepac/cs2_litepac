@@ -22,22 +22,3 @@ export function utilityMatchesFocus(
 
   return kind === focus;
 }
-
-export function utilityFocusLabel(focus: UtilityFocus) {
-  switch (focus) {
-    case "all":
-      return "All utility";
-    case "smoke":
-      return "Smokes";
-    case "flashbang":
-      return "Flashes";
-    case "hegrenade":
-      return "HE";
-    case "fire":
-      return "Molotov / Incendiary";
-    case "decoy":
-      return "Decoys";
-    default:
-      return focus;
-  }
-}

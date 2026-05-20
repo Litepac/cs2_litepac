@@ -1,10 +1,11 @@
 import { Circle, Container, Graphics, Text } from "pixi.js";
 
-import { worldToScreen, type RadarViewport } from "../maps/transform";
+import { worldToScreen, type RadarViewport } from "../mapGeometry/transform";
 import type { Replay } from "../replay/types";
 import type { PositionPlayerSnapshot, PositionTrailEntry } from "../replay/positionsAnalysis";
 import { resolvePlayerEquipmentState } from "../replay/weapons";
-import { drawPlayerMarker } from "./replayStage/renderPlayers";
+import { attachReplayHitTarget } from "./replayStage/hitTargets";
+import { drawBombCarrierIcon, drawPlayerMarker } from "./replayStage/renderPlayers";
 
 const CT_COLOR = 0x56b3ff;
 const T_COLOR = 0xf2a64b;
@@ -134,10 +135,10 @@ export function drawPositionPlayerSnapshotVisual(
   });
 
   const snapshotLayer = new Container();
-  snapshotLayer.eventMode = "static";
-  snapshotLayer.cursor = "pointer";
-  snapshotLayer.hitArea = new Circle(screenPoint.x, screenPoint.y, active ? 20 : 18);
-  snapshotLayer.on("pointertap", () => options?.onSelectSnapshot?.(snapshot));
+  attachReplayHitTarget(snapshotLayer, {
+    hitArea: new Circle(screenPoint.x, screenPoint.y, active ? 20 : 18),
+    onActivate: () => options?.onSelectSnapshot?.(snapshot),
+  });
   overlayLayer.addChild(snapshotLayer);
 
   const sampleMarker = new Graphics();
@@ -157,13 +158,7 @@ export function drawPositionPlayerSnapshotVisual(
   snapshotLayer.addChild(sampleMarker);
 
   if (snapshot.hasBomb) {
-    const bombBadge = new Graphics();
-    bombBadge.roundRect(screenPoint.x + 8, screenPoint.y - 12, 9, 9, 2);
-    bombBadge.fill({ color: 0x15100a, alpha: active ? 0.92 : 0.48 });
-    bombBadge.stroke({ color: 0xffd06c, width: 1.2, alpha: active ? 0.9 : 0.46 });
-    bombBadge.rect(screenPoint.x + 10.5, screenPoint.y - 9.5, 4, 4);
-    bombBadge.stroke({ color: 0xffd06c, width: 1, alpha: active ? 0.92 : 0.5 });
-    snapshotLayer.addChild(bombBadge);
+    drawBombCarrierIcon(snapshotLayer, screenPoint.x, screenPoint.y, active, active ? 0.94 : 0.48);
   }
 
   const halo = new Graphics();

@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { deriveMatchStats } from "../replay/matchStats";
 import type { MatchLibraryEntry } from "../replay/matchLibrary";
 import type { MatchRoundBreakdown, MatchStatsPlayerRow, MatchStatsSideFilter, MatchStatsTeamTable } from "../replay/statsTypes";
+import styles from "./StatsPage.module.css";
 
 type Props = {
   entry: MatchLibraryEntry;
@@ -35,6 +36,13 @@ type StatsView = {
   minWidth: string;
   columns: StatsColumn[];
 };
+
+function cx(...classNames: Array<string | false | null | undefined>) {
+  return classNames
+    .flatMap((className) => (className ? className.split(" ") : []))
+    .map((className) => styles[className] ?? className)
+    .join(" ");
+}
 
 const SIDE_FILTERS: Array<{ label: string; value: MatchStatsSideFilter }> = [
   { label: "Both Sides", value: "all" },
@@ -210,33 +218,33 @@ export function StatsPage({ entry, onBackToMatches, onOpenReplay }: Props) {
   const headerRunnerUp = sortedTeams[1];
 
   return (
-    <section className="stats-page">
-      <header className="stats-header">
+    <section className={cx("stats-page")}>
+      <header className={cx("stats-header")}>
         <div
-          className="stats-header-backdrop"
+          className={cx("stats-header-backdrop")}
           style={{ backgroundImage: `linear-gradient(90deg, rgba(7, 11, 15, 0.84), rgba(7, 11, 15, 0.58) 38%, rgba(7, 11, 15, 0.84)), url(${entry.summary.mapImageUrl})` }}
         />
-        <div className="stats-header-main">
-          <div className="stats-heading">
-            <div className="eyebrow">Match Stats</div>
-            <div className="stats-match-band">
-              <div className="stats-map-block">
+        <div className={cx("stats-header-main")}>
+          <div className={cx("stats-heading")}>
+            <div className={cx("eyebrow")}>Match Stats</div>
+            <div className={cx("stats-match-band")}>
+              <div className={cx("stats-map-block")}>
                 <h1>{entry.summary.mapName}</h1>
-                <div className="stats-context-line">
+                <div className={cx("stats-context-line")}>
                   <span>{entry.summary.addedLabel}</span>
                   <span>{entry.summary.sourceLabel}</span>
                   <span>{entry.replay.map.mapId}</span>
                 </div>
               </div>
-              <div className="stats-score-band">
-                <div className="stats-team-mark">
+              <div className={cx("stats-score-band")}>
+                <div className={cx("stats-team-mark")}>
                   <strong>{headerWinner?.teamName ?? entry.summary.teamAName}</strong>
                   <small>{headerWinner ? "Winner" : "Match final"}</small>
                 </div>
-                <span className="stats-score-value">
+                <span className={cx("stats-score-value")}>
                   {headerWinner?.finalScore ?? entry.summary.teamAScore} - {headerRunnerUp?.finalScore ?? entry.summary.teamBScore}
                 </span>
-                <div className="stats-team-mark stats-team-mark-right">
+                <div className={cx("stats-team-mark", "stats-team-mark-right")}>
                   <strong>{headerRunnerUp?.teamName ?? entry.summary.teamBName}</strong>
                   <small>{headerRunnerUp ? "Runner-up" : "Match final"}</small>
                 </div>
@@ -245,13 +253,13 @@ export function StatsPage({ entry, onBackToMatches, onOpenReplay }: Props) {
           </div>
         </div>
 
-        <div className="stats-header-controls">
-          <div className="stats-side-filter" role="tablist" aria-label="Side filter">
+        <div className={cx("stats-header-controls")}>
+          <div className={cx("stats-side-filter")} role="tablist" aria-label="Side filter">
             {SIDE_FILTERS.map((option) => (
               <button
                 key={option.value}
                 type="button"
-                className={option.value === sideFilter ? "stats-side-filter-button stats-side-filter-button-active" : "stats-side-filter-button"}
+                className={cx("stats-side-filter-button", option.value === sideFilter && "stats-side-filter-button-active")}
                 onClick={() => setSideFilter(option.value)}
               >
                 {option.label}
@@ -259,26 +267,26 @@ export function StatsPage({ entry, onBackToMatches, onOpenReplay }: Props) {
             ))}
           </div>
 
-          <div className="stats-header-actions">
-            <button type="button" className="stats-header-button stats-header-button-secondary" onClick={onBackToMatches}>
+          <div className={cx("stats-header-actions")}>
+            <button type="button" className={cx("stats-header-button", "stats-header-button-secondary")} onClick={onBackToMatches}>
               Back to Matches
             </button>
-            <button type="button" className="stats-header-button stats-header-button-primary" onClick={() => onOpenReplay(entry.id)}>
+            <button type="button" className={cx("stats-header-button", "stats-header-button-primary")} onClick={() => onOpenReplay(entry.id)}>
               Open 2D Replay
             </button>
           </div>
         </div>
       </header>
 
-      <section className="stats-view-shell">
-        <div className="stats-view-tabs" role="tablist" aria-label="Stats view">
+      <section className={cx("stats-view-shell")}>
+        <div className={cx("stats-view-tabs")} role="tablist" aria-label="Stats view">
           {STATS_VIEWS.map((view) => (
             <button
               key={view.id}
               type="button"
               role="tab"
               aria-selected={view.id === currentView.id}
-              className={view.id === currentView.id ? "stats-view-tab stats-view-tab-active" : "stats-view-tab"}
+              className={cx("stats-view-tab", view.id === currentView.id && "stats-view-tab-active")}
               onClick={() => {
                 setViewId(view.id);
                 setSortKey(view.defaultSortKey);
@@ -291,37 +299,35 @@ export function StatsPage({ entry, onBackToMatches, onOpenReplay }: Props) {
         </div>
       </section>
 
-      <div className="stats-team-grid">
+      <div className={cx("stats-team-grid")}>
         {sortedTeams.map((team) => (
           <section
             key={team.teamId}
-            className={`stats-team-card ${team.isWinner ? "stats-team-card-winner" : "stats-team-card-trailing"}`}
+            className={cx("stats-team-card", team.isWinner ? "stats-team-card-winner" : "stats-team-card-trailing")}
           >
-            <div className="stats-team-card-header">
+            <div className={cx("stats-team-card-header")}>
               <div>
-                <div className="card-title">{sideFilter === "all" ? (team.isWinner ? "Winner" : "Runner-up") : `${sideFilter} Focus`}</div>
+                <div className={cx("card-title")}>{sideFilter === "all" ? (team.isWinner ? "Winner" : "Runner-up") : `${sideFilter} Focus`}</div>
                 <strong>{team.teamName}</strong>
               </div>
               <span>{buildCompactTeamHeaderMeta(team, currentView)}</span>
             </div>
 
-            <div className="stats-table">
-              <div className="stats-table-scroll">
+            <div className={cx("stats-table")}>
+              <div className={cx("stats-table-scroll")}>
                 <div
-                  className="stats-table-head"
+                  className={cx("stats-table-head")}
                   style={{ gridTemplateColumns: currentView.gridTemplateColumns, minWidth: currentView.minWidth }}
                 >
                   {currentView.columns.map((column) => {
                     const isActive = column.id === activeSortKey;
-                    const className = [
+                    const className = cx(
                       "stats-sort-head",
                       `stats-table-align-${column.align ?? "right"}`,
-                      column.emphasis === "metric" ? "stats-sort-head-metric" : "",
-                      column.groupStart ? "stats-table-group-start" : "",
-                      isActive ? "stats-sort-head-active" : "",
-                    ]
-                      .filter(Boolean)
-                      .join(" ");
+                      column.emphasis === "metric" && "stats-sort-head-metric",
+                      column.groupStart && "stats-table-group-start",
+                      isActive && "stats-sort-head-active",
+                    );
 
                     return (
                       <button
@@ -349,25 +355,23 @@ export function StatsPage({ entry, onBackToMatches, onOpenReplay }: Props) {
                   })}
                 </div>
 
-                <div className="stats-table-body">
+                <div className={cx("stats-table-body")}>
                   {team.players.map((player) => (
                     <div
                       key={player.playerId}
-                      className="stats-table-row"
+                      className={cx("stats-table-row")}
                       style={{ gridTemplateColumns: currentView.gridTemplateColumns, minWidth: currentView.minWidth }}
                     >
                       {currentView.columns.map((column) => (
                         <div
                           key={column.id}
-                          className={[
+                          className={cx(
                             "stats-table-cell",
                             `stats-table-align-${column.align ?? "right"}`,
-                            column.emphasis === "primary" ? "stats-table-cell-primary" : "",
-                            column.emphasis === "metric" ? "stats-table-cell-metric" : "",
-                            column.groupStart ? "stats-table-group-start" : "",
-                          ]
-                            .filter(Boolean)
-                            .join(" ")}
+                            column.emphasis === "primary" && "stats-table-cell-primary",
+                            column.emphasis === "metric" && "stats-table-cell-metric",
+                            column.groupStart && "stats-table-group-start",
+                          )}
                         >
                           {column.render(player)}
                         </div>
@@ -381,16 +385,16 @@ export function StatsPage({ entry, onBackToMatches, onOpenReplay }: Props) {
         ))}
       </div>
 
-      <section className="stats-rounds-card">
-        <div className="stats-rounds-header">
+      <section className={cx("stats-rounds-card")}>
+        <div className={cx("stats-rounds-header")}>
           <div>
-            <div className="card-title">Rounds</div>
+            <div className={cx("card-title")}>Rounds</div>
             <strong>Round matrix</strong>
           </div>
           <span>Winner, survivors, score, and outcome per round</span>
         </div>
 
-        <div className="stats-round-matrix">
+        <div className={cx("stats-round-matrix")}>
           {stats.rounds.map((round, index) => (
             <RoundCell key={round.roundNumber} round={round} displayRoundNumber={index + 1} />
           ))}
@@ -400,9 +404,17 @@ export function StatsPage({ entry, onBackToMatches, onOpenReplay }: Props) {
   );
 }
 
+export function StatsPageUnavailable() {
+  return (
+    <section className={cx("stats-empty")}>
+      This match is no longer available in your local library.
+    </section>
+  );
+}
+
 function renderPlayerCell(player: MatchStatsPlayerRow) {
   return (
-    <div className="stats-player-cell">
+    <div className={cx("stats-player-cell")}>
       <strong>{player.displayName}</strong>
       <small>{player.roundsPlayed} rounds</small>
     </div>
@@ -412,7 +424,7 @@ function renderPlayerCell(player: MatchStatsPlayerRow) {
 function renderRatingCell(player: MatchStatsPlayerRow) {
   return (
     <div
-      className="stats-rating-cell"
+      className={cx("stats-rating-cell")}
       title={`Approximate HLTV 2.0-style estimate. KAST ${player.kastPercentage.toFixed(1)}, KPR ${player.killsPerRound.toFixed(2)}, DPR ${player.deathsPerRound.toFixed(2)}, Impact ${player.impact.toFixed(2)}, ADR ${player.adr.toFixed(1)}.`}
     >
       {player.rating.toFixed(2)}
@@ -422,7 +434,7 @@ function renderRatingCell(player: MatchStatsPlayerRow) {
 
 function renderKadCell(player: MatchStatsPlayerRow) {
   return (
-    <div className="stats-kad-cell">
+    <div className={cx("stats-kad-cell")}>
       <strong>
         {player.kills} / {player.assists} / {player.deaths}
       </strong>
@@ -432,7 +444,7 @@ function renderKadCell(player: MatchStatsPlayerRow) {
 
 function renderOpeningDuelsCell(player: MatchStatsPlayerRow) {
   return (
-    <div className="stats-rival-cell">
+    <div className={cx("stats-rival-cell")}>
       <strong>
         {player.openingKills} : {player.openingDeaths}
       </strong>
@@ -443,7 +455,7 @@ function renderOpeningDuelsCell(player: MatchStatsPlayerRow) {
 
 function renderTopRivalCell(player: MatchStatsPlayerRow) {
   if (!player.topDuelRival) {
-    return <span className="stats-muted">No repeated duel</span>;
+    return <span className={cx("stats-muted")}>No repeated duel</span>;
   }
 
   const tooltip = player.topDuelRivals
@@ -451,7 +463,7 @@ function renderTopRivalCell(player: MatchStatsPlayerRow) {
     .join(" | ");
 
   return (
-    <div className="stats-rival-cell" title={tooltip}>
+    <div className={cx("stats-rival-cell")} title={tooltip}>
       <strong>{player.topDuelRival.opponentName}</strong>
       <small>
         {player.topDuelRival.kills}-{player.topDuelRival.deaths} · {player.topDuelRival.delta >= 0 ? "+" : ""}
@@ -464,12 +476,12 @@ function renderTopRivalCell(player: MatchStatsPlayerRow) {
 function renderSideRoleCell(player: MatchStatsPlayerRow, side: "CT" | "T") {
   const tendency = side === "CT" ? player.role.ctTendency : player.role.tTendency;
   if (!tendency) {
-    return <span className="stats-muted">Zone model unavailable</span>;
+    return <span className={cx("stats-muted")}>Zone model unavailable</span>;
   }
 
   return (
     <div
-      className="stats-role-cell"
+      className={cx("stats-role-cell")}
       title={`${side} placement tendency from alive sample occupancy${tendency.zoneLabel ? ` · primary zone ${tendency.zoneLabel}` : ""}.`}
     >
       <strong>{tendency.label}</strong>
@@ -480,7 +492,7 @@ function renderSideRoleCell(player: MatchStatsPlayerRow, side: "CT" | "T") {
 
 function renderRoleNoteCell(player: MatchStatsPlayerRow) {
   return (
-    <div className="stats-role-note" title={player.role.notes.join(" ") || player.role.matchNote}>
+    <div className={cx("stats-role-note")} title={player.role.notes.join(" ") || player.role.matchNote}>
       <span>{player.role.matchNote}</span>
     </div>
   );
@@ -488,7 +500,7 @@ function renderRoleNoteCell(player: MatchStatsPlayerRow) {
 
 function renderClutchCell(player: MatchStatsPlayerRow) {
   return (
-    <div className="stats-rival-cell">
+    <div className={cx("stats-rival-cell")}>
       <strong>
         {player.clutchWins}-{player.clutchAttempts}
       </strong>
@@ -498,19 +510,19 @@ function renderClutchCell(player: MatchStatsPlayerRow) {
 }
 
 function renderStat(value: number) {
-  return <span className="stats-stat-text">{value}</span>;
+  return <span className={cx("stats-stat-text")}>{value}</span>;
 }
 
 function renderDecimal(value: number, digits = 2) {
-  return <span className="stats-stat-text">{value.toFixed(digits)}</span>;
+  return <span className={cx("stats-stat-text")}>{value.toFixed(digits)}</span>;
 }
 
 function renderPercent(value: number, digits = 1) {
-  return <span className="stats-stat-text">{value.toFixed(digits)}%</span>;
+  return <span className={cx("stats-stat-text")}>{value.toFixed(digits)}%</span>;
 }
 
 function renderSigned(value: number) {
-  const className = value > 0 ? "stats-stat-text stats-stat-positive" : value < 0 ? "stats-stat-text stats-stat-negative" : "stats-stat-text";
+  const className = cx("stats-stat-text", value > 0 ? "stats-stat-positive" : value < 0 ? "stats-stat-negative" : null);
   const label = value > 0 ? `+${value}` : `${value}`;
   return <span className={className}>{label}</span>;
 }
@@ -616,33 +628,27 @@ function RoundCell({ round, displayRoundNumber }: { round: MatchRoundBreakdown; 
   return (
     <div
       title={`${tooltipRoundText} | Winner: ${round.winnerSide ?? "Unknown"} | Score: ${round.scoreAfter.ct}-${round.scoreAfter.t} | Outcome: ${outcomeLabel} | Survivors CT ${round.ctSurvivors} / T ${round.tSurvivors}`}
-      className={[
-        "stats-round-cell",
-        round.winnerSide === "CT" ? "stats-round-cell-ct" : "",
-        round.winnerSide === "T" ? "stats-round-cell-t" : "",
-      ]
-        .filter(Boolean)
-        .join(" ")}
+      className={cx("stats-round-cell", round.winnerSide === "CT" && "stats-round-cell-ct", round.winnerSide === "T" && "stats-round-cell-t")}
     >
       {showOutcomeIcon ? (
-        <span className={`stats-round-cell-outcome-watermark stats-round-cell-outcome-watermark-${outcomeKind}`} aria-hidden="true">
+        <span className={cx("stats-round-cell-outcome-watermark", `stats-round-cell-outcome-watermark-${outcomeKind}`)} aria-hidden="true">
           <RoundOutcomeIcon kind={outcomeKind} />
         </span>
       ) : null}
-      <div className="stats-round-cell-content">
-        <div className="stats-round-cell-topline">
-          <span className="stats-round-cell-number">R{displayRoundNumber}</span>
+      <div className={cx("stats-round-cell-content")}>
+        <div className={cx("stats-round-cell-topline")}>
+          <span className={cx("stats-round-cell-number")}>R{displayRoundNumber}</span>
         </div>
-        <strong className="stats-round-cell-score">{round.scoreAfter.ct}-{round.scoreAfter.t}</strong>
-        <div className="stats-round-cell-survivors">
-          <div className="stats-round-survivor-row stats-round-survivor-row-ct" aria-hidden="true">
+        <strong className={cx("stats-round-cell-score")}>{round.scoreAfter.ct}-{round.scoreAfter.t}</strong>
+        <div className={cx("stats-round-cell-survivors")}>
+          <div className={cx("stats-round-survivor-row", "stats-round-survivor-row-ct")} aria-hidden="true">
             {Array.from({ length: 5 }, (_, index) => (
-              <span key={`ct-${index}`} className={index < round.ctSurvivors ? "stats-round-survivor-dot stats-round-survivor-dot-active" : "stats-round-survivor-dot"} />
+              <span key={`ct-${index}`} className={cx("stats-round-survivor-dot", index < round.ctSurvivors && "stats-round-survivor-dot-active")} />
             ))}
           </div>
-          <div className="stats-round-survivor-row stats-round-survivor-row-t" aria-hidden="true">
+          <div className={cx("stats-round-survivor-row", "stats-round-survivor-row-t")} aria-hidden="true">
             {Array.from({ length: 5 }, (_, index) => (
-              <span key={`t-${index}`} className={index < round.tSurvivors ? "stats-round-survivor-dot stats-round-survivor-dot-active" : "stats-round-survivor-dot"} />
+              <span key={`t-${index}`} className={cx("stats-round-survivor-dot", index < round.tSurvivors && "stats-round-survivor-dot-active")} />
             ))}
           </div>
         </div>

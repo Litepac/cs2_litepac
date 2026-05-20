@@ -1,15 +1,19 @@
 import { Container, Graphics } from "pixi.js";
 
-import type { RadarViewport } from "../../maps/transform";
-import { worldToScreen } from "../../maps/transform";
+import type { RadarViewport } from "../../mapGeometry/transform";
+import { worldToScreen } from "../../mapGeometry/transform";
 import { resolveActiveBombState, resolveDroppedBombState, type ActiveBombState, type DroppedBombState } from "../../replay/bombState";
 import type { Replay, Round } from "../../replay/types";
+import { drawTintedEquipmentIcon } from "../equipmentIconGraphics";
+import c4IconSvg from "../../icons/cs2-equipment/panorama/images/icons/equipment/c4.svg?raw";
 import { RECENT_BOMB_WINDOW_TICKS } from "./constants";
 import { clamp } from "./camera";
 
 const BOMB_EXPLOSION_OUTER_RADIUS_WORLD = 1750;
 const BOMB_EXPLOSION_MID_RADIUS_WORLD = 1100;
 const BOMB_EXPLOSION_CORE_RADIUS_WORLD = 620;
+const BOMB_ICON_SIZE = 32;
+const BOMB_ICON = { svg: c4IconSvg, width: BOMB_ICON_SIZE, height: BOMB_ICON_SIZE };
 
 export function renderBombOverlays(
   layer: Container,
@@ -128,24 +132,7 @@ function drawBombStateOverlay(
   marker.stroke({ color: 0x1f2f3b, width: 0.85, alpha: 0.48 });
   marker.circle(point.x, point.y, 6.95);
   marker.stroke({ color: 0x344654, width: 0.64, alpha: 0.28 });
-  marker.roundRect(point.x - 3.8, point.y - 5.45, 7.6, 10.9, 1.1);
-  marker.fill({ color: 0xf16876, alpha: 0.98 });
-  marker.roundRect(point.x - 3.8, point.y - 5.45, 7.6, 10.9, 1.1);
-  marker.stroke({ color: 0x0b1217, width: 0.9, alpha: 0.98 });
-  marker.roundRect(point.x - 2.0, point.y - 3.0, 4.0, 1.25, 0.26);
-  marker.fill({ color: 0x0f171e, alpha: 0.98 });
-  marker.roundRect(point.x - 2.0, point.y - 0.72, 4.0, 4.1, 0.4);
-  marker.stroke({ color: 0x0f171e, width: 0.72, alpha: 0.98 });
-  for (const keypadX of [-0.88, 0, 0.88]) {
-    for (const keypadY of [0.06, 0.98, 1.9]) {
-      marker.rect(point.x + keypadX - 0.23, point.y + keypadY - 0.23, 0.46, 0.46);
-      marker.fill({ color: 0x0f171e, alpha: 0.98 });
-    }
-  }
-  marker.moveTo(point.x - 1.0, point.y - 6.5);
-  marker.lineTo(point.x - 1.0, point.y - 8.1);
-  marker.lineTo(point.x + 1.7, point.y - 8.1);
-  marker.stroke({ color: 0xffa2ae, width: 0.92, alpha: 0.96 });
+  drawBombSvgIcon(marker, point.x, point.y, 12.2, countdownColor, 1);
   layer.addChild(marker);
 }
 
@@ -170,27 +157,24 @@ function drawDroppedBombOverlay(
   marker.circle(point.x, point.y, 8.9);
   marker.stroke({ color: 0x162029, width: 0.9, alpha: 0.88 });
 
-  marker.roundRect(point.x - 4.0, point.y - 5.3, 8.0, 10.6, 1.0);
-  marker.fill({ color: 0xf3b259, alpha: 0.98 });
-  marker.roundRect(point.x - 4.0, point.y - 5.3, 8.0, 10.6, 1.0);
-  marker.stroke({ color: 0x12191f, width: 0.92, alpha: 0.98 });
-  marker.roundRect(point.x - 2.05, point.y - 3.05, 4.1, 1.25, 0.24);
-  marker.fill({ color: 0x12191f, alpha: 0.98 });
-  marker.roundRect(point.x - 2.05, point.y - 0.68, 4.1, 4.0, 0.38);
-  marker.stroke({ color: 0x12191f, width: 0.7, alpha: 0.98 });
-  for (const keypadX of [-0.88, 0, 0.88]) {
-    for (const keypadY of [0.1, 1.02, 1.94]) {
-      marker.rect(point.x + keypadX - 0.23, point.y + keypadY - 0.23, 0.46, 0.46);
-      marker.fill({ color: 0x12191f, alpha: 0.98 });
-    }
-  }
-
-  marker.moveTo(point.x - 1.0, point.y - 6.4);
-  marker.lineTo(point.x - 1.0, point.y - 8.0);
-  marker.lineTo(point.x + 1.75, point.y - 8.0);
-  marker.stroke({ color: 0xffefba, width: 0.96, alpha: 0.98 });
+  drawBombSvgIcon(marker, point.x, point.y, 11.4, 0xffd28a, 0.98);
 
   layer.addChild(marker);
+}
+
+function drawBombSvgIcon(
+  layer: Container,
+  x: number,
+  y: number,
+  maxSize: number,
+  color: number,
+  alpha: number,
+) {
+  drawTintedEquipmentIcon(layer, BOMB_ICON, x, y, maxSize, maxSize, color, 0x05080b, alpha, {
+    shadowAlpha: 0.66,
+    shadowOffsetX: 0.7,
+    shadowOffsetY: 0.7,
+  });
 }
 
 function drawArcStroke(

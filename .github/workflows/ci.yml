@@ -43,5 +43,8 @@ jobs:
       - name: Install viewer dependencies
         run: npm ci
 
+      - name: Check viewer structure
+        run: npm run check:structure
+
       - name: Build viewer
         run: npm run build

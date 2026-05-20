@@ -398,3 +398,13 @@
     linear-gradient(90deg, rgba(5, 9, 13, 0.5), rgba(5, 9, 13, 0.12) 18%, rgba(5, 9, 13, 0.08) 78%, rgba(5, 9, 13, 0.4)),
     linear-gradient(180deg, rgba(8, 13, 18, 0.1), transparent 18%);
 }
+
+.matches-surface.stats-surface::before {
+  background:
+    linear-gradient(rgba(0, 255, 136, 0.028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 255, 136, 0.028) 1px, transparent 1px),
+    radial-gradient(circle at 18% 16%, rgba(0, 255, 136, 0.05), transparent 20%),
+    radial-gradient(circle at 84% 12%, rgba(79, 179, 255, 0.05), transparent 16%);
+  background-size: 48px 48px, 48px 48px, auto, auto;
+  opacity: 0.42;
+}

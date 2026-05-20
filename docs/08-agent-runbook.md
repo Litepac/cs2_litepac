@@ -19,7 +19,7 @@ Use it when:
 
 ## Current Safe Workflow
 1. Parse real demos into canonical replay files
-2. Stage replay fixtures into `assets/fixtures`
+2. Use `testdata/replays` as the fixture source of truth; the viewer dev server exposes it at `/fixtures`
 3. Open the viewer on real staged replay data
 4. Compare specific rounds against observed demo behavior
 5. Fix either parser semantics or viewer interpretation, not both blindly
@@ -105,10 +105,11 @@ cd parser
 go run .\cmd\fixtureparse
 ```
 
-### Stage fixtures for the viewer
+### Optional static fixture staging
+The viewer dev server serves `testdata/replays` directly at `/fixtures`. Use this only when a static preview/build needs local fixture JSON files copied into `public/fixtures`; the output path is explicit so local replay JSON is not accidentally bundled into public builds.
 ```powershell
 cd parser
-go run .\cmd\fixturestage
+go run .\cmd\fixturestage -- -fixture-dir ..\public\fixtures
 ```
 
 ### Parser verification
@@ -121,6 +122,13 @@ go test ./...
 ```powershell
 cd viewer
 npm.cmd run build
+```
+
+### Frontend structure guard
+Run this after frontend ownership cleanup, asset moves, or CSS migration work. It catches retired asset folders, stale parser/viewer paths, deleted replay-era files being reintroduced, and new non-module component CSS.
+```powershell
+cd viewer
+npm.cmd run check:structure
 ```
 
 ## Current Truth Sources

@@ -1,10 +1,10 @@
 import type { UtilityVisualKind } from "../replay/utilityPresentation";
-import bombIcon from "../assets/icons/cs2-equipment/panorama/images/icons/equipment/c4.svg";
-import decoyIcon from "../assets/icons/cs2-equipment/panorama/images/icons/equipment/decoy.svg";
-import flashbangIcon from "../assets/icons/cs2-equipment/panorama/images/icons/equipment/flashbang.svg";
-import fireIcon from "../assets/icons/cs2-equipment/panorama/images/icons/equipment/molotov.svg";
-import heIcon from "../assets/icons/cs2-equipment/panorama/images/icons/equipment/hegrenade.svg";
-import smokeIcon from "../assets/icons/cs2-equipment/panorama/images/icons/equipment/smokegrenade.svg";
+import bombIcon from "../icons/cs2-equipment/panorama/images/icons/equipment/c4.svg";
+import decoyIcon from "../icons/cs2-equipment/panorama/images/icons/equipment/decoy.svg";
+import flashbangIcon from "../icons/cs2-equipment/panorama/images/icons/equipment/flashbang.svg";
+import fireIcon from "../icons/cs2-equipment/panorama/images/icons/equipment/molotov.svg";
+import heIcon from "../icons/cs2-equipment/panorama/images/icons/equipment/hegrenade.svg";
+import smokeIcon from "../icons/cs2-equipment/panorama/images/icons/equipment/smokegrenade.svg";
 
 type Props = {
   kind: UtilityVisualKind;

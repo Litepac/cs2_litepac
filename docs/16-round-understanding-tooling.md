@@ -168,6 +168,24 @@ Broad "where everyone moved" heatmaps have been visually unstable and analytical
 6. Add Round Finder / Review Queue once the first analysis cards exist.
 7. Revisit Heatmap only after external user feedback.
 
+## Next Product Slice
+Build a compact Review Inspector V0 inside the replay workspace instead of adding another standalone mode.
+
+Scope:
+
+- Reuse the existing Deaths mode selection flow as the first inspector source.
+- Keep canonical facts unmarked: victim, killer, weapon, headshot, assist, round clock, kill position.
+- Mark viewer-derived measurements as estimated until parser-backed analysis owns them: quick trade status, nearby support count, and utility-left count.
+- Add one evidence-first action from the card back into Live at the event tick.
+- Do not add broad coaching labels, ratings, win probability, or AI summaries.
+
+Definition of done:
+
+- A clicked death answers "what happened here?" in one card without forcing the user to scrub.
+- Any non-canonical row is visually labeled as estimated.
+- The card has a direct replay proof path.
+- Parser validation covers the canonical fields the card depends on.
+
 ## Non-Negotiables
 - Parser and canonical replay own truth.
 - Viewer may measure and present existing truth, but should not invent tactical conclusions.

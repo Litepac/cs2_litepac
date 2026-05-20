@@ -26,6 +26,7 @@ That conflicts with this project's canonical contract:
 - Keep the timeline flat, dense, and operator-oriented.
 - Keep the right-side team rail compact and information-first.
 - Keep utility visuals calm and readable rather than debug-heavy.
+- Keep Valve-standard radar images as the default replay truth surface because they align with official overview coordinates. If DemoRead later adds a Skybox-style grey tactical map, treat it as a separate derived visual skin over the same calibration, with map-by-map QA before it replaces the standard radar.
 - For the replay dock, prefer grouped event lanes over one undifferentiated marker strip when kills, utility, and bomb events are all visible. Sports-analysis tools commonly use timeline markers to jump to tagged events, and session-analysis tools group dense events into easier-to-read buckets; DemoRead should adapt that idea as parser-owned "round evidence" lanes rather than a copied media scrubber.
 - For live roster cards, ESL-style broadcast overlays are a useful density reference: lead with side-colored HP/name/weapon identity, then compactly expose utility, money/equipment, and current-round impact. Do not copy broadcast-only economy guesses such as loss bonus/equipment value unless parser truth exists.
 - Keep renderer concerns separate from replay extraction concerns.

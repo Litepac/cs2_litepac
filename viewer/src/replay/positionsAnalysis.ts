@@ -1,7 +1,6 @@
 import type { Side } from "./derived";
 import { interpolatePlayerStreamSample } from "./playerStream";
 import {
-  analysisScopeLabel,
   collectAnalysisRounds,
   type ReplayAnalysisScope,
   type ReplayAnalysisSourceFilter,
@@ -70,15 +69,6 @@ export type PositionsConfig = {
   sourceFilter: PositionsSourceFilter;
   teamFilter: PositionsTeamFilter;
 };
-
-export function positionsScopeLabel(
-  replay: Replay,
-  activeRoundIndex: number,
-  sideBlocks: ReplaySideBlock[],
-  scope: PositionsScope,
-) {
-  return analysisScopeLabel(replay, activeRoundIndex, sideBlocks, scope);
-}
 
 export function collectPositionTrailEntries(
   replay: Replay,

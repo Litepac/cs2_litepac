@@ -16,7 +16,7 @@ parser-*.log
 parser/.cache/
 testdata/demos/*.dem
 testdata/replays/*.json
-assets/fixtures/*.json
+public/fixtures/
 tmp-*.log
 .tmp-*.log
 .tmp-*.ndjson
@@ -31,4 +31,3 @@ tmp-*.log
 friend-logs/
 .vscode/
 docs/perf/traces/*.json
-parser/replayinspect.exe

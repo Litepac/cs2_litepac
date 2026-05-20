@@ -1,10 +1,18 @@
-import { Container, Graphics, Text } from "pixi.js";
+import { Circle, Container, Graphics, Text } from "pixi.js";
 
-import type { RadarViewport } from "../../maps/transform";
-import { worldToScreen } from "../../maps/transform";
+import type { RadarViewport } from "../../mapGeometry/transform";
+import { worldToScreen } from "../../mapGeometry/transform";
 import { interpolatePlayerStreamSample } from "../../replay/playerStream";
 import type { Replay, Round } from "../../replay/types";
 import { resolvePlayerEquipmentState, type PlayerTokenMode, type UtilityKind } from "../../replay/weapons";
+import { drawTintedEquipmentIcon, type EquipmentSvgIcon } from "../equipmentIconGraphics";
+import { attachReplayHitTarget } from "./hitTargets";
+import c4IconSvg from "../../icons/cs2-equipment/panorama/images/icons/equipment/c4.svg?raw";
+import decoyIconSvg from "../../icons/cs2-equipment/panorama/images/icons/equipment/decoy.svg?raw";
+import flashbangIconSvg from "../../icons/cs2-equipment/panorama/images/icons/equipment/flashbang.svg?raw";
+import hegrenadeIconSvg from "../../icons/cs2-equipment/panorama/images/icons/equipment/hegrenade.svg?raw";
+import molotovIconSvg from "../../icons/cs2-equipment/panorama/images/icons/equipment/molotov.svg?raw";
+import smokegrenadeIconSvg from "../../icons/cs2-equipment/panorama/images/icons/equipment/smokegrenade.svg?raw";
 import { RECENT_UTILITY_THROW_MODE_SECONDS } from "./constants";
 import type { BlindEffectState } from "./types";
 import { clamp } from "./camera";
@@ -22,6 +30,8 @@ type LivePlayerEntry = {
 const ESTIMATED_MOVEMENT_NOISE_RADIUS_WORLD = 1100;
 const MOVEMENT_NOISE_SPEED_START = 90;
 const MOVEMENT_NOISE_SPEED_FULL = 210;
+
+const BOMB_ICON: EquipmentSvgIcon = { svg: c4IconSvg, width: 32, height: 32 };
 
 export function renderPlayers(
   playerLayer: Container,
@@ -67,9 +77,10 @@ export function renderPlayers(
 
     const marker = new Graphics();
     marker.alpha = contextModeActive && !selected ? 0.55 : 1;
-    marker.eventMode = "static";
-    marker.cursor = "pointer";
-    marker.on("pointertap", () => onSelectPlayer(stream.playerId));
+    attachReplayHitTarget(marker, {
+      hitArea: new Circle(point.x, point.y, selected ? 16 : 13),
+      onActivate: () => onSelectPlayer(stream.playerId),
+    });
 
     if (contextModeActive && selected) {
       const movementIntensity = resolveMovementCueIntensity(stream, currentTick, replay.match.tickRate);
@@ -98,11 +109,7 @@ export function renderPlayers(
     );
 
     if (hasBomb) {
-      marker.roundRect(point.x + 9, point.y - 13, 9, 9, 2);
-      marker.fill({ color: 0x15100a, alpha: 0.94 });
-      marker.stroke({ color: 0xffd06c, width: 1.4, alpha: 0.9 });
-      marker.rect(point.x + 11.5, point.y - 10.5, 4, 4);
-      marker.stroke({ color: 0xffd06c, width: 1.2, alpha: 0.92 });
+      drawBombCarrierIcon(marker, point.x, point.y, selected);
     }
 
     playerLayer.addChild(marker);
@@ -260,18 +267,12 @@ export function drawPlayerMarker(
 
   drawBlindedRing(marker, x, y, radius, selected, blindEffect);
 
-  const healthMask = new Graphics();
-  healthMask.circle(x, y, innerRadius);
-  healthMask.fill({ color: 0xffffff, alpha: 1 });
-  healthMask.alpha = 0;
-  marker.addChild(healthMask);
-
   const healthLossHeight = innerRadius * 2 * (1 - healthRatio);
   if (healthLossHeight > 0.01) {
     const shade = new Graphics();
-    shade.rect(x - innerRadius - 1, y - innerRadius - 1, innerRadius * 2 + 2, healthLossHeight + 1);
+    const shadeWidth = innerRadius * 1.42;
+    shade.roundRect(x - shadeWidth / 2, y - innerRadius, shadeWidth, healthLossHeight, 1.4);
     shade.fill({ color: 0x081017, alpha: 0.8 });
-    shade.mask = healthMask;
     marker.addChild(shade);
   }
 
@@ -481,221 +482,61 @@ function drawHeldUtilityTokenMarker(
   selected: boolean,
   utilityKind: UtilityKind | null,
 ) {
-  const badge = new Graphics();
-  badge.x = x;
-  badge.y = y;
-  badge.scale.set(selected ? 0.72 : 0.66);
-  marker.addChild(badge);
-
   if (!utilityKind) {
     const fallbackRadius = selected ? 1.8 : 1.6;
-    badge.circle(0, 0, fallbackRadius);
-    badge.fill({ color: fillColor, alpha: 0.98 });
-    badge.stroke({ color: strokeColor, width: selected ? 0.72 : 0.62, alpha: 0.95 });
+    marker.circle(x, y, fallbackRadius);
+    marker.fill({ color: fillColor, alpha: 0.98 });
+    marker.stroke({ color: strokeColor, width: selected ? 0.72 : 0.62, alpha: 0.95 });
     return;
   }
 
-  switch (utilityKind) {
-    case "smoke":
-      drawSmokeTokenUtility(badge, 0, 0, fillColor, strokeColor, selected);
-      return;
+  drawTintedEquipmentIcon(
+    marker,
+    utilityTokenSvgIcon(utilityKind),
+    x,
+    y,
+    selected ? 8.7 : 7.9,
+    selected ? 9.1 : 8.25,
+    fillColor,
+    strokeColor,
+    selected ? 1 : 0.96,
+  );
+}
+
+export function drawBombCarrierIcon(
+  layer: Container,
+  x: number,
+  y: number,
+  selected: boolean,
+  alpha = 1,
+) {
+  drawTintedEquipmentIcon(
+    layer,
+    BOMB_ICON,
+    x + (selected ? 11 : 9.8),
+    y - (selected ? 10.8 : 9.4),
+    selected ? 8.8 : 7.8,
+    selected ? 8.8 : 7.8,
+    0xffc56d,
+    0x05080b,
+    alpha,
+  );
+}
+
+function utilityTokenSvgIcon(kind: UtilityKind): EquipmentSvgIcon {
+  switch (kind) {
     case "flashbang":
-      drawFlashTokenUtility(badge, 0, 0, fillColor, strokeColor, selected);
-      return;
+      return { svg: flashbangIconSvg, width: 30, height: 32 };
     case "hegrenade":
-      drawHETokenUtility(badge, 0, 0, fillColor, strokeColor, selected);
-      return;
+      return { svg: hegrenadeIconSvg, width: 25, height: 33 };
+    case "smoke":
+      return { svg: smokegrenadeIconSvg, width: 15, height: 32 };
     case "molotov":
     case "incendiary":
-      drawFireTokenUtility(badge, 0, 0, fillColor, strokeColor, selected);
-      return;
+      return { svg: molotovIconSvg, width: 22, height: 32 };
     case "decoy":
-      drawDecoyTokenUtility(badge, 0, 0, fillColor, strokeColor, selected);
-      return;
-    default:
-      badge.circle(0, 0, selected ? 1.8 : 1.6);
-      badge.fill({ color: fillColor, alpha: 0.98 });
-      badge.stroke({ color: strokeColor, width: selected ? 0.72 : 0.62, alpha: 0.95 });
+      return { svg: decoyIconSvg, width: 30, height: 32 };
   }
-}
-
-function fillAndStrokeTokenShape(
-  marker: Graphics,
-  drawShape: () => void,
-  fillColor: number,
-  strokeColor: number,
-  strokeWidth: number,
-) {
-  drawShape();
-  marker.fill({ color: fillColor, alpha: 0.98 });
-  drawShape();
-  marker.stroke({ color: strokeColor, width: strokeWidth, alpha: 0.96, cap: "round", join: "round" });
-}
-
-function drawFlashTokenUtility(
-  marker: Graphics,
-  x: number,
-  y: number,
-  fillColor: number,
-  strokeColor: number,
-  selected: boolean,
-) {
-  const strokeWidth = selected ? 0.84 : 0.76;
-  fillAndStrokeTokenShape(
-    marker,
-    () => marker.roundRect(x - 1.85, y - 3.65, 3.7, 7.2, 0.88),
-    fillColor,
-    strokeColor,
-    strokeWidth,
-  );
-  fillAndStrokeTokenShape(
-    marker,
-    () => marker.rect(x - 0.95, y - 4.75, 1.9, 1.02),
-    fillColor,
-    strokeColor,
-    selected ? 0.7 : 0.64,
-  );
-  marker.moveTo(x + 0.95, y - 4.35);
-  marker.lineTo(x + 1.75, y - 4.35);
-  marker.lineTo(x + 1.75, y - 3.15);
-  marker.stroke({ color: strokeColor, width: selected ? 0.8 : 0.72, alpha: 0.95, cap: "round", join: "round" });
-  marker.circle(x + 2.85, y - 4.05, selected ? 1.02 : 0.92);
-  marker.stroke({ color: strokeColor, width: selected ? 0.84 : 0.76, alpha: 0.96 });
-  marker.moveTo(x, y - 2.15);
-  marker.lineTo(x, y + 2.0);
-  marker.stroke({ color: strokeColor, width: selected ? 0.84 : 0.76, alpha: 0.72, cap: "round" });
-}
-
-function drawSmokeTokenUtility(
-  marker: Graphics,
-  x: number,
-  y: number,
-  fillColor: number,
-  strokeColor: number,
-  selected: boolean,
-) {
-  const strokeWidth = selected ? 0.86 : 0.78;
-  fillAndStrokeTokenShape(
-    marker,
-    () => marker.roundRect(x - 2.2, y - 4.75, 4.4, 9.5, 0.96),
-    fillColor,
-    strokeColor,
-    strokeWidth,
-  );
-  fillAndStrokeTokenShape(
-    marker,
-    () => marker.rect(x - 1.25, y - 6, 2.5, 1.05),
-    fillColor,
-    strokeColor,
-    selected ? 0.72 : 0.66,
-  );
-  fillAndStrokeTokenShape(
-    marker,
-    () => marker.roundRect(x + 1.95, y - 2.65, 1.55, 5.2, 0.3),
-    fillColor,
-    strokeColor,
-    selected ? 0.78 : 0.72,
-  );
-  marker.moveTo(x - 1.15, y - 2.95);
-  marker.lineTo(x + 1.1, y - 2.95);
-  marker.moveTo(x - 1.15, y - 1.0);
-  marker.lineTo(x + 1.1, y - 1.0);
-  marker.moveTo(x - 1.15, y + 0.95);
-  marker.lineTo(x + 1.1, y + 0.95);
-  marker.moveTo(x - 1.15, y + 2.9);
-  marker.lineTo(x + 1.1, y + 2.9);
-  marker.stroke({ color: strokeColor, width: selected ? 0.84 : 0.76, alpha: 0.74, cap: "round" });
-}
-
-function drawHETokenUtility(
-  marker: Graphics,
-  x: number,
-  y: number,
-  fillColor: number,
-  strokeColor: number,
-  selected: boolean,
-) {
-  fillAndStrokeTokenShape(
-    marker,
-    () => marker.circle(x - 0.15, y + 0.45, selected ? 3.2 : 2.9),
-    fillColor,
-    strokeColor,
-    selected ? 0.88 : 0.8,
-  );
-  fillAndStrokeTokenShape(
-    marker,
-    () => marker.rect(x - 0.6, y - 3.95, 1.2, 1.2),
-    fillColor,
-    strokeColor,
-    selected ? 0.72 : 0.66,
-  );
-  marker.moveTo(x + 1.0, y - 2.0);
-  marker.lineTo(x + 2.65, y - 3.55);
-  marker.stroke({ color: strokeColor, width: selected ? 0.8 : 0.72, alpha: 0.92, cap: "round" });
-  marker.circle(x + 3.2, y - 3.8, selected ? 0.7 : 0.62);
-  marker.stroke({ color: strokeColor, width: selected ? 0.72 : 0.64, alpha: 0.9 });
-}
-
-function drawFireTokenUtility(
-  marker: Graphics,
-  x: number,
-  y: number,
-  fillColor: number,
-  strokeColor: number,
-  selected: boolean,
-) {
-  fillAndStrokeTokenShape(
-    marker,
-    () => marker.roundRect(x - 2.0, y - 2.85, 4, 6.45, 0.88),
-    fillColor,
-    strokeColor,
-    selected ? 0.84 : 0.76,
-  );
-  fillAndStrokeTokenShape(
-    marker,
-    () => marker.rect(x - 0.6, y - 4.95, 1.2, 2.05),
-    fillColor,
-    strokeColor,
-    selected ? 0.74 : 0.66,
-  );
-  fillAndStrokeTokenShape(
-    marker,
-    () => {
-      marker.moveTo(x - 1.3, y - 2.85);
-      marker.lineTo(x - 0.6, y - 4.05);
-      marker.lineTo(x + 0.6, y - 4.05);
-      marker.lineTo(x + 1.3, y - 2.85);
-      marker.closePath();
-    },
-    fillColor,
-    strokeColor,
-    selected ? 0.72 : 0.66,
-  );
-  marker.moveTo(x + 0.15, y - 5.2);
-  marker.lineTo(x + 1.25, y - 6.45);
-  marker.stroke({ color: strokeColor, width: selected ? 0.82 : 0.74, alpha: 0.92, cap: "round" });
-}
-
-function drawDecoyTokenUtility(
-  marker: Graphics,
-  x: number,
-  y: number,
-  fillColor: number,
-  strokeColor: number,
-  selected: boolean,
-) {
-  fillAndStrokeTokenShape(
-    marker,
-    () => marker.roundRect(x - 2.15, y - 2.15, 4.3, 4.3, 0.84),
-    fillColor,
-    strokeColor,
-    selected ? 0.82 : 0.74,
-  );
-  marker.moveTo(x - 1.35, y);
-  marker.lineTo(x + 1.35, y);
-  marker.moveTo(x, y - 1.35);
-  marker.lineTo(x, y + 1.35);
-  marker.stroke({ color: strokeColor, width: selected ? 0.8 : 0.72, alpha: 0.72, cap: "round" });
 }
 
 function hasRecentUtilityThrow(round: Round, playerId: string, currentTick: number, tickRate: number) {

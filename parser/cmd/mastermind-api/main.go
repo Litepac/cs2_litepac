@@ -20,7 +20,7 @@ func main() {
 	var allowedOrigin string
 	fs.StringVar(&listenAddr, "listen", "127.0.0.1:4318", "HTTP listen address")
 	fs.StringVar(&schemaPath, "schema", "", "Path to schema/mastermind.replay.schema.json")
-	fs.StringVar(&assetsRoot, "assets-root", "", "Path to assets/maps")
+	fs.StringVar(&assetsRoot, "assets-root", "", "Path to public/maps")
 	fs.StringVar(&tempDir, "temp-dir", "", "Directory for temporary uploaded demos and replay artifacts")
 	fs.Int64Var(&maxUploadBytes, "max-upload-bytes", 0, "Maximum demo upload size in bytes; defaults to the local development limit")
 	fs.StringVar(&allowedOrigin, "allowed-origin", "", "Value for Access-Control-Allow-Origin; defaults to * for local development")

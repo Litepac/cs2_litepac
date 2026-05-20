@@ -30,7 +30,7 @@ export function ReplayModeRail({
   return (
     <nav className="dr-mapfirst-mode-rail" aria-label="Replay navigation">
       <button className="dr-mapfirst-mode-brand" onClick={onOpenHome} type="button" aria-label="Open Home">
-        <img src="/DemoRead_Logo.png" alt="DemoRead" decoding="async" />
+        <img src="/brand/demoread-logo.png" alt="DemoRead" decoding="async" />
       </button>
       <div className="dr-mapfirst-mode-rail-list">
         <div className="dr-mapfirst-rail-section dr-mapfirst-rail-section-shell">

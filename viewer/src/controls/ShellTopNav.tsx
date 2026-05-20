@@ -12,7 +12,7 @@ type Props = {
   onOpenMatches: () => void;
 };
 
-const DEMOREAD_LOGO_SRC = "/DemoRead_Logo.png";
+const DEMOREAD_LOGO_SRC = "/brand/demoread-logo.png";
 
 export function ShellTopNav({
   actionLabel,

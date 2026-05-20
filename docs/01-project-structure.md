@@ -26,7 +26,7 @@ Use a small two-part repository:
 
 - Canonical artifact: `mastermind.replay.json`
 - Machine-readable schema: `schema/mastermind.replay.schema.json`
-- Static map metadata: separate versioned files under `assets/maps/`
+- Static map metadata: separate versioned files under `public/maps/`
 
 ## Why This Stack
 
@@ -82,11 +82,12 @@ viewer/
     replay/
     canvas/
     controls/
-    timeline/
-    maps/
+    icons/
+    mapGeometry/
     selection/
 
-assets/
+public/
+  brand/
   maps/
     <map-name>/
       radar.png
@@ -96,7 +97,6 @@ testdata/
   demos/
   replays/
   goldens/
-  map-calibration/
 ```
 
 ## Structure Rules
@@ -104,7 +104,7 @@ testdata/
 - `parser/` never imports `viewer/`
 - `viewer/` never reads raw `.dem` files
 - `schema/` is the contract boundary between parser and viewer
-- `assets/maps/` contains static calibration data, not match data
+- `public/maps/` contains static calibration data and radar images, not match data
 - `testdata/` holds real fixtures and golden outputs only
 - No god-packages and no mixed parser/viewer logic files
 

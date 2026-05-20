@@ -1,7 +1,7 @@
 import { Container, Graphics, Text } from "pixi.js";
 
-import type { RadarViewport } from "../../maps/transform";
-import { worldToScreen } from "../../maps/transform";
+import type { RadarViewport } from "../../mapGeometry/transform";
+import { worldToScreen } from "../../mapGeometry/transform";
 import type { Replay, Round } from "../../replay/types";
 import { HURT_BURST_GAP_TICKS, RECENT_HURT_WINDOW_TICKS } from "./constants";
 

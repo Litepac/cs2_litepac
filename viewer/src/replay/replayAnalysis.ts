@@ -144,15 +144,6 @@ function resolveUtilityAtlasJumpTick(utility: UtilityEntity) {
   return utility.startTick;
 }
 
-export function utilityAtlasScopeLabel(
-  replay: Replay,
-  activeRoundIndex: number,
-  sideBlocks: ReplaySideBlock[],
-  scope: UtilityAtlasScope,
-) {
-  return analysisScopeLabel(replay, activeRoundIndex, sideBlocks, scope);
-}
-
 export function collectAnalysisRounds(
   replay: Replay,
   activeRoundIndex: number,

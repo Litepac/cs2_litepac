@@ -10,7 +10,6 @@ const DEMOREAD_LOGO_PARTS = {
 } as const;
 
 const heroTimelineTicks = Array.from({ length: 18 }, (_, index) => index);
-const heroEventTicks = ["Kill", "Smoke", "Plant", "Trade"];
 
 const valuePoints = [
   ["See what happened", "Follow the round in 2D instead of guessing from memory."],
@@ -58,32 +57,36 @@ export function HomePage({
           </div>
         </div>
 
-        <aside className="landing-product-proof" aria-label="DemoRead replay workflow preview">
-          <div className="landing-proof-brand" aria-hidden="true">
-            <img src="/brand/demoread-logo.png" alt="" decoding="async" />
+        <aside className="landing-brand-film" aria-label="DemoRead animated logo">
+          <div className="landing-brand-film-logo" aria-hidden="true">
+            <img
+              className="landing-brand-film-logo-part landing-brand-film-logo-icon"
+              src={DEMOREAD_LOGO_PARTS.icon}
+              alt=""
+              decoding="async"
+            />
+            <img
+              className="landing-brand-film-logo-part landing-brand-film-logo-demo"
+              src={DEMOREAD_LOGO_PARTS.demo}
+              alt=""
+              decoding="async"
+            />
+            <img
+              className="landing-brand-film-logo-part landing-brand-film-logo-read"
+              src={DEMOREAD_LOGO_PARTS.read}
+              alt=""
+              decoding="async"
+            />
+            <img
+              className="landing-brand-film-logo-part landing-brand-film-logo-tagline"
+              src={DEMOREAD_LOGO_PARTS.tagline}
+              alt=""
+              decoding="async"
+            />
           </div>
-          <div className="landing-proof-window">
-            <div className="landing-proof-map" aria-hidden="true">
-              <span className="landing-proof-site landing-proof-site-a">A</span>
-              <span className="landing-proof-site landing-proof-site-b">B</span>
-              <i className="landing-proof-token landing-proof-token-ct landing-proof-token-1" />
-              <i className="landing-proof-token landing-proof-token-ct landing-proof-token-2" />
-              <i className="landing-proof-token landing-proof-token-t landing-proof-token-3" />
-              <i className="landing-proof-token landing-proof-token-t landing-proof-token-4" />
-              <svg viewBox="0 0 100 64" preserveAspectRatio="none">
-                <path d="M18 48 C34 38 42 30 55 30 C68 30 75 20 84 14" />
-                <path d="M22 16 C36 22 46 24 60 18" />
-              </svg>
-            </div>
-            <div className="landing-proof-inspector">
-              <span>Death Review</span>
-              <strong>What happened here?</strong>
-              <p>Victim, killer, weapon, trade timing, flash state, and nearby support in one evidence card.</p>
-            </div>
-          </div>
-          <div className="landing-proof-timeline" aria-hidden="true">
-            {heroEventTicks.map((event) => (
-              <span key={event}>{event}</span>
+          <div className="landing-brand-film-timeline" aria-hidden="true">
+            {heroTimelineTicks.map((tick) => (
+              <i key={tick} />
             ))}
           </div>
         </aside>

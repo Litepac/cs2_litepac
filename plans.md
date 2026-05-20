@@ -46,6 +46,7 @@ Planning note:
 
 ## Done
 ### Recent Done
+- Removed the retired Home/Matches-era global selector block from `legacy-app.css`, leaving active replay/shell responsive rules intact, and extended the frontend structure guard so those stale selector families cannot return to non-module CSS; verified with viewer build, frontend structure check, diff hygiene, and browser smoke through Home, Matches, sample-demo expansion, Mirage fixture load, and all replay modes.
 - Removed the last active Matches fixture-list dependency on legacy `entry-fixture-*` global classes, deleted those stale global selectors, and extended the structure guard so fixture item styling stays module-owned; verified with viewer build, frontend structure check, diff hygiene, and browser checks for visible sample-demo expansion plus Mirage fixture replay load.
 - Extended the frontend structure guard so component-owned `.feedback-*` selectors cannot be reintroduced into global CSS after the Feedback widget module migration; verified with `npm.cmd run check:structure` and `git diff --check`.
 - Moved the component-owned Feedback widget styling out of global shell CSS into `FeedbackWidget.module.css`, including its mobile launch-button adjustment and local eyebrow styling, so feedback no longer depends on global `.feedback-*` selectors; verified with viewer build, frontend structure check, diff hygiene, and browser open/close smoke at desktop plus a narrow viewport.

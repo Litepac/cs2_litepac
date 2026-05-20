@@ -63,8 +63,13 @@ const retiredClassPatterns = [
 ];
 
 const retiredGlobalClassPatterns = [
+  /\.empty-state(?:[\s.{:#,[>+~-]|$)/,
   /\.entry-fixture-/,
+  /\.entry-(?:state|card|grid|fixtures)(?:[\s.{:#,[>+~-]|$)/,
   /\.feedback-/,
+  /\.home-(?:page|hero|product|cyber|frame|latest|flow|foundation|showcase|value|primary|bridge|display|terminal|principles)(?:[\s.{:#,[>+~-]|$)/,
+  /\.match-(?:library|table|row|cell|map|team|score|action|date|source|time|outcome)(?:[\s.{:#,[>+~-]|$)/,
+  /\.matches-(?:page|top|copy|control|upload|main|fixtures|library|toolbar|notice|secondary|helper|error)(?:[\s.{:#,[>+~-]|$)/,
 ];
 
 const textExtensions = new Set([".css", ".go", ".html", ".js", ".json", ".md", ".mjs", ".ts", ".tsx"]);

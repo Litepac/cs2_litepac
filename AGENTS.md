@@ -45,6 +45,12 @@ These refine this file. They do not override it.
 - Do not claim verification that was not run. If a relevant check is unavailable, record the residual risk in the handoff rather than hiding it in the commit.
 - After committing, confirm the intended paths are included and the worktree is clean. Do not rewrite pushed history unless the user explicitly requests it.
 
+## Publish discipline
+- Start non-trivial work from synchronized `main` on an `agent/<description>` branch; do not let completed work accumulate only on local `main`.
+- Push each coherent green checkpoint during the same working session, and open or update a draft pull request early enough for GitHub Actions to validate the real branch state.
+- Merge only when the intended scope is clear and required checks pass. Preserve focused commits with a merge commit unless a deliberately squashed history is more useful.
+- After merge, synchronize local `main` and report the branch, pull request, CI result, merge commit, and whether any local or remote work remains unpublished.
+
 ## Core boundary
 - Parser and canonical replay own replay truth
 - Viewer only maps, interpolates, and presents that truth

@@ -47,7 +47,7 @@ const bannedTextPatterns = [
     message: "viewer/src/maps is retired; map transform source lives in viewer/src/mapGeometry.",
   },
   {
-    pattern: /BOMB_EXPLOSION_(?:OUTER|MID|CORE)_RADIUS_WORLD/g,
+    pattern: /BOMB_EXPLOSION_[A-Z0-9_]*(?:RADIUS|DISTANCE|REACH)_WORLD/g,
     message: "Do not reintroduce guessed circular C4 damage radii; current damage truth is map-compiled and occlusion-aware.",
   },
 ];

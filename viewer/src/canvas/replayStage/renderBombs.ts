@@ -8,10 +8,8 @@ import { drawTintedEquipmentIcon } from "../equipmentIconGraphics";
 import c4IconSvg from "../../icons/cs2-equipment/panorama/images/icons/equipment/c4.svg?raw";
 import { RECENT_BOMB_WINDOW_TICKS } from "./constants";
 import { clamp } from "./camera";
+import { drawBombExplosionEventWave } from "./bombExplosionCue";
 
-const BOMB_EXPLOSION_EVENT_PULSE_SECONDS = 0.9;
-const BOMB_EXPLOSION_EVENT_PULSE_START_PX = 9;
-const BOMB_EXPLOSION_EVENT_PULSE_END_PX = 36;
 const BOMB_ICON_SIZE = 32;
 const BOMB_ICON = { svg: c4IconSvg, width: BOMB_ICON_SIZE, height: BOMB_ICON_SIZE };
 
@@ -304,7 +302,7 @@ function drawBombEvent(
     marker.lineTo(point.x, point.y + 3.3);
     marker.stroke({ color: 0xd9f1ff, width: 1.5, alpha: 0.56 + ageRatio * 0.3, cap: "round" });
   } else {
-    drawBombExplosionEventPulse(marker, point.x, point.y, eventAgeSeconds);
+    drawBombExplosionEventWave(marker, point.x, point.y, eventAgeSeconds);
     marker.circle(point.x, point.y, 5.8 + ageRatio * 1.05);
     marker.fill({ color: 0xffb25a, alpha: 0.14 + ageRatio * 0.16 });
     marker.moveTo(point.x - 3.7, point.y - 3.7);
@@ -314,29 +312,4 @@ function drawBombEvent(
     marker.stroke({ color: 0xffb25a, width: 1.9, alpha: 0.54 + ageRatio * 0.24, cap: "round" });
   }
   layer.addChild(marker);
-}
-
-function drawBombExplosionEventPulse(
-  marker: Graphics,
-  centerX: number,
-  centerY: number,
-  eventAgeSeconds: number,
-) {
-  if (eventAgeSeconds < 0 || eventAgeSeconds > BOMB_EXPLOSION_EVENT_PULSE_SECONDS) {
-    return;
-  }
-
-  // Screen-space event emphasis only. CS2's current C4 damage wave is driven by
-  // map-compiled, occlusion-aware simulation data that is not present here.
-  const progress = clamp(eventAgeSeconds / BOMB_EXPLOSION_EVENT_PULSE_SECONDS, 0, 1);
-  const easedProgress = 1 - (1 - progress) ** 2;
-  const radius =
-    BOMB_EXPLOSION_EVENT_PULSE_START_PX +
-    (BOMB_EXPLOSION_EVENT_PULSE_END_PX - BOMB_EXPLOSION_EVENT_PULSE_START_PX) * easedProgress;
-  const alpha = 1 - progress;
-
-  marker.circle(centerX, centerY, radius);
-  marker.stroke({ color: 0xffb25a, width: 2.2, alpha: 0.16 + alpha * 0.62 });
-  marker.circle(centerX, centerY, Math.max(BOMB_EXPLOSION_EVENT_PULSE_START_PX, radius * 0.64));
-  marker.stroke({ color: 0xffe1b3, width: 1.15, alpha: alpha * 0.46 });
 }

@@ -8,7 +8,7 @@ Planning note:
 
 ## Planned
 ### Next Up
-- Reverse-engineer the per-position 8-byte records in `baked_bomb_damage.vdata_c` against multiple map builds and observed in-game outcomes before proposing canonical shockwave fields. Preserve the compiled resource SHA-256 as the version boundary; do not commit extracted Valve data or label unknown record members as distance, time, damage, or graph links without proof.
+- Reverse-engineer the per-position 8-byte records in `baked_bomb_damage.vdata_c` against multiple map builds and observed in-game outcomes before proposing canonical shockwave fields. Start with a controlled local-map session using the client binary's discovered bomb-damage debug/visualization hooks as an evidence source; their presence is confirmed, but their runtime behavior is not yet verified. Preserve the compiled resource SHA-256 as the version boundary; do not commit extracted Valve data or label unknown record members as distance, time, damage, or graph links without proof.
 - Record a short offline CS2 bot-match `.dem` with explicit project-owned redistribution provenance, then add it as the clean-checkout extraction fixture; the local 307-523 MB demos and upstream parser test downloads do not currently provide a defensible small fixture with recorded content provenance.
 - Replace process-local friend-tunnel safeguards with authentication/invite gating, durable quotas, and proxy-grade distributed controls before any public-domain deployment.
 - Split the development-only 3D stage into owned modules and remove its remaining per-frame utility churn before considering any release-path return.
@@ -48,7 +48,7 @@ Planning note:
 - Revisit a separate internal AI runtime surface only if direct VSCode/Codex integration becomes valuable enough to justify a true runtime-first sidecar instead of another staged prototype
 
 ## In Progress
-- None. The next bounded implementation path is the first item under `Next Up`.
+- Publish the existing DemoRead viewer as a private Sites preview without weakening the parser boundary: preserve the real product UI, keep hosted demo upload explicitly unavailable until a hosted parser exists, add only the minimal Cloudflare-compatible hosting surface, verify the release build/package, and deploy the exact validated source.
 
 ## Done
 ### Recent Done

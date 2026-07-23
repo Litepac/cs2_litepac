@@ -58,6 +58,7 @@ Build a trustworthy CS2 2D replay core with an operator-grade Replay workspace a
 - The fresh replay contains one explosion event and no hurt event explicitly classified with weapon name `C4`; that is insufficient evidence for reconstructing shockwave arrival or damage from player events.
 - All ten installed official defusal-map VPKs inspected (`ancient`, `anubis`, `cache`, `dust2`, `inferno`, `mirage`, `nuke`, `overpass`, `train`, and `vertigo`) contain `maps/<map>/baked_bomb_damage.vdata_c`. The resource identifies itself as `CS2_BOMB_DAMAGE_DATA`, header version `1`, and decompiles into `bombsites`, `positions`, and `damage_values` binary blobs.
 - The current Mirage resource has SHA-256 `AB848262CD263358D4568A7566E492450303D60980E1AAA47B98E07E6F4A7776`; its `positions` blob contains 68,177 packed 3D records and `damage_values` contains one 8-byte record per position. Source2Viewer exposes the blobs but does not decode their game semantics, so distance, arrival time, damage, and graph/occlusion meaning remain unknown.
+- Installed client/server binaries reference the owning `CMapBombDamageGameSystem` / `CS2BombDamage` subsystem and built-in `cs2_bomb_damage_debug`, `cs2_bomb_damage_showdebugwindow`, and `bake_bomb_damage_render_visualization` hooks, plus a `maps/bomb_vis/%s_bmbdmg_vis.png` output path. This establishes a promising controlled in-game measurement route, but the hooks have not yet been exercised and do not by themselves prove the opaque record layout.
 - Any future canonical shockwave data must carry an exact map-resource fingerprint, not only `mapId`: the simulation is compiled into the map package and can change independently per map build. Extracted Valve resources remain local and must not be committed.
 - The July 9 engine-code update also prompted parser compatibility to be rechecked with the newly supplied demo instead of inferred from old fixtures.
 - The repo already pins [`demoinfocs-golang/v5 v5.2.0`](https://github.com/markus-wa/demoinfocs-golang/releases/tag/v5.2.0), which remains the latest tagged upstream release; no unverified pseudo-version upgrade was taken.
@@ -66,9 +67,10 @@ Build a trustworthy CS2 2D replay core with an operator-grade Replay workspace a
 - The local replay manifest records the supplied demo SHA-256 and canonical summary. The source remains ignored because both the 202,737,756-byte compressed download and 307,386,819-byte demo are too large for normal Git, and redistribution provenance is not established.
 
 ## Next High-Value Steps
+- Exercise the discovered bomb-damage debug/visualization hooks in a controlled local-map session and correlate observed values with the compiled resource before defining any canonical shockwave fields
+- Record a short project-owned offline bot-match `.dem`, document redistribution provenance, and add it as the clean-checkout parser extraction fixture
 - Make `Position Player` a genuinely useful selected-player cross-round movement tool without mixing it into Position Paths or replacing the normal replay timeline
 - Add focused fixture/test coverage for replay-analysis snapshot correctness and click-to-round jumps
-- Add a license-safe compact `.dem` extraction fixture to CI
 - Continue map-by-map role-label validation only from parser-backed staged fixtures
 
 ## Source Of Truth

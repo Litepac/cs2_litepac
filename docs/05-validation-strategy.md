@@ -10,6 +10,8 @@ Only ship replay artifacts that are defensible enough for a trustworthy 2D viewe
 
 Validate every emitted replay against `schema/mastermind.replay.schema.json`.
 
+Validation compiles the canonical root and item definitions, checks bounded object envelopes through the JSON Schema engine, and checks the large typed player/trajectory sample arrays in place. Do not materialize an entire replay or full player stream as `map[string]any` / `[]any`; real replays can exceed the Go WebAssembly memory ceiling under that representation.
+
 This catches:
 
 - missing required fields

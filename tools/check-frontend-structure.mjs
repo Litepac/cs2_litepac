@@ -8,6 +8,7 @@ const failures = [];
 
 const bannedDirectories = [
   "assets",
+  path.join("public", "models"),
   path.join("viewer", "src", "assets"),
   path.join("viewer", "src", "maps"),
 ];
@@ -18,7 +19,13 @@ const retiredFiles = [
   path.join("viewer", "src", "controls", "RosterPanel.tsx"),
   path.join("viewer", "src", "controls", "Sidebar.tsx"),
   path.join("viewer", "src", "replay", "playbackClock.ts"),
+  path.join("viewer", "src", "replay3d", "modelAssets.ts"),
+  path.join("viewer", "src", "replay3d", "weaponModelPresentation.ts"),
   path.join("viewer", "src", "selection", "RoundStrip.tsx"),
+  path.join("tools", "export-source2-player-animations.ps1"),
+  path.join("tools", "export-source2-player-proxies.ps1"),
+  path.join("tools", "export-source2-viewmodels.ps1"),
+  path.join("tools", "export-source2-weapon-models.ps1"),
 ];
 
 const allowedGlobalCss = new Set([

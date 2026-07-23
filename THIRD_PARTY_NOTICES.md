@@ -9,4 +9,4 @@ Those files are third-party game assets, not original DemoRead artwork. Counter-
 
 Before a public/domain-facing release, replace these extracted assets with repo-owned equivalents or complete a separate rights review for their intended distribution and use.
 
-The locally exported Source 2 map, player, weapon, animation, and viewmodel assets under ignored `public/maps/*/3d` and `public/models` paths are development inputs only. They are excluded from production builds and must not be treated as redistributable release assets.
+The locally exported Source 2 map assets under ignored `public/maps/*/3d` paths are development inputs only. They are excluded from production builds and must not be treated as redistributable release assets.

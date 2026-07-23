@@ -170,7 +170,6 @@ export default defineConfig(({ command }) => ({
     exclude: [
       "three/examples/jsm/controls/OrbitControls.js",
       "three/examples/jsm/loaders/GLTFLoader.js",
-      "three/examples/jsm/utils/SkeletonUtils.js",
     ],
   },
   publicDir: command === "serve" ? publicRoot : false,

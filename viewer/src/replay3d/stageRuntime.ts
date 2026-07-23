@@ -50,11 +50,6 @@ export type ThreeStage = {
   playerGroup: Group;
   cameraMode: Replay3DCameraMode;
   freeFly: FreeFlyState;
-  povViewmodelCamera: PerspectiveCamera;
-  povViewmodelGroup: Group;
-  povViewmodelScene: Scene;
-  povViewmodelKey: string | null;
-  povViewmodelHasModel: boolean;
   renderer: WebGLRenderer;
   scene: Scene;
   selectedAimPoint: Mesh;
@@ -79,11 +74,6 @@ export function createThreeStage(host: HTMLDivElement): ThreeStage {
   camera.position.set(0, 120, 180);
   camera.rotation.order = "YXZ";
   scene.add(camera);
-
-  const povViewmodelScene = new Scene();
-  const povViewmodelCamera = new PerspectiveCamera(POV_REVIEW_CAMERA_FOV, 1, 0.01, 12);
-  povViewmodelCamera.position.set(0, 0, 0);
-  povViewmodelScene.add(povViewmodelCamera);
 
   const renderer = new WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
   renderer.autoClear = false;
@@ -163,11 +153,6 @@ export function createThreeStage(host: HTMLDivElement): ThreeStage {
   selectedAimTube.visible = false;
   scene.add(selectedAimTube);
 
-  const povViewmodelGroup = new Group();
-  povViewmodelGroup.name = "parser-backed-pov-viewmodel";
-  povViewmodelGroup.visible = false;
-  povViewmodelScene.add(povViewmodelGroup);
-
   const ambient = new AmbientLight(0xd8d1ca, 0.52);
   const hemisphere = new HemisphereLight(0xf0dfc4, 0x272018, 0.5);
   const key = new DirectionalLight(0xffffff, 0.94);
@@ -180,7 +165,6 @@ export function createThreeStage(host: HTMLDivElement): ThreeStage {
     controls,
     dispose: () => {
       disposeObjectMeshes(scene);
-      disposeObjectMeshes(povViewmodelScene);
       renderer.dispose();
       renderer.forceContextLoss();
       renderer.domElement.remove();
@@ -198,11 +182,6 @@ export function createThreeStage(host: HTMLDivElement): ThreeStage {
       yaw: 0,
     },
     playerGroup,
-    povViewmodelCamera,
-    povViewmodelGroup,
-    povViewmodelScene,
-    povViewmodelKey: null,
-    povViewmodelHasModel: false,
     renderer,
     scene,
     selectedAimPoint,
@@ -224,8 +203,6 @@ export function resizeStage(host: HTMLDivElement, stage: ThreeStage) {
   const height = Math.max(1, Math.floor(bounds.height));
   stage.camera.aspect = width / height;
   stage.camera.updateProjectionMatrix();
-  stage.povViewmodelCamera.aspect = width / height;
-  stage.povViewmodelCamera.updateProjectionMatrix();
   stage.renderer.setSize(width, height, false);
 }
 

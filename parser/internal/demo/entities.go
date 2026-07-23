@@ -42,7 +42,6 @@ func (s *parseState) ensurePlayer(player *common.Player) string {
 			TeamID:        teamID,
 			CrosshairCode: crosshairCode,
 		},
-		Index: len(s.players),
 	}
 
 	return playerID
@@ -69,7 +68,6 @@ func (s *parseState) ensureTeam(team *common.TeamState) string {
 			DisplayName: displayName,
 			ClanName:    optionalString(team.ClanName()),
 		},
-		Index: len(s.teams),
 	}
 
 	return teamID

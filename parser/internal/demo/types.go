@@ -9,6 +9,7 @@ import (
 
 type Options struct {
 	DemoPath       string
+	SourceFileName string
 	OutputPath     string
 	SchemaPath     string
 	AssetsRoot     string
@@ -23,12 +24,10 @@ type ParseProgress struct {
 
 type playerRef struct {
 	Player replay.Player
-	Index  int
 }
 
 type teamRef struct {
-	Team  replay.Team
-	Index int
+	Team replay.Team
 }
 
 type parseState struct {

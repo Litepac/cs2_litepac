@@ -18,6 +18,7 @@ type Tracker struct {
 	byUnique        map[int64]string
 	byInfernoUnique map[int64]string
 	byEntity        map[int]string
+	nextSequence    int
 
 	infernoEntityByUtility  map[string]int
 	lastInfernoPosByUtility map[string]r3.Vector
@@ -50,7 +51,7 @@ func (t *Tracker) TrackThrow(tick int, projectile *common.GrenadeProjectile, thr
 		return
 	}
 
-	utilityID := fmt.Sprintf("utility-%d", projectile.UniqueID())
+	utilityID := t.nextUtilityID()
 	entityID := projectile.Entity.ID()
 
 	entry := &replay.UtilityEntity{
@@ -74,6 +75,11 @@ func (t *Tracker) TrackThrow(tick int, projectile *common.GrenadeProjectile, thr
 	t.byUnique[projectile.UniqueID()] = utilityID
 	t.byEntity[entityID] = utilityID
 	t.appendTrajectorySample(entry, tick, projectile.Position())
+}
+
+func (t *Tracker) nextUtilityID() string {
+	t.nextSequence++
+	return fmt.Sprintf("utility-%d", t.nextSequence)
 }
 
 func (t *Tracker) TrackBounce(tick int, projectile *common.GrenadeProjectile) {

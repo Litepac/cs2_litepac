@@ -38,7 +38,7 @@ Rounds are explicit objects with start, freeze end, and end ticks. Side swaps ar
 
 - `teamId` identifies the real team
 - `playerId` identifies the player across the match
-- `utilityId` identifies a grenade or utility entity within a round
+- `utilityId` identifies a grenade or utility entity within a round. It is assigned from deterministic throw order; parser-library random correlation IDs remain internal and must not leak into canonical output.
 
 ## Top-Level Shape
 

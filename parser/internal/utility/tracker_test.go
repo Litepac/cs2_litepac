@@ -11,6 +11,17 @@ import (
 	"mastermind/parser/internal/replay"
 )
 
+func TestNextUtilityIDIsDeterministicWithinRound(t *testing.T) {
+	tracker := NewTracker()
+
+	if got := tracker.nextUtilityID(); got != "utility-1" {
+		t.Fatalf("expected first utility id, got %q", got)
+	}
+	if got := tracker.nextUtilityID(); got != "utility-2" {
+		t.Fatalf("expected second utility id, got %q", got)
+	}
+}
+
 func TestSyncInfernosExpiresMissingInfernoFromActiveSet(t *testing.T) {
 	tracker := &Tracker{
 		byID: map[string]*replay.UtilityEntity{

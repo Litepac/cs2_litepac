@@ -341,6 +341,7 @@ func parseDemoUpload(w http.ResponseWriter, r *http.Request, opts Options) error
 
 	if err := demo.Parse(demo.Options{
 		DemoPath:       demoPath,
+		SourceFileName: baseName,
 		OutputPath:     replayPath,
 		SchemaPath:     opts.SchemaPath,
 		AssetsRoot:     opts.AssetsRoot,

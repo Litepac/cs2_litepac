@@ -192,7 +192,14 @@ func orderedPlayers(entries map[string]playerRef) []replay.Player {
 	for key := range entries {
 		keys = append(keys, key)
 	}
-	sort.Slice(keys, func(i, j int) bool { return entries[keys[i]].Index < entries[keys[j]].Index })
+	sort.Slice(keys, func(i, j int) bool {
+		left := entries[keys[i]].Player
+		right := entries[keys[j]].Player
+		if left.TeamID != right.TeamID {
+			return left.TeamID < right.TeamID
+		}
+		return left.PlayerID < right.PlayerID
+	})
 
 	out := make([]replay.Player, 0, len(entries))
 	for _, key := range keys {
@@ -207,7 +214,7 @@ func orderedTeams(entries map[string]teamRef) []replay.Team {
 	for key := range entries {
 		keys = append(keys, key)
 	}
-	sort.Slice(keys, func(i, j int) bool { return entries[keys[i]].Index < entries[keys[j]].Index })
+	sort.Strings(keys)
 
 	out := make([]replay.Team, 0, len(entries))
 	for _, key := range keys {

@@ -48,6 +48,7 @@ Build a trustworthy CS2 2D replay core with an operator-grade Replay workspace a
 - Stats role labels are parser-backed and placement-aware, but several maps still need fixture-backed tuning
 - Parser-side utility lifecycle and post-round sampling remain valid follow-up areas if new fixture mismatches appear
 - Schema validation is now bounded around compiled root/item envelopes: large typed player/trajectory sample arrays are checked in place instead of being expanded into a complete generic JSON tree. The 285 MB fresh replay passes the exact Go WebAssembly fixture gate in 37 seconds without exceeding the runtime's 4 GiB ceiling.
+- Real multipart ingest now preserves the sanitized uploaded demo name in `sourceDemo.fileName` instead of leaking the parser's temporary filename. Top-level teams/players and round-local utility IDs use deterministic canonical ordering/sequence; two independent uploads of the same 307 MB demo produce byte-identical replay bodies after excluding `generatedAt`.
 - CI has a committed canonical replay gate, but extraction still needs a newly recorded short offline bot-match `.dem` with explicit project-owned redistribution provenance. The current local demos are 307-523 MB, and no small upstream download with sufficiently clear demo-content provenance was identified.
 - The friend-tunnel API has local safeguards but still lacks authentication, durable quotas, and distributed edge controls
 - The development-only 3D stage remains too large internally and should be split before it returns to any release path

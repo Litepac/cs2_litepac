@@ -11,6 +11,17 @@ import (
 	"mastermind/parser/internal/replay"
 )
 
+func TestNextUtilityIDIsDeterministicWithinRound(t *testing.T) {
+	tracker := NewTracker()
+
+	if got := tracker.nextUtilityID(); got != "utility-1" {
+		t.Fatalf("expected first utility id, got %q", got)
+	}
+	if got := tracker.nextUtilityID(); got != "utility-2" {
+		t.Fatalf("expected second utility id, got %q", got)
+	}
+}
+
 func TestSyncInfernosExpiresMissingInfernoFromActiveSet(t *testing.T) {
 	tracker := &Tracker{
 		byID: map[string]*replay.UtilityEntity{
@@ -72,6 +83,7 @@ func TestSyncInfernosExpiresInfernoWithoutActiveFires(t *testing.T) {
 		},
 	}
 	tracker.byEntity[77] = "utility-1"
+	tracker.byInfernoUnique[inferno.UniqueID()] = "utility-1"
 	tracker.infernoEntityByUtility["utility-1"] = 77
 
 	tracker.SyncInfernos(181, map[int]*common.Inferno{77: inferno})
@@ -108,6 +120,82 @@ func TestSyncInfernosSamplesActiveFireFootprint(t *testing.T) {
 	first := entry.FireFootprint[0]
 	if first.Tick != 121 || len(first.X) != 1 || *first.X[0] != 110 || *first.Y[0] != 220 || *first.Z[0] != 330 {
 		t.Fatalf("unexpected first footprint sample: %+v", first)
+	}
+}
+
+func TestSyncInfernosIgnoresReusedNonFireEntityMapping(t *testing.T) {
+	inferno := newInfernoWithFires(t, []bool{true})
+	tracker := NewTracker()
+	tracker.byID["utility-flash"] = &replay.UtilityEntity{
+		UtilityID: "utility-flash",
+		Kind:      "flashbang",
+		StartTick: 90,
+	}
+	tracker.byID["utility-fire"] = &replay.UtilityEntity{
+		UtilityID:       "utility-fire",
+		Kind:            "molotov",
+		ThrowerPlayerID: replay.String("player:unknown:0"),
+		StartTick:       100,
+	}
+	tracker.byEntity[88] = "utility-flash"
+
+	tracker.SyncInfernos(121, map[int]*common.Inferno{88: inferno})
+
+	if len(tracker.byID["utility-flash"].FireFootprint) != 0 {
+		t.Fatal("expected a reused inferno entity ID not to attach fire truth to a flashbang")
+	}
+
+	fire := tracker.byID["utility-fire"]
+	if fire.DetonateTick == nil || *fire.DetonateTick != 121 {
+		t.Fatalf("expected the fire utility to own the inferno detonation, got %v", fire.DetonateTick)
+	}
+	if len(fire.FireFootprint) != 1 {
+		t.Fatalf("expected the fire utility to receive one footprint sample, got %d", len(fire.FireFootprint))
+	}
+	if mapped := tracker.byEntity[88]; mapped != "utility-fire" {
+		t.Fatalf("expected the inferno entity mapping to be repaired, got %q", mapped)
+	}
+
+	tracker.byEntity[88] = "utility-flash"
+	tracker.SyncInfernos(125, map[int]*common.Inferno{88: inferno})
+
+	if len(fire.FireFootprint) != 2 {
+		t.Fatalf("expected the inferno unique ID to keep ownership after entity ID reuse, got %d samples", len(fire.FireFootprint))
+	}
+	if mapped := tracker.byEntity[88]; mapped != "utility-fire" {
+		t.Fatalf("expected the unique inferno mapping to repair entity ownership, got %q", mapped)
+	}
+}
+
+func TestSyncInfernosIgnoresReusedActiveInfernoEntityMapping(t *testing.T) {
+	inferno := newInfernoWithFires(t, []bool{true})
+	tracker := NewTracker()
+	tracker.byID["utility-old-fire"] = &replay.UtilityEntity{
+		UtilityID:    "utility-old-fire",
+		Kind:         "incendiary",
+		StartTick:    50,
+		DetonateTick: replay.Int(70),
+	}
+	tracker.byID["utility-new-fire"] = &replay.UtilityEntity{
+		UtilityID:       "utility-new-fire",
+		Kind:            "molotov",
+		ThrowerPlayerID: replay.String("player:unknown:0"),
+		StartTick:       100,
+	}
+	tracker.byEntity[88] = "utility-old-fire"
+
+	tracker.SyncInfernos(121, map[int]*common.Inferno{88: inferno})
+
+	if len(tracker.byID["utility-old-fire"].FireFootprint) != 0 {
+		t.Fatal("expected a reused inferno entity ID not to attach a new footprint to an older active inferno")
+	}
+
+	newFire := tracker.byID["utility-new-fire"]
+	if newFire.DetonateTick == nil || *newFire.DetonateTick != 121 {
+		t.Fatalf("expected the pending fire utility to own the reused inferno entity, got %v", newFire.DetonateTick)
+	}
+	if mapped := tracker.byEntity[88]; mapped != "utility-new-fire" {
+		t.Fatalf("expected the reused inferno entity mapping to move to the pending fire utility, got %q", mapped)
 	}
 }
 
@@ -232,5 +320,5 @@ func newInfernoWithFires(t *testing.T, burning []bool) *common.Inferno {
 		entity.On("PropertyValueMust", "m_fireZDelta."+iStr).Return(st.PropertyValue{Any: int32(110)})
 	}
 
-	return common.NewInferno(nil, entity, nil)
+	return common.NewInferno(nil, entity, &common.Player{})
 }

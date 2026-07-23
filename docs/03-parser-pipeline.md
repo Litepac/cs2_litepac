@@ -75,7 +75,7 @@ Rules:
 
 ### 5. Map Calibration Attachment
 
-Attach static map metadata from `assets/maps/<map>/calibration.json`:
+Attach static map metadata from `public/maps/<map>/calibration.json`:
 
 - radar image key
 - world bounds

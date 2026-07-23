@@ -11,11 +11,13 @@ import (
 func (s *parseState) registerBombHandlers() {
 	s.parser.RegisterEventHandler(func(e demoevents.BombPickup) {
 		s.lastBombCarrierID = s.ensurePlayer(e.Player)
+		s.hasBombCarrier = true
 		s.appendBombEvent("pickup", e.Player, nil, positionOrBomb(s.parser.GameState().Bomb()))
 	})
 
 	s.parser.RegisterEventHandler(func(e demoevents.BombDropped) {
 		s.lastBombCarrierID = ""
+		s.hasBombCarrier = true
 		s.appendBombEvent("drop", e.Player, nil, positionOrBomb(s.parser.GameState().Bomb()))
 	})
 
@@ -25,6 +27,7 @@ func (s *parseState) registerBombHandlers() {
 
 	s.parser.RegisterEventHandler(func(e demoevents.BombPlanted) {
 		s.lastBombCarrierID = ""
+		s.hasBombCarrier = true
 		s.appendBombEvent("planted", e.Player, norm.BombSite(e.Site), positionOrBomb(s.parser.GameState().Bomb()))
 	})
 
@@ -38,11 +41,13 @@ func (s *parseState) registerBombHandlers() {
 
 	s.parser.RegisterEventHandler(func(e demoevents.BombDefused) {
 		s.lastBombCarrierID = ""
+		s.hasBombCarrier = true
 		s.appendBombEvent("defused", e.Player, norm.BombSite(e.Site), positionOrBomb(s.parser.GameState().Bomb()))
 	})
 
 	s.parser.RegisterEventHandler(func(e demoevents.BombExplode) {
 		s.lastBombCarrierID = ""
+		s.hasBombCarrier = true
 		s.appendBombEvent("exploded", e.Player, norm.BombSite(e.Site), positionOrBomb(s.parser.GameState().Bomb()))
 	})
 }

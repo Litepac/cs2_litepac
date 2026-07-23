@@ -3,31 +3,159 @@ package server
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
+	"time"
 
 	"mastermind/parser/internal/demo"
 )
 
-const defaultMaxUploadBytes int64 = 2 << 30
+const (
+	defaultMaxUploadBytes       int64 = 512 << 20
+	defaultMaxConcurrentParses        = 1
+	defaultParseStartsPerHour         = 6
+	defaultFeedbackPerMinute          = 20
+	defaultUsageEventsPerMinute       = 240
+
+	serverReadHeaderTimeout = 10 * time.Second
+	serverReadTimeout       = 10 * time.Minute
+	serverWriteTimeout      = 30 * time.Minute
+	serverIdleTimeout       = 60 * time.Second
+	serverMaxHeaderBytes    = 1 << 20
+	maxLimiterClients       = 1024
+)
 
 type Options struct {
-	ListenAddr     string
-	SchemaPath     string
-	AssetsRoot     string
-	TempDir        string
-	MaxUploadBytes int64
-	AllowedOrigin  string
+	ListenAddr          string
+	SchemaPath          string
+	AssetsRoot          string
+	TempDir             string
+	MaxUploadBytes      int64
+	MaxConcurrentParses int
+	AllowedOrigin       string
+}
+
+type requestLimiter struct {
+	mu      sync.Mutex
+	limit   int
+	window  time.Duration
+	clients map[string]requestLimitWindow
+}
+
+type requestLimitWindow struct {
+	started time.Time
+	count   int
+}
+
+type serverState struct {
+	parseSlots       chan struct{}
+	parseStarts      *requestLimiter
+	feedbackRequests *requestLimiter
+	usageRequests    *requestLimiter
 }
 
 func Serve(opts Options) error {
+	return newHTTPServer(opts).ListenAndServe()
+}
+
+func newHTTPServer(opts Options) *http.Server {
+	addr := strings.TrimSpace(opts.ListenAddr)
+	if addr == "" {
+		addr = "127.0.0.1:4318"
+	}
+
+	return &http.Server{
+		Addr:              addr,
+		Handler:           newHandler(opts),
+		ReadHeaderTimeout: serverReadHeaderTimeout,
+		ReadTimeout:       serverReadTimeout,
+		WriteTimeout:      serverWriteTimeout,
+		IdleTimeout:       serverIdleTimeout,
+		MaxHeaderBytes:    serverMaxHeaderBytes,
+	}
+}
+
+func newHandler(opts Options) http.Handler {
+	return newHandlerWithState(opts, newServerState(opts))
+}
+
+func newServerState(opts Options) *serverState {
+	maxConcurrentParses := opts.MaxConcurrentParses
+	if maxConcurrentParses <= 0 {
+		maxConcurrentParses = defaultMaxConcurrentParses
+	}
+
+	return &serverState{
+		parseSlots:       make(chan struct{}, maxConcurrentParses),
+		parseStarts:      newRequestLimiter(defaultParseStartsPerHour, time.Hour),
+		feedbackRequests: newRequestLimiter(defaultFeedbackPerMinute, time.Minute),
+		usageRequests:    newRequestLimiter(defaultUsageEventsPerMinute, time.Minute),
+	}
+}
+
+func newRequestLimiter(limit int, window time.Duration) *requestLimiter {
+	return &requestLimiter{
+		limit:   limit,
+		window:  window,
+		clients: make(map[string]requestLimitWindow),
+	}
+}
+
+func (limiter *requestLimiter) allow(client string, now time.Time) (bool, time.Duration) {
+	limiter.mu.Lock()
+	defer limiter.mu.Unlock()
+
+	window, ok := limiter.clients[client]
+	if !ok && len(limiter.clients) >= maxLimiterClients {
+		for key, candidate := range limiter.clients {
+			if now.Sub(candidate.started) >= limiter.window {
+				delete(limiter.clients, key)
+			}
+		}
+		if len(limiter.clients) >= maxLimiterClients {
+			client = "overflow"
+			window, ok = limiter.clients[client]
+			if !ok {
+				for key := range limiter.clients {
+					delete(limiter.clients, key)
+					break
+				}
+			}
+		}
+	}
+
+	if !ok || window.started.IsZero() || now.Sub(window.started) >= limiter.window {
+		window = requestLimitWindow{started: now}
+	}
+
+	if window.count >= limiter.limit {
+		retryAfter := limiter.window - now.Sub(window.started)
+		if retryAfter < time.Second {
+			retryAfter = time.Second
+		}
+		return false, retryAfter
+	}
+
+	window.count++
+	limiter.clients[client] = window
+	return true, 0
+}
+
+func newHandlerWithState(opts Options, state *serverState) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/health", func(w http.ResponseWriter, r *http.Request) {
-		allowCORS(w, opts)
+		if !allowCORS(w, r, opts) {
+			writeJSONError(w, http.StatusForbidden, "origin not allowed")
+			return
+		}
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
 			return
@@ -44,23 +172,42 @@ func Serve(opts Options) error {
 		})
 	})
 	mux.HandleFunc("/api/parse-demo", func(w http.ResponseWriter, r *http.Request) {
-		allowCORS(w, opts)
+		if !allowCORS(w, r, opts) {
+			writeJSONError(w, http.StatusForbidden, "origin not allowed")
+			return
+		}
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
 		if r.Method != http.MethodPost {
 			writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
+			return
+		}
+
+		select {
+		case state.parseSlots <- struct{}{}:
+			defer func() { <-state.parseSlots }()
+		default:
+			writeRateLimitError(w, time.Minute, "another demo is already being parsed")
+			return
+		}
+
+		if allowed, retryAfter := state.parseStarts.allow(clientKey(r), time.Now()); !allowed {
+			writeRateLimitError(w, retryAfter, "demo parse limit reached")
 			return
 		}
 
 		if err := parseDemoUpload(w, r, opts); err != nil {
-			writeJSONError(w, http.StatusBadRequest, err.Error())
+			writeJSONError(w, requestErrorStatus(err), err.Error())
 			return
 		}
 	})
 	mux.HandleFunc("/api/usage-events", func(w http.ResponseWriter, r *http.Request) {
-		allowCORS(w, opts)
+		if !allowCORS(w, r, opts) {
+			writeJSONError(w, http.StatusForbidden, "origin not allowed")
+			return
+		}
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
 			return
@@ -70,13 +217,24 @@ func Serve(opts Options) error {
 			return
 		}
 
+		if allowed, retryAfter := state.usageRequests.allow(clientKey(r), time.Now()); !allowed {
+			writeRateLimitError(w, retryAfter, "usage event limit reached")
+			return
+		}
+
+		r.Body = http.MaxBytesReader(w, r.Body, maxUsageEventBytes)
 		if err := appendUsageEvent(r); err != nil {
 			fmt.Fprintf(os.Stderr, "usage-event logging failed: %v\n", err)
+			writeJSONError(w, requestErrorStatus(err), err.Error())
+			return
 		}
 		w.WriteHeader(http.StatusNoContent)
 	})
 	mux.HandleFunc("/api/feedback", func(w http.ResponseWriter, r *http.Request) {
-		allowCORS(w, opts)
+		if !allowCORS(w, r, opts) {
+			writeJSONError(w, http.StatusForbidden, "origin not allowed")
+			return
+		}
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
 			return
@@ -86,19 +244,20 @@ func Serve(opts Options) error {
 			return
 		}
 
+		if allowed, retryAfter := state.feedbackRequests.allow(clientKey(r), time.Now()); !allowed {
+			writeRateLimitError(w, retryAfter, "feedback submission limit reached")
+			return
+		}
+
+		r.Body = http.MaxBytesReader(w, r.Body, maxFeedbackBytes)
 		if err := appendFeedbackSubmission(r); err != nil {
-			writeJSONError(w, http.StatusBadRequest, err.Error())
+			writeJSONError(w, requestErrorStatus(err), err.Error())
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)
 	})
 
-	addr := opts.ListenAddr
-	if strings.TrimSpace(addr) == "" {
-		addr = "127.0.0.1:4318"
-	}
-
-	return http.ListenAndServe(addr, mux)
+	return mux
 }
 
 func parseDemoUpload(w http.ResponseWriter, r *http.Request, opts Options) error {
@@ -182,6 +341,7 @@ func parseDemoUpload(w http.ResponseWriter, r *http.Request, opts Options) error
 
 	if err := demo.Parse(demo.Options{
 		DemoPath:       demoPath,
+		SourceFileName: baseName,
 		OutputPath:     replayPath,
 		SchemaPath:     opts.SchemaPath,
 		AssetsRoot:     opts.AssetsRoot,
@@ -249,7 +409,7 @@ func parseDemoUpload(w http.ResponseWriter, r *http.Request, opts Options) error
 
 func uploadParseError(fileName string, err error) string {
 	if err == nil {
-		return "Demo processing failed.";
+		return "Demo processing failed."
 	}
 
 	raw := strings.TrimSpace(err.Error())
@@ -285,10 +445,22 @@ func stripGoStackTrace(message string) string {
 	return strings.TrimSpace(message)
 }
 
-func allowCORS(w http.ResponseWriter, opts Options) {
-	w.Header().Set("Access-Control-Allow-Origin", allowedOrigin(opts))
+func allowCORS(w http.ResponseWriter, r *http.Request, opts Options) bool {
+	allowed := allowedOrigin(opts)
+	origin := strings.TrimSpace(r.Header.Get("Origin"))
+	if allowed == "" {
+		return origin == "" || originMatchesHost(origin, r.Host)
+	}
+
+	if allowed != "*" && origin != "" && origin != allowed {
+		return false
+	}
+
+	w.Header().Add("Vary", "Origin")
+	w.Header().Set("Access-Control-Allow-Origin", allowed)
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	return true
 }
 
 func maxUploadBytes(opts Options) int64 {
@@ -300,12 +472,64 @@ func maxUploadBytes(opts Options) int64 {
 }
 
 func allowedOrigin(opts Options) string {
-	origin := strings.TrimSpace(opts.AllowedOrigin)
-	if origin != "" {
-		return origin
+	return strings.TrimSpace(opts.AllowedOrigin)
+}
+
+func originMatchesHost(origin string, requestHost string) bool {
+	parsed, err := url.Parse(origin)
+	if err != nil || parsed.Scheme == "" || parsed.Host == "" || parsed.User != nil {
+		return false
+	}
+	return strings.EqualFold(parsed.Host, strings.TrimSpace(requestHost))
+}
+
+func clientKey(r *http.Request) string {
+	directIP := remoteIP(r.RemoteAddr)
+	if directIP != nil && directIP.IsLoopback() {
+		for _, candidate := range []string{
+			r.Header.Get("CF-Connecting-IP"),
+			strings.Split(r.Header.Get("X-Forwarded-For"), ",")[0],
+		} {
+			if ip := net.ParseIP(strings.TrimSpace(candidate)); ip != nil {
+				return ip.String()
+			}
+		}
 	}
 
-	return "*"
+	if directIP != nil {
+		return directIP.String()
+	}
+	return "unknown"
+}
+
+func remoteIP(remoteAddr string) net.IP {
+	host, _, err := net.SplitHostPort(strings.TrimSpace(remoteAddr))
+	if err == nil {
+		if ip := net.ParseIP(host); ip != nil {
+			return ip
+		}
+	}
+	if ip := net.ParseIP(strings.TrimSpace(remoteAddr)); ip != nil {
+		return ip
+	}
+	return nil
+}
+
+func requestErrorStatus(err error) int {
+	var maxBytesError *http.MaxBytesError
+	if errors.As(err, &maxBytesError) {
+		return http.StatusRequestEntityTooLarge
+	}
+	return http.StatusBadRequest
+}
+
+func writeRateLimitError(w http.ResponseWriter, retryAfter time.Duration, message string) {
+	seconds := int(retryAfter.Round(time.Second) / time.Second)
+	if seconds < 1 {
+		seconds = 1
+	}
+	w.Header().Set("Retry-After", fmt.Sprintf("%d", seconds))
+	writeJSONError(w, http.StatusTooManyRequests, message)
 }
 
 func writeJSON(w http.ResponseWriter, status int, payload any) {

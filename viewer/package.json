@@ -7,17 +7,22 @@
     "dev": "vite --configLoader native",
     "dev:local": "node ../tools/start-local-dev.mjs",
     "dev:bridge": "npm run dev:local",
+    "test": "node --experimental-strip-types --test tests/*.test.mjs",
     "build": "tsc -b && vite build",
+    "check:release": "node ../tools/check-release-build.mjs",
+    "check:structure": "node ../tools/check-frontend-structure.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
     "@types/node": "^25.5.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "@types/three": "^0.184.1",
     "ajv": "^8.18.0",
     "pixi.js": "^8.17.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
+    "three": "^0.184.0",
     "typescript": "^5.9.3",
     "vite": "^8.0.0"
   }

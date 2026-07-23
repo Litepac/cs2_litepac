@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 
 const replayPath = path.resolve(
-  process.argv.slice(2).find((arg) => !arg.startsWith("--")) ?? "assets/fixtures/Mirage.replay.json",
+  process.argv.slice(2).find((arg) => !arg.startsWith("--")) ?? "testdata/replays/Mirage.replay.json",
 );
 const replay = JSON.parse(readFileSync(replayPath, "utf-8"));
 const tickRate = Math.max(1, replay.match?.tickRate || replay.sourceDemo?.tickRate || 64);

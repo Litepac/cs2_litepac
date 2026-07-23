@@ -9,7 +9,17 @@ import (
 
 func ValidateReplay(data replay.Replay) error {
 	lastRoundEnd := -1
-	for _, round := range data.Rounds {
+	var previousScoreAfter *replay.Score
+	for roundIndex, round := range data.Rounds {
+		expectedRoundNumber := roundIndex + 1
+		if round.RoundNumber != expectedRoundNumber {
+			return fmt.Errorf("round at index %d has number %d, expected %d", roundIndex, round.RoundNumber, expectedRoundNumber)
+		}
+
+		if previousScoreAfter != nil && !sameOrSwappedScore(round.ScoreBefore, *previousScoreAfter) {
+			return fmt.Errorf("round %d score before does not match previous score after", round.RoundNumber)
+		}
+
 		if round.EndTick < round.StartTick {
 			return fmt.Errorf("round %d ends before it starts", round.RoundNumber)
 		}
@@ -26,10 +36,25 @@ func ValidateReplay(data replay.Replay) error {
 		if round.ScoreAfter.T < round.ScoreBefore.T || round.ScoreAfter.CT < round.ScoreBefore.CT {
 			return fmt.Errorf("round %d score regresses", round.RoundNumber)
 		}
+		scoreDeltaT := round.ScoreAfter.T - round.ScoreBefore.T
+		scoreDeltaCT := round.ScoreAfter.CT - round.ScoreBefore.CT
+		if scoreDeltaT+scoreDeltaCT > 1 {
+			return fmt.Errorf("round %d score advances by more than one point", round.RoundNumber)
+		}
+		if round.WinnerSide != nil {
+			if (*round.WinnerSide == "T" && (scoreDeltaT != 1 || scoreDeltaCT != 0)) ||
+				(*round.WinnerSide == "CT" && (scoreDeltaCT != 1 || scoreDeltaT != 0)) {
+				return fmt.Errorf("round %d winner side does not match score advance", round.RoundNumber)
+			}
+		}
 
 		for _, kill := range round.KillEvents {
 			if kill.Tick < round.StartTick || kill.Tick > round.EndTick {
 				return fmt.Errorf("round %d kill at tick %d is outside round bounds", round.RoundNumber, kill.Tick)
+			}
+
+			if kill.PenetratedObjects != nil && *kill.PenetratedObjects < 0 {
+				return fmt.Errorf("round %d kill at tick %d has negative penetrated object count", round.RoundNumber, kill.Tick)
 			}
 
 			if kill.VictimX == nil || kill.VictimY == nil || kill.VictimZ == nil {
@@ -75,13 +100,26 @@ func ValidateReplay(data replay.Replay) error {
 			}
 		}
 
+		lastBombTick := round.StartTick - 1
+		plantedTick := -1
+		terminalBombTick := -1
+		activeDefuse := false
 		for _, bomb := range round.BombEvents {
 			if bomb.Tick < round.StartTick || bomb.Tick > round.EndTick {
 				return fmt.Errorf("round %d bomb event at tick %d is outside round bounds", round.RoundNumber, bomb.Tick)
 			}
 
+			if bomb.Tick < lastBombTick {
+				return fmt.Errorf("round %d bomb events are not sorted", round.RoundNumber)
+			}
+			lastBombTick = bomb.Tick
+
 			if bomb.X == nil || bomb.Y == nil || bomb.Z == nil {
 				return fmt.Errorf("round %d bomb event %s at tick %d is missing position", round.RoundNumber, bomb.Type, bomb.Tick)
+			}
+
+			if terminalBombTick >= 0 {
+				return fmt.Errorf("round %d bomb event %s at tick %d occurs after terminal bomb event at tick %d", round.RoundNumber, bomb.Type, bomb.Tick, terminalBombTick)
 			}
 
 			switch bomb.Type {
@@ -93,6 +131,39 @@ func ValidateReplay(data replay.Replay) error {
 				if bomb.Site != nil {
 					return fmt.Errorf("round %d bomb event %s at tick %d should not carry a site", round.RoundNumber, bomb.Type, bomb.Tick)
 				}
+			default:
+				return fmt.Errorf("round %d bomb event at tick %d has unknown type %q", round.RoundNumber, bomb.Tick, bomb.Type)
+			}
+
+			if bomb.Type == "planted" {
+				if plantedTick >= 0 {
+					return fmt.Errorf("round %d has multiple planted bomb events", round.RoundNumber)
+				}
+				plantedTick = bomb.Tick
+			}
+			switch bomb.Type {
+			case "pickup", "drop", "plant_start":
+				if plantedTick >= 0 {
+					return fmt.Errorf("round %d bomb event %s at tick %d occurs after planted", round.RoundNumber, bomb.Type, bomb.Tick)
+				}
+			case "defuse_start":
+				if plantedTick < 0 {
+					return fmt.Errorf("round %d bomb event %s at tick %d occurs before planted", round.RoundNumber, bomb.Type, bomb.Tick)
+				}
+				activeDefuse = true
+			case "defuse_abort":
+				if plantedTick < 0 {
+					return fmt.Errorf("round %d bomb event %s at tick %d occurs before planted", round.RoundNumber, bomb.Type, bomb.Tick)
+				}
+				if !activeDefuse {
+					return fmt.Errorf("round %d bomb event defuse_abort at tick %d has no active defuse", round.RoundNumber, bomb.Tick)
+				}
+				activeDefuse = false
+			case "defused", "exploded":
+				if plantedTick < 0 {
+					return fmt.Errorf("round %d bomb event %s at tick %d occurs before planted", round.RoundNumber, bomb.Type, bomb.Tick)
+				}
+				terminalBombTick = bomb.Tick
 			}
 		}
 
@@ -137,23 +208,77 @@ func ValidateReplay(data replay.Replay) error {
 			if utility.DetonateTick != nil && *utility.DetonateTick < utility.StartTick {
 				return fmt.Errorf("round %d utility %s detonates before it starts", round.RoundNumber, utility.UtilityID)
 			}
+			if utility.DetonateTick != nil && *utility.DetonateTick > effectiveEndTick {
+				return fmt.Errorf("round %d utility %s detonates after round end", round.RoundNumber, utility.UtilityID)
+			}
 
 			if utility.EndTick != nil && *utility.EndTick < utility.StartTick {
 				return fmt.Errorf("round %d utility %s ends before it starts", round.RoundNumber, utility.UtilityID)
+			}
+			if utility.DetonateTick != nil && utility.EndTick != nil && *utility.EndTick < *utility.DetonateTick {
+				return fmt.Errorf("round %d utility %s ends before it detonates", round.RoundNumber, utility.UtilityID)
 			}
 
 			if len(utility.Trajectory.X) != len(utility.Trajectory.Y) || len(utility.Trajectory.X) != len(utility.Trajectory.Z) {
 				return fmt.Errorf("round %d utility %s trajectory arrays differ in length", round.RoundNumber, utility.UtilityID)
 			}
 
+			if len(utility.Trajectory.X) == 0 {
+				return fmt.Errorf("round %d utility %s trajectory has no samples", round.RoundNumber, utility.UtilityID)
+			}
+
+			if utility.Trajectory.SampleIntervalTicks <= 0 {
+				return fmt.Errorf("round %d utility %s trajectory has non-positive sample interval", round.RoundNumber, utility.UtilityID)
+			}
+
+			if utility.Trajectory.SampleOriginTick < utility.StartTick || utility.Trajectory.SampleOriginTick > effectiveEndTick {
+				return fmt.Errorf("round %d utility %s trajectory starts outside utility bounds", round.RoundNumber, utility.UtilityID)
+			}
+
+			lastTrajectoryTick := utility.Trajectory.SampleOriginTick +
+				(len(utility.Trajectory.X)-1)*utility.Trajectory.SampleIntervalTicks
+			if lastTrajectoryTick > effectiveEndTick {
+				return fmt.Errorf("round %d utility %s trajectory ends after round end", round.RoundNumber, utility.UtilityID)
+			}
+
+			for index := 0; index < len(utility.Trajectory.X); index++ {
+				x := utility.Trajectory.X[index]
+				y := utility.Trajectory.Y[index]
+				z := utility.Trajectory.Z[index]
+				if x == nil || y == nil || z == nil {
+					return fmt.Errorf("round %d utility %s trajectory has incomplete position at sample %d", round.RoundNumber, utility.UtilityID, index)
+				}
+
+				if !isFinite(*x) || !isFinite(*y) || !isFinite(*z) {
+					return fmt.Errorf("round %d utility %s trajectory has non-finite position at sample %d", round.RoundNumber, utility.UtilityID, index)
+				}
+			}
+
+			lastPhaseTick := utility.StartTick - 1
 			for _, phase := range utility.PhaseEvents {
 				if phase.Tick < utility.StartTick {
 					return fmt.Errorf("round %d utility %s phase %s at tick %d is before utility start", round.RoundNumber, utility.UtilityID, phase.Type, phase.Tick)
 				}
+				if phase.Tick > effectiveEndTick {
+					return fmt.Errorf("round %d utility %s phase %s at tick %d is after round end", round.RoundNumber, utility.UtilityID, phase.Type, phase.Tick)
+				}
+
+				if phase.Tick < lastPhaseTick {
+					return fmt.Errorf("round %d utility %s phase events are not sorted", round.RoundNumber, utility.UtilityID)
+				}
+				lastPhaseTick = phase.Tick
 
 				if phase.DurationTicks != nil && *phase.DurationTicks <= 0 {
 					return fmt.Errorf("round %d utility %s phase %s at tick %d has non-positive duration", round.RoundNumber, utility.UtilityID, phase.Type, phase.Tick)
 				}
+
+				if err := validateUtilityPhase(round.RoundNumber, utility, phase); err != nil {
+					return err
+				}
+			}
+
+			if err := validateFireFootprint(round.RoundNumber, effectiveEndTick, utility); err != nil {
+				return err
 			}
 		}
 
@@ -162,6 +287,20 @@ func ValidateReplay(data replay.Replay) error {
 			if count != len(stream.Y) ||
 				count != len(stream.Z) ||
 				count != len(stream.Yaw) ||
+				count != len(stream.Pitch) ||
+				count != len(stream.EyeX) ||
+				count != len(stream.EyeY) ||
+				count != len(stream.EyeZ) ||
+				count != len(stream.IsScoped) ||
+				count != len(stream.ZoomLevel) ||
+				count != len(stream.ViewmodelFOV) ||
+				count != len(stream.ViewmodelOffsetX) ||
+				count != len(stream.ViewmodelOffsetY) ||
+				count != len(stream.ViewmodelOffsetZ) ||
+				count != len(stream.RecoilIndex) ||
+				count != len(stream.IsWalking) ||
+				count != len(stream.IsDucking) ||
+				count != len(stream.IsOnGround) ||
 				count != len(stream.Alive) ||
 				count != len(stream.HasBomb) ||
 				count != len(stream.Health) ||
@@ -224,9 +363,126 @@ func ValidateReplay(data replay.Replay) error {
 					return fmt.Errorf("round %d player stream %s has out-of-range yaw %.3f at sample %d", round.RoundNumber, stream.PlayerID, *yaw, index)
 				}
 			}
+
+			for index := 0; index < count; index++ {
+				pitch := stream.Pitch[index]
+				if pitch != nil {
+					if !stream.Alive[index] {
+						return fmt.Errorf("round %d player stream %s has pitch while not alive at sample %d", round.RoundNumber, stream.PlayerID, index)
+					}
+
+					if stream.X[index] == nil || stream.Y[index] == nil || stream.Z[index] == nil {
+						return fmt.Errorf("round %d player stream %s has pitch without full position at sample %d", round.RoundNumber, stream.PlayerID, index)
+					}
+
+					if math.IsNaN(*pitch) || math.IsInf(*pitch, 0) {
+						return fmt.Errorf("round %d player stream %s has non-finite pitch at sample %d", round.RoundNumber, stream.PlayerID, index)
+					}
+
+					if *pitch < -90 || *pitch > 90 {
+						return fmt.Errorf("round %d player stream %s has out-of-range pitch %.3f at sample %d", round.RoundNumber, stream.PlayerID, *pitch, index)
+					}
+				}
+
+				eyeX := stream.EyeX[index]
+				eyeY := stream.EyeY[index]
+				eyeZ := stream.EyeZ[index]
+				eyeCount := 0
+				for _, value := range []*float64{eyeX, eyeY, eyeZ} {
+					if value != nil {
+						eyeCount++
+						if math.IsNaN(*value) || math.IsInf(*value, 0) {
+							return fmt.Errorf("round %d player stream %s has non-finite eye position at sample %d", round.RoundNumber, stream.PlayerID, index)
+						}
+					}
+				}
+
+				if eyeCount != 0 {
+					if eyeCount != 3 {
+						return fmt.Errorf("round %d player stream %s has partial eye position at sample %d", round.RoundNumber, stream.PlayerID, index)
+					}
+
+					if !stream.Alive[index] {
+						return fmt.Errorf("round %d player stream %s has eye position while not alive at sample %d", round.RoundNumber, stream.PlayerID, index)
+					}
+
+					if stream.X[index] == nil || stream.Y[index] == nil || stream.Z[index] == nil {
+						return fmt.Errorf("round %d player stream %s has eye position without full position at sample %d", round.RoundNumber, stream.PlayerID, index)
+					}
+				}
+
+				if stream.IsScoped[index] != nil && !stream.Alive[index] {
+					return fmt.Errorf("round %d player stream %s has scoped state while not alive at sample %d", round.RoundNumber, stream.PlayerID, index)
+				}
+
+				if zoom := stream.ZoomLevel[index]; zoom != nil && *zoom < 0 {
+					return fmt.Errorf("round %d player stream %s has negative zoom level at sample %d", round.RoundNumber, stream.PlayerID, index)
+				}
+
+				if viewmodelFOV := stream.ViewmodelFOV[index]; viewmodelFOV != nil {
+					if !stream.Alive[index] {
+						return fmt.Errorf("round %d player stream %s has viewmodel FOV while not alive at sample %d", round.RoundNumber, stream.PlayerID, index)
+					}
+					if math.IsNaN(*viewmodelFOV) || math.IsInf(*viewmodelFOV, 0) || *viewmodelFOV <= 0 || *viewmodelFOV > 180 {
+						return fmt.Errorf("round %d player stream %s has invalid viewmodel FOV %.3f at sample %d", round.RoundNumber, stream.PlayerID, *viewmodelFOV, index)
+					}
+				}
+
+				vmX := stream.ViewmodelOffsetX[index]
+				vmY := stream.ViewmodelOffsetY[index]
+				vmZ := stream.ViewmodelOffsetZ[index]
+				viewmodelOffsetCount := 0
+				for _, value := range []*float64{vmX, vmY, vmZ} {
+					if value != nil {
+						viewmodelOffsetCount++
+						if math.IsNaN(*value) || math.IsInf(*value, 0) {
+							return fmt.Errorf("round %d player stream %s has non-finite viewmodel offset at sample %d", round.RoundNumber, stream.PlayerID, index)
+						}
+					}
+				}
+				if viewmodelOffsetCount != 0 {
+					if viewmodelOffsetCount != 3 {
+						return fmt.Errorf("round %d player stream %s has partial viewmodel offset at sample %d", round.RoundNumber, stream.PlayerID, index)
+					}
+					if !stream.Alive[index] {
+						return fmt.Errorf("round %d player stream %s has viewmodel offset while not alive at sample %d", round.RoundNumber, stream.PlayerID, index)
+					}
+				}
+
+				if recoil := stream.RecoilIndex[index]; recoil != nil {
+					if math.IsNaN(*recoil) || math.IsInf(*recoil, 0) || *recoil < 0 {
+						return fmt.Errorf("round %d player stream %s has invalid recoil index %.3f at sample %d", round.RoundNumber, stream.PlayerID, *recoil, index)
+					}
+				}
+			}
 		}
 
 		lastRoundEnd = round.EndTick
+		previousScoreAfter = &round.ScoreAfter
+	}
+
+	return nil
+}
+
+func validateUtilityPhase(roundNumber int, utility replay.UtilityEntity, phase replay.UtilityPhaseEvent) error {
+	if phase.Type != "displaced" {
+		return nil
+	}
+
+	if utility.Kind != "smoke" {
+		return fmt.Errorf("round %d utility %s has displaced phase for non-smoke utility %s", roundNumber, utility.UtilityID, utility.Kind)
+	}
+
+	if phase.DurationTicks == nil {
+		return fmt.Errorf("round %d utility %s displaced phase at tick %d is missing duration", roundNumber, utility.UtilityID, phase.Tick)
+	}
+
+	if phase.X == nil || phase.Y == nil || phase.Z == nil {
+		return fmt.Errorf("round %d utility %s displaced phase at tick %d is missing position", roundNumber, utility.UtilityID, phase.Tick)
+	}
+
+	if !isFinite(*phase.X) || !isFinite(*phase.Y) || !isFinite(*phase.Z) {
+		return fmt.Errorf("round %d utility %s displaced phase at tick %d has non-finite position", roundNumber, utility.UtilityID, phase.Tick)
 	}
 
 	return nil
@@ -238,4 +494,58 @@ func effectiveRoundEndTick(round replay.Round) int {
 	}
 
 	return round.EndTick
+}
+
+func validateFireFootprint(roundNumber int, effectiveEndTick int, utility replay.UtilityEntity) error {
+	if len(utility.FireFootprint) == 0 {
+		return nil
+	}
+
+	if utility.Kind != "molotov" && utility.Kind != "incendiary" {
+		return fmt.Errorf("round %d utility %s has fire footprint for non-fire utility %s", roundNumber, utility.UtilityID, utility.Kind)
+	}
+
+	lastSampleTick := utility.StartTick - 1
+	for _, sample := range utility.FireFootprint {
+		if sample.Tick < utility.StartTick || sample.Tick > effectiveEndTick {
+			return fmt.Errorf("round %d utility %s fire footprint sample at tick %d is outside round bounds", roundNumber, utility.UtilityID, sample.Tick)
+		}
+		if utility.EndTick != nil && sample.Tick > *utility.EndTick {
+			return fmt.Errorf("round %d utility %s fire footprint sample at tick %d is after utility end", roundNumber, utility.UtilityID, sample.Tick)
+		}
+
+		if sample.Tick <= lastSampleTick {
+			return fmt.Errorf("round %d utility %s fire footprint samples are not strictly increasing", roundNumber, utility.UtilityID)
+		}
+		lastSampleTick = sample.Tick
+
+		count := len(sample.X)
+		if count == 0 {
+			return fmt.Errorf("round %d utility %s fire footprint sample at tick %d has no cells", roundNumber, utility.UtilityID, sample.Tick)
+		}
+
+		if count != len(sample.Y) || count != len(sample.Z) {
+			return fmt.Errorf("round %d utility %s fire footprint sample at tick %d array lengths differ", roundNumber, utility.UtilityID, sample.Tick)
+		}
+
+		for index := 0; index < count; index++ {
+			if sample.X[index] == nil || sample.Y[index] == nil || sample.Z[index] == nil {
+				return fmt.Errorf("round %d utility %s fire footprint sample at tick %d has incomplete cell position", roundNumber, utility.UtilityID, sample.Tick)
+			}
+
+			if !isFinite(*sample.X[index]) || !isFinite(*sample.Y[index]) || !isFinite(*sample.Z[index]) {
+				return fmt.Errorf("round %d utility %s fire footprint sample at tick %d has non-finite cell position", roundNumber, utility.UtilityID, sample.Tick)
+			}
+		}
+	}
+
+	return nil
+}
+
+func isFinite(value float64) bool {
+	return !math.IsNaN(value) && !math.IsInf(value, 0)
+}
+
+func sameOrSwappedScore(left, right replay.Score) bool {
+	return left == right || (left.T == right.CT && left.CT == right.T)
 }

@@ -45,20 +45,20 @@ func TestValidateReplayRejectsIncompleteEventPositions(t *testing.T) {
 
 	t.Run("bomb missing position", func(t *testing.T) {
 		data := replayWithEventFixtures()
-		data.Rounds[0].BombEvents[0].X = nil
+		data.Rounds[0].BombEvents[1].X = nil
 		assertEventValidationErrorContains(t, ValidateReplay(data), "bomb event planted at tick 20 is missing position")
 	})
 
 	t.Run("bomb site required for planted family", func(t *testing.T) {
 		data := replayWithEventFixtures()
-		data.Rounds[0].BombEvents[0].Site = nil
+		data.Rounds[0].BombEvents[1].Site = nil
 		assertEventValidationErrorContains(t, ValidateReplay(data), "bomb event planted at tick 20 is missing site")
 	})
 
 	t.Run("bomb site forbidden for pickup family", func(t *testing.T) {
 		data := replayWithEventFixtures()
-		data.Rounds[0].BombEvents[1].Site = replay.String("A")
-		assertEventValidationErrorContains(t, ValidateReplay(data), "bomb event pickup at tick 21 should not carry a site")
+		data.Rounds[0].BombEvents[0].Site = replay.String("A")
+		assertEventValidationErrorContains(t, ValidateReplay(data), "bomb event pickup at tick 19 should not carry a site")
 	})
 
 	t.Run("dropped bomb stream array lengths must match", func(t *testing.T) {
@@ -142,6 +142,15 @@ func replayWithEventFixtures() replay.Replay {
 				},
 				BombEvents: []replay.BombEvent{
 					{
+						Tick:     19,
+						Type:     "pickup",
+						PlayerID: replay.String("player:carrier"),
+						Site:     nil,
+						X:        replay.Float64(4),
+						Y:        replay.Float64(5),
+						Z:        replay.Float64(6),
+					},
+					{
 						Tick:     20,
 						Type:     "planted",
 						PlayerID: replay.String("player:planter"),
@@ -149,15 +158,6 @@ func replayWithEventFixtures() replay.Replay {
 						X:        replay.Float64(1),
 						Y:        replay.Float64(2),
 						Z:        replay.Float64(3),
-					},
-					{
-						Tick:     21,
-						Type:     "pickup",
-						PlayerID: replay.String("player:carrier"),
-						Site:     nil,
-						X:        replay.Float64(4),
-						Y:        replay.Float64(5),
-						Z:        replay.Float64(6),
 					},
 				},
 				UtilityEntities: []replay.UtilityEntity{},

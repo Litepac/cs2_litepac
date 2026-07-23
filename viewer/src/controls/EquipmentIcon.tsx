@@ -1,7 +1,7 @@
-import armorIcon from "../assets/icons/cs2-equipment/panorama/images/icons/equipment/armor.svg";
-import defuserIcon from "../assets/icons/cs2-equipment/panorama/images/icons/equipment/defuser.svg";
-import helmetIcon from "../assets/icons/cs2-equipment/panorama/images/icons/equipment/helmet.svg";
-import kevlarIcon from "../assets/icons/cs2-equipment/panorama/images/icons/equipment/kevlar.svg";
+import armorIcon from "../icons/cs2-equipment/panorama/images/icons/equipment/armor.svg";
+import defuserIcon from "../icons/cs2-equipment/panorama/images/icons/equipment/defuser.svg";
+import helmetIcon from "../icons/cs2-equipment/panorama/images/icons/equipment/helmet.svg";
+import kevlarIcon from "../icons/cs2-equipment/panorama/images/icons/equipment/kevlar.svg";
 
 type EquipmentKind = "armor" | "defuser" | "helmet" | "kevlar";
 

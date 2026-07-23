@@ -12,6 +12,7 @@ const isWindows = process.platform === "win32";
 const goCommand = isWindows ? "go.exe" : "go";
 const nodeCommand = isWindows ? "node.exe" : "node";
 const npmCommand = isWindows ? "npm.cmd" : "npm";
+const openViewer = process.argv.includes("--open");
 
 let bridgeProcess = null;
 let parserProcess = null;
@@ -35,7 +36,12 @@ async function main() {
     }
   }
 
-  viewerProcess = spawn(npmCommand, ["run", "dev", "--", "--host", "127.0.0.1", "--port", "4173"], {
+  const viewerArgs = ["run", "dev", "--", "--host", "127.0.0.1", "--port", "4173"];
+  if (openViewer) {
+    viewerArgs.push("--open");
+  }
+
+  viewerProcess = spawn(npmCommand, viewerArgs, {
     cwd: viewerRoot,
     env: {
       ...process.env,

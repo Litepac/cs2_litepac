@@ -21,7 +21,7 @@
       "const": "mastermind.replay"
     },
     "schemaVersion": {
-      "type": "string"
+      "const": "1.1.0-draft"
     },
     "generatedAt": {
       "type": "string",
@@ -68,6 +68,12 @@
     "nullableInteger": {
       "type": [
         "integer",
+        "null"
+      ]
+    },
+    "nullableBoolean": {
+      "type": [
+        "boolean",
         "null"
       ]
     },
@@ -277,6 +283,9 @@
         },
         "teamId": {
           "type": "string"
+        },
+        "crosshairCode": {
+          "$ref": "#/$defs/nullableString"
         }
       }
     },
@@ -696,6 +705,20 @@
         "y",
         "z",
         "yaw",
+        "pitch",
+        "eyeX",
+        "eyeY",
+        "eyeZ",
+        "isScoped",
+        "zoomLevel",
+        "viewmodelFov",
+        "viewmodelOffsetX",
+        "viewmodelOffsetY",
+        "viewmodelOffsetZ",
+        "recoilIndex",
+        "isWalking",
+        "isDucking",
+        "isOnGround",
         "alive",
         "hasBomb",
         "health",
@@ -748,6 +771,90 @@
           "type": "array",
           "items": {
             "$ref": "#/$defs/nullableNumber"
+          }
+        },
+        "pitch": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nullableNumber"
+          }
+        },
+        "eyeX": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nullableNumber"
+          }
+        },
+        "eyeY": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nullableNumber"
+          }
+        },
+        "eyeZ": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nullableNumber"
+          }
+        },
+        "isScoped": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nullableBoolean"
+          }
+        },
+        "zoomLevel": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nullableInteger"
+          }
+        },
+        "viewmodelFov": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nullableNumber"
+          }
+        },
+        "viewmodelOffsetX": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nullableNumber"
+          }
+        },
+        "viewmodelOffsetY": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nullableNumber"
+          }
+        },
+        "viewmodelOffsetZ": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nullableNumber"
+          }
+        },
+        "recoilIndex": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nullableNumber"
+          }
+        },
+        "isWalking": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nullableBoolean"
+          }
+        },
+        "isDucking": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nullableBoolean"
+          }
+        },
+        "isOnGround": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nullableBoolean"
           }
         },
         "alive": {

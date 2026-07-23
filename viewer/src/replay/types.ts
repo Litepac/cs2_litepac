@@ -45,6 +45,7 @@ export type Replay = {
     displayName: string;
     steamId: string | null;
     teamId: string;
+    crosshairCode?: string | null;
   }>;
   rounds: Round[];
 };
@@ -84,6 +85,20 @@ export type PlayerStream = {
   y: Array<number | null>;
   z: Array<number | null>;
   yaw: Array<number | null>;
+  pitch: Array<number | null>;
+  eyeX: Array<number | null>;
+  eyeY: Array<number | null>;
+  eyeZ: Array<number | null>;
+  isScoped: Array<boolean | null>;
+  zoomLevel: Array<number | null>;
+  viewmodelFov: Array<number | null>;
+  viewmodelOffsetX: Array<number | null>;
+  viewmodelOffsetY: Array<number | null>;
+  viewmodelOffsetZ: Array<number | null>;
+  recoilIndex: Array<number | null>;
+  isWalking: Array<boolean | null>;
+  isDucking: Array<boolean | null>;
+  isOnGround: Array<boolean | null>;
   alive: boolean[];
   hasBomb: boolean[];
   health: Array<number | null>;

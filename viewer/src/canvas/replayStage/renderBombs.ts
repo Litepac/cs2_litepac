@@ -1,15 +1,22 @@
-import { Container, Graphics } from "pixi.js";
+import { Container, Graphics, Sprite } from "pixi.js";
 
-import type { RadarViewport } from "../../maps/transform";
-import { worldToScreen } from "../../maps/transform";
+import type { RadarViewport } from "../../mapGeometry/transform";
+import { worldToScreen } from "../../mapGeometry/transform";
 import { resolveActiveBombState, resolveDroppedBombState, type ActiveBombState, type DroppedBombState } from "../../replay/bombState";
 import type { Replay, Round } from "../../replay/types";
+import { drawTintedEquipmentIcon } from "../equipmentIconGraphics";
+import c4IconSvg from "../../icons/cs2-equipment/panorama/images/icons/equipment/c4.svg?raw";
 import { RECENT_BOMB_WINDOW_TICKS } from "./constants";
 import { clamp } from "./camera";
+import { drawBombExplosionEventCue } from "./bombExplosionCue";
+import {
+  resolveBombDamageSite,
+  type BombDamageField,
+} from "./bombDamageField";
 
-const BOMB_EXPLOSION_OUTER_RADIUS_WORLD = 1750;
-const BOMB_EXPLOSION_MID_RADIUS_WORLD = 1100;
-const BOMB_EXPLOSION_CORE_RADIUS_WORLD = 620;
+const BOMB_ICON_SIZE = 32;
+const BOMB_ICON = { svg: c4IconSvg, width: BOMB_ICON_SIZE, height: BOMB_ICON_SIZE };
+const FIELD_CUE_SECONDS = 1.35;
 
 export function renderBombOverlays(
   layer: Container,
@@ -17,6 +24,7 @@ export function renderBombOverlays(
   round: Round,
   currentTick: number,
   radarViewport: RadarViewport,
+  bombDamageField: BombDamageField | null,
 ) {
   const bombState = resolveActiveBombState(replay, round, currentTick);
   if (bombState) {
@@ -29,7 +37,7 @@ export function renderBombOverlays(
   }
 
   for (const bombEvent of round.bombEvents) {
-    drawBombEvent(layer, replay, bombEvent, currentTick, radarViewport);
+    drawBombEvent(layer, replay, bombEvent, currentTick, radarViewport, bombDamageField);
   }
 }
 
@@ -128,24 +136,7 @@ function drawBombStateOverlay(
   marker.stroke({ color: 0x1f2f3b, width: 0.85, alpha: 0.48 });
   marker.circle(point.x, point.y, 6.95);
   marker.stroke({ color: 0x344654, width: 0.64, alpha: 0.28 });
-  marker.roundRect(point.x - 3.8, point.y - 5.45, 7.6, 10.9, 1.1);
-  marker.fill({ color: 0xf16876, alpha: 0.98 });
-  marker.roundRect(point.x - 3.8, point.y - 5.45, 7.6, 10.9, 1.1);
-  marker.stroke({ color: 0x0b1217, width: 0.9, alpha: 0.98 });
-  marker.roundRect(point.x - 2.0, point.y - 3.0, 4.0, 1.25, 0.26);
-  marker.fill({ color: 0x0f171e, alpha: 0.98 });
-  marker.roundRect(point.x - 2.0, point.y - 0.72, 4.0, 4.1, 0.4);
-  marker.stroke({ color: 0x0f171e, width: 0.72, alpha: 0.98 });
-  for (const keypadX of [-0.88, 0, 0.88]) {
-    for (const keypadY of [0.06, 0.98, 1.9]) {
-      marker.rect(point.x + keypadX - 0.23, point.y + keypadY - 0.23, 0.46, 0.46);
-      marker.fill({ color: 0x0f171e, alpha: 0.98 });
-    }
-  }
-  marker.moveTo(point.x - 1.0, point.y - 6.5);
-  marker.lineTo(point.x - 1.0, point.y - 8.1);
-  marker.lineTo(point.x + 1.7, point.y - 8.1);
-  marker.stroke({ color: 0xffa2ae, width: 0.92, alpha: 0.96 });
+  drawBombSvgIcon(marker, point.x, point.y, 12.2, countdownColor, 1);
   layer.addChild(marker);
 }
 
@@ -170,27 +161,24 @@ function drawDroppedBombOverlay(
   marker.circle(point.x, point.y, 8.9);
   marker.stroke({ color: 0x162029, width: 0.9, alpha: 0.88 });
 
-  marker.roundRect(point.x - 4.0, point.y - 5.3, 8.0, 10.6, 1.0);
-  marker.fill({ color: 0xf3b259, alpha: 0.98 });
-  marker.roundRect(point.x - 4.0, point.y - 5.3, 8.0, 10.6, 1.0);
-  marker.stroke({ color: 0x12191f, width: 0.92, alpha: 0.98 });
-  marker.roundRect(point.x - 2.05, point.y - 3.05, 4.1, 1.25, 0.24);
-  marker.fill({ color: 0x12191f, alpha: 0.98 });
-  marker.roundRect(point.x - 2.05, point.y - 0.68, 4.1, 4.0, 0.38);
-  marker.stroke({ color: 0x12191f, width: 0.7, alpha: 0.98 });
-  for (const keypadX of [-0.88, 0, 0.88]) {
-    for (const keypadY of [0.1, 1.02, 1.94]) {
-      marker.rect(point.x + keypadX - 0.23, point.y + keypadY - 0.23, 0.46, 0.46);
-      marker.fill({ color: 0x12191f, alpha: 0.98 });
-    }
-  }
-
-  marker.moveTo(point.x - 1.0, point.y - 6.4);
-  marker.lineTo(point.x - 1.0, point.y - 8.0);
-  marker.lineTo(point.x + 1.75, point.y - 8.0);
-  marker.stroke({ color: 0xffefba, width: 0.96, alpha: 0.98 });
+  drawBombSvgIcon(marker, point.x, point.y, 11.4, 0xffd28a, 0.98);
 
   layer.addChild(marker);
+}
+
+function drawBombSvgIcon(
+  layer: Container,
+  x: number,
+  y: number,
+  maxSize: number,
+  color: number,
+  alpha: number,
+) {
+  drawTintedEquipmentIcon(layer, BOMB_ICON, x, y, maxSize, maxSize, color, 0x05080b, alpha, {
+    shadowAlpha: 0.66,
+    shadowOffsetX: 0.7,
+    shadowOffsetY: 0.7,
+  });
 }
 
 function drawArcStroke(
@@ -292,6 +280,7 @@ function drawBombEvent(
   event: Round["bombEvents"][number],
   currentTick: number,
   radarViewport: RadarViewport,
+  bombDamageField: BombDamageField | null,
 ) {
   if (!["defused", "exploded"].includes(event.type)) {
     return;
@@ -306,7 +295,19 @@ function drawBombEvent(
   }
 
   const ageRatio = 1 - (currentTick - event.tick) / (RECENT_BOMB_WINDOW_TICKS / 2);
+  const eventAgeSeconds = (currentTick - event.tick) / replay.match.tickRate;
   const point = worldToScreen(replay, radarViewport, event.x, event.y);
+  if (event.type === "exploded") {
+    drawMapBombDamageCue(
+      layer,
+      replay,
+      event.x,
+      event.y,
+      eventAgeSeconds,
+      radarViewport,
+      bombDamageField,
+    );
+  }
   const marker = new Graphics();
   marker.circle(point.x, point.y, 10.5);
   marker.fill({ color: 0x081017, alpha: 0.52 + ageRatio * 0.2 });
@@ -319,7 +320,7 @@ function drawBombEvent(
     marker.lineTo(point.x, point.y + 3.3);
     marker.stroke({ color: 0xd9f1ff, width: 1.5, alpha: 0.56 + ageRatio * 0.3, cap: "round" });
   } else {
-    drawBombExplosionRadius(marker, replay, radarViewport, point.x, point.y, ageRatio);
+    drawBombExplosionEventCue(marker, point.x, point.y, eventAgeSeconds);
     marker.circle(point.x, point.y, 5.8 + ageRatio * 1.05);
     marker.fill({ color: 0xffb25a, alpha: 0.14 + ageRatio * 0.16 });
     marker.moveTo(point.x - 3.7, point.y - 3.7);
@@ -331,40 +332,44 @@ function drawBombEvent(
   layer.addChild(marker);
 }
 
-function drawBombExplosionRadius(
-  marker: Graphics,
+function drawMapBombDamageCue(
+  layer: Container,
   replay: Replay,
+  worldX: number,
+  worldY: number,
+  eventAgeSeconds: number,
   radarViewport: RadarViewport,
-  centerX: number,
-  centerY: number,
-  ageRatio: number,
+  field: BombDamageField | null,
 ) {
-  const outerRadius = worldRadiusToScreenRadius(replay, radarViewport, BOMB_EXPLOSION_OUTER_RADIUS_WORLD);
-  const midRadius = worldRadiusToScreenRadius(replay, radarViewport, BOMB_EXPLOSION_MID_RADIUS_WORLD);
-  const coreRadius = worldRadiusToScreenRadius(replay, radarViewport, BOMB_EXPLOSION_CORE_RADIUS_WORLD);
-  const pulseScale = 0.96 + (1 - ageRatio) * 0.06;
-  const alpha = clamp(ageRatio, 0, 1);
+  if (
+    !field ||
+    field.mapId !== replay.map.mapId ||
+    !field.compatibleSourceDemoSha256.has(replay.sourceDemo.sha256.toLowerCase()) ||
+    field.radarWidth !== radarViewport.imageWidth ||
+    field.radarHeight !== radarViewport.imageHeight ||
+    eventAgeSeconds < 0 ||
+    eventAgeSeconds > FIELD_CUE_SECONDS
+  ) {
+    return;
+  }
 
-  marker.circle(centerX, centerY, outerRadius * pulseScale);
-  marker.fill({ color: 0xffc05a, alpha: 0.018 + alpha * 0.026 });
-  marker.circle(centerX, centerY, midRadius * pulseScale);
-  marker.fill({ color: 0xff7a35, alpha: 0.032 + alpha * 0.048 });
-  marker.circle(centerX, centerY, coreRadius * pulseScale);
-  marker.fill({ color: 0xff3e34, alpha: 0.052 + alpha * 0.078 });
+  const site = resolveBombDamageSite(field, worldX, worldY);
+  if (!site) {
+    return;
+  }
 
-  marker.circle(centerX, centerY, outerRadius * pulseScale);
-  marker.stroke({ color: 0xffd58a, width: 1.2, alpha: 0.18 + alpha * 0.28 });
-  marker.circle(centerX, centerY, midRadius * pulseScale);
-  marker.stroke({ color: 0xff8d45, width: 1.5, alpha: 0.22 + alpha * 0.36 });
-  marker.circle(centerX, centerY, coreRadius * pulseScale);
-  marker.stroke({ color: 0xffefc2, width: 1.15, alpha: 0.2 + alpha * 0.34 });
-}
-
-function worldRadiusToScreenRadius(replay: Replay, radarViewport: RadarViewport, worldRadius: number) {
-  const { worldXMin, worldXMax, worldYMin, worldYMax } = replay.map.coordinateSystem;
-  const worldWidth = Math.max(1, worldXMax - worldXMin);
-  const worldHeight = Math.max(1, worldYMax - worldYMin);
-  const pixelsPerWorldX = (radarViewport.imageWidth * radarViewport.scale) / worldWidth;
-  const pixelsPerWorldY = (radarViewport.imageHeight * radarViewport.scale) / worldHeight;
-  return worldRadius * ((pixelsPerWorldX + pixelsPerWorldY) / 2);
+  // The mask extent and wall-following shape come from the exact compiled map
+  // resource identified by the field manifest. Opacity is only a short event
+  // emphasis; it does not claim exact damage, arrival time, or player outcome.
+  const attack = clamp(eventAgeSeconds / 0.16, 0, 1);
+  const decay = 1 - clamp((eventAgeSeconds - 0.2) / (FIELD_CUE_SECONDS - 0.2), 0, 1);
+  const sprite = new Sprite(site.texture);
+  sprite.x = radarViewport.offsetX;
+  sprite.y = radarViewport.offsetY;
+  sprite.width = radarViewport.imageWidth * radarViewport.scale;
+  sprite.height = radarViewport.imageHeight * radarViewport.scale;
+  sprite.alpha = attack * decay * 0.42;
+  sprite.tint = 0xff9c42;
+  sprite.blendMode = "add";
+  layer.addChild(sprite);
 }

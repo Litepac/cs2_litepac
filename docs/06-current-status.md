@@ -5,6 +5,7 @@ Build a trustworthy CS2 2D replay core with an operator-grade Replay workspace a
 
 ## Canonical Contract
 - Parser emits one artifact: `mastermind.replay.json`
+- The current contract is `1.1.0-draft`; incompatible player-stream additions are versioned explicitly
 - Viewer consumes only the canonical replay artifact
 - No mock replay data in the core flow
 - No speculative stats in the viewer
@@ -17,6 +18,8 @@ Build a trustworthy CS2 2D replay core with an operator-grade Replay workspace a
 - Position Paths is broadly useful, Heatmap is supporting context, and Position Player is the active quality gap
 - Position Player should be treated as selected-player timing/pattern study first; broad all-player comparison is only a secondary overview
 - Map rendering, bomb events, utility events, combat events, and player positions are rendered from real replay output only
+- Unknown numeric, angle, movement, and stance samples stay `null` through viewer interpolation
+- Production is 2D-first; the experimental 3D renderer is development-only and Live-only
 
 ## Viewer Progress
 - A top-nav Home / Matches shell and a denser Replay operator workspace are in place
@@ -44,11 +47,32 @@ Build a trustworthy CS2 2D replay core with an operator-grade Replay workspace a
 - Heavy fights can still become visually dense when labels, timers, and utility badges compete
 - Stats role labels are parser-backed and placement-aware, but several maps still need fixture-backed tuning
 - Parser-side utility lifecycle and post-round sampling remain valid follow-up areas if new fixture mismatches appear
+- Schema validation is now bounded around compiled root/item envelopes: large typed player/trajectory sample arrays are checked in place instead of being expanded into a complete generic JSON tree. The 285 MB fresh replay passes the exact Go WebAssembly fixture gate in 37 seconds without exceeding the runtime's 4 GiB ceiling.
+- Real multipart ingest now preserves the sanitized uploaded demo name in `sourceDemo.fileName` instead of leaking the parser's temporary filename. Top-level teams/players and round-local utility IDs use deterministic canonical ordering/sequence; two independent uploads of the same 307 MB demo produce byte-identical replay bodies after excluding `generatedAt`.
+- CI has a committed canonical replay gate, but extraction still needs a newly recorded short offline bot-match `.dem` with explicit project-owned redistribution provenance. The current local demos are 307-523 MB, and no small upstream download with sufficiently clear demo-content provenance was identified.
+- The friend-tunnel API has local safeguards but still lacks authentication, durable quotas, and distributed edge controls
+- The development-only 3D stage remains too large internally and should be split before it returns to any release path
+
+## Parser Compatibility Check (2026-07-23)
+- [Valve's July 8 update](https://www.counter-strike.net/newsentry/701021228894257508?l=english) redesigned C4 damage around precomputed simulation values embedded in official compiled maps and a shockwave that expands from the explosion center. [The July 9 follow-up](https://www.counter-strike.net/newsentry/701021228894259656) corrected boundary damage, removed the map-wide minimum point of damage, and increased force on dropped weapons.
+- The canonical `exploded` bomb event provides a trustworthy tick and origin. When a matching SHA-keyed local map asset is available, the viewer presents the baked A/B propagation extent as a brief opacity cue; otherwise it uses only a bounded non-spatial flash. Neither path draws a guessed circular radius or claims exact arrival timing, damage, or player outcome.
+- The fresh replay contains one explosion event and no hurt event explicitly classified with weapon name `C4`; that is insufficient evidence for reconstructing shockwave arrival or damage from player events.
+- All ten installed official defusal-map VPKs inspected (`ancient`, `anubis`, `cache`, `dust2`, `inferno`, `mirage`, `nuke`, `overpass`, `train`, and `vertigo`) contain `maps/<map>/baked_bomb_damage.vdata_c`. The resource identifies itself as `CS2_BOMB_DAMAGE_DATA`, header version `1`, and decompiles into `bombsites`, `positions`, and `damage_values` binary blobs.
+- The current Mirage resource has SHA-256 `AB848262CD263358D4568A7566E492450303D60980E1AAA47B98E07E6F4A7776`; its `positions` blob contains 68,177 packed 3D records. Controlled decoding corrected the initial record assumption: `damage_values` is site-major, with one 4-byte value per position for A followed by one 4-byte value per position for B. The leading unsigned 16-bit member is a spatially continuous propagation cost; thresholding it by each bombsite record's baked range (`1795` for Mirage A and `2228` for B) reproduces Valve's own generated extent and wall-following shape. The remaining 16-bit member, exact arrival-time conversion, and damage formula are still unknown and must not be presented as replay truth.
+- Installed client/server binaries reference the owning `CMapBombDamageGameSystem` / `CS2BombDamage` subsystem and built-in `cs2_bomb_damage_debug`, `cs2_bomb_damage_showdebugwindow`, and `bake_bomb_damage_render_visualization` hooks. The visualization command has now been exercised in a controlled local Mirage session and emitted both baked site fields, providing the independent evidence used to validate the site-major layout and range threshold.
+- `tools/export-source2-bomb-damage.ps1` extracts the exact installed map resource and generates ignored, SHA-keyed A/B extent masks under `public/maps/<mapId>/bomb-damage/`. The manifest also allowlists explicit source-demo SHA-256 values so historical demos do not silently inherit the current map build's field. The viewer may use a compatible mask as a short event-emphasis layer; without one it shows only a non-spatial detonation cue. Generated Valve-derived data stays out of Git, and neither path claims exact damage, player outcome, or shockwave arrival time.
+- Any future canonical shockwave data must carry an exact map-resource fingerprint, not only `mapId`: the simulation is compiled into the map package and can change independently per map build. Extracted Valve resources remain local and must not be committed.
+- The July 9 engine-code update also prompted parser compatibility to be rechecked with the newly supplied demo instead of inferred from old fixtures.
+- The repo already pins [`demoinfocs-golang/v5 v5.2.0`](https://github.com/markus-wa/demoinfocs-golang/releases/tag/v5.2.0), which remains the latest tagged upstream release; no unverified pseudo-version upgrade was taken.
+- The supplied 307,386,819-byte demo parses and validates as a 21-round Mirage replay with 153 kills, 112 bomb events, and 380 utility entities.
+- The first pass exposed a local utility-correlation bug rather than a wire-format decoder failure: Source 2 reused an entity ID and an inferno was attached to a stale flashbang entry. Inferno ownership now prefers the library's stable inferno `UniqueID`, rejects stale or ineligible entity mappings, and has focused regressions for both non-fire and older active-fire reuse.
+- The local replay manifest records the supplied demo SHA-256 and canonical summary. The source remains ignored because both the 202,737,756-byte compressed download and 307,386,819-byte demo are too large for normal Git, and redistribution provenance is not established.
 
 ## Next High-Value Steps
+- Correlate the remaining per-site 16-bit member and propagation-cost timing with controlled outcomes across map builds before adding arrival animation or damage claims
+- Record a short project-owned offline bot-match `.dem`, document redistribution provenance, and add it as the clean-checkout parser extraction fixture
 - Make `Position Player` a genuinely useful selected-player cross-round movement tool without mixing it into Position Paths or replacing the normal replay timeline
 - Add focused fixture/test coverage for replay-analysis snapshot correctness and click-to-round jumps
-- Prune stale planning/doc drift so future chats follow the current parser-startup and replay-analysis path
 - Continue map-by-map role-label validation only from parser-backed staged fixtures
 
 ## Source Of Truth

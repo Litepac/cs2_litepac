@@ -19,7 +19,7 @@ Use it when:
 
 ## Current Safe Workflow
 1. Parse real demos into canonical replay files
-2. Stage replay fixtures into `assets/fixtures`
+2. Use `testdata/replays` as the fixture source of truth; the viewer dev server exposes it at `/fixtures`
 3. Open the viewer on real staged replay data
 4. Compare specific rounds against observed demo behavior
 5. Fix either parser semantics or viewer interpretation, not both blindly
@@ -54,7 +54,7 @@ Use this on the current machine when you want the known-good local launcher. It 
 .\start-localhost.cmd
 ```
 
-Use this as the default operator shortcut on this machine. It clears stale localhost temp logs, opens a dedicated console window, and runs the known-good local path for you without tying up the current shell.
+Use this as the default operator shortcut on this machine. If the viewer health endpoint is already reachable, the shortcut reopens `http://127.0.0.1:4173/` without starting a duplicate strict-port process. Otherwise it clears stale localhost temp logs, opens a dedicated console window, runs the known-good local path without tying up the current shell, and asks Vite to open the browser after the viewer is ready. The underlying `npm.cmd run dev:local` command remains non-opening for terminal and automation use.
 
 ### Start Cloudflare tunnel for friend testing
 ```powershell
@@ -105,10 +105,11 @@ cd parser
 go run .\cmd\fixtureparse
 ```
 
-### Stage fixtures for the viewer
+### Optional static fixture staging
+The viewer dev server serves `testdata/replays` directly at `/fixtures`. Use this only when a static preview/build needs local fixture JSON files copied into `public/fixtures`; the output path is explicit so local replay JSON is not accidentally bundled into public builds.
 ```powershell
 cd parser
-go run .\cmd\fixturestage
+go run .\cmd\fixturestage -- -fixture-dir ..\public\fixtures
 ```
 
 ### Parser verification
@@ -121,6 +122,13 @@ go test ./...
 ```powershell
 cd viewer
 npm.cmd run build
+```
+
+### Frontend structure guard
+Run this after frontend ownership cleanup, asset moves, or CSS migration work. It catches retired asset folders, stale parser/viewer paths, deleted replay-era files being reintroduced, and new non-module component CSS.
+```powershell
+cd viewer
+npm.cmd run check:structure
 ```
 
 ## Current Truth Sources

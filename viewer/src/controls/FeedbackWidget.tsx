@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 
 import { submitFeedback, trackUsageEvent } from "../replay/parserBridge";
+import styles from "./FeedbackWidget.module.css";
 
 type Props = {
   context: Record<string, unknown>;
@@ -85,26 +86,26 @@ export function FeedbackWidget({ context }: Props) {
   }
 
   return (
-    <div className={`feedback-widget ${panelOpen ? "feedback-widget-open" : ""}`}>
+    <div className={styles["feedback-widget"]}>
       {panelOpen ? (
         <form
           aria-labelledby={titleId}
-          className="feedback-panel"
+          className={styles["feedback-panel"]}
           onKeyDown={handlePanelKeyDown}
           onSubmit={handleSubmit}
           role="dialog"
         >
-          <div className="feedback-panel-head">
+          <div className={styles["feedback-panel-head"]}>
             <div>
-              <p className="eyebrow">Feedback</p>
+              <p className={styles["feedback-eyebrow"]}>Feedback</p>
               <h2 id={titleId}>Send a note</h2>
             </div>
-            <button className="feedback-close-button" onClick={closePanel} type="button">
+            <button className={styles["feedback-close-button"]} onClick={closePanel} type="button">
               Close
             </button>
           </div>
 
-          <label className="feedback-field">
+          <label className={styles["feedback-field"]}>
             <span>What feels wrong, missing, or good?</span>
             <textarea
               ref={textareaRef}
@@ -122,13 +123,13 @@ export function FeedbackWidget({ context }: Props) {
             />
           </label>
 
-          <div className="feedback-panel-foot">
+          <div className={styles["feedback-panel-foot"]}>
             <p
-              className={`feedback-status-copy ${
+              className={`${styles["feedback-status-copy"]} ${
                 status === "error"
-                  ? "feedback-status-copy-error"
+                  ? styles["feedback-status-copy-error"]
                   : status === "sent"
-                    ? "feedback-status-copy-success"
+                    ? styles["feedback-status-copy-success"]
                     : ""
               }`}
             >
@@ -139,7 +140,7 @@ export function FeedbackWidget({ context }: Props) {
                   : "Logged on this PC while the tunnel is running."}
             </p>
             <button
-              className="feedback-submit-button"
+              className={styles["feedback-submit-button"]}
               disabled={!message.trim() || status === "sending"}
               type="submit"
             >
@@ -152,7 +153,7 @@ export function FeedbackWidget({ context }: Props) {
       <button
         ref={launchButtonRef}
         aria-expanded={panelOpen}
-        className="feedback-launch-button"
+        className={styles["feedback-launch-button"]}
         onClick={togglePanel}
         type="button"
       >

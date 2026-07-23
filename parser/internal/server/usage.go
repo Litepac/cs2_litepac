@@ -3,15 +3,14 @@ package server
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 )
 
 const maxUsageEventBytes = 32 << 10
+const maxUsageEventNameLength = 128
 
 type usageEventRequest struct {
 	Event   string         `json:"event"`
@@ -34,7 +33,7 @@ func appendUsageEvent(r *http.Request) error {
 	defer r.Body.Close()
 
 	var eventRequest usageEventRequest
-	if err := json.NewDecoder(io.LimitReader(r.Body, maxUsageEventBytes)).Decode(&eventRequest); err != nil {
+	if err := decodeSingleJSON(r.Body, &eventRequest); err != nil {
 		return fmt.Errorf("decode usage event: %w", err)
 	}
 
@@ -42,17 +41,20 @@ func appendUsageEvent(r *http.Request) error {
 	if eventName == "" {
 		eventName = "unknown"
 	}
+	if len([]rune(eventName)) > maxUsageEventNameLength {
+		return fmt.Errorf("usage event name is too long")
+	}
 
 	entry := usageEventLogEntry{
 		Event:     eventName,
 		Details:   eventRequest.Details,
-		Host:      r.Host,
+		Host:      boundedLogValue(r.Host),
 		Method:    r.Method,
-		Origin:    r.Header.Get("Origin"),
+		Origin:    boundedLogValue(r.Header.Get("Origin")),
 		Path:      r.URL.Path,
-		Remote:    r.RemoteAddr,
+		Remote:    boundedLogValue(r.RemoteAddr),
 		Timestamp: time.Now().UTC().Format(time.RFC3339Nano),
-		UserAgent: r.UserAgent(),
+		UserAgent: boundedLogValue(r.UserAgent()),
 	}
 
 	return writeUsageEventLog(entry)
@@ -71,26 +73,6 @@ func writeUsageEventLog(entry usageEventLogEntry) error {
 	if usageLogPath == "" {
 		return nil
 	}
-	if err := os.MkdirAll(filepath.Dir(usageLogPath), 0o755); err != nil {
-		return fmt.Errorf("create usage log directory: %w", err)
-	}
-
-	file, err := os.OpenFile(usageLogPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
-	if err != nil {
-		return fmt.Errorf("open usage log: %w", err)
-	}
-	defer file.Close()
-
-	if _, err := file.WriteString(line); err != nil {
-		return fmt.Errorf("write usage log: %w", err)
-	}
-
-	readableLogPath := strings.TrimSuffix(usageLogPath, ".ndjson") + ".log"
-	readableFile, err := os.OpenFile(readableLogPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
-	if err != nil {
-		return fmt.Errorf("open readable usage log: %w", err)
-	}
-	defer readableFile.Close()
 
 	localTimestamp := time.Now().Format("2006-01-02 15:04:05")
 	if parsedTimestamp, err := time.Parse(time.RFC3339Nano, entry.Timestamp); err == nil {
@@ -99,30 +81,27 @@ func writeUsageEventLog(entry usageEventLogEntry) error {
 
 	pageLabel := "unknown-page"
 	if shellPage, ok := entry.Details["shellPage"].(string); ok && strings.TrimSpace(shellPage) != "" {
-		pageLabel = strings.TrimSpace(shellPage)
+		pageLabel = boundedLogValue(strings.TrimSpace(shellPage))
 	}
 	if pathName, ok := entry.Details["path"].(string); ok && strings.TrimSpace(pathName) != "" {
-		pageLabel = strings.TrimSpace(pathName)
+		pageLabel = boundedLogValue(strings.TrimSpace(pathName))
 	}
 
 	mapLabel := ""
 	if mapName, ok := entry.Details["mapName"].(string); ok && strings.TrimSpace(mapName) != "" {
-		mapLabel = fmt.Sprintf(" | %s", strings.TrimSpace(mapName))
+		mapLabel = fmt.Sprintf(" | %s", boundedLogValue(strings.TrimSpace(mapName)))
 	}
 
 	matchLabel := ""
 	if matchID, ok := entry.Details["matchId"].(string); ok && strings.TrimSpace(matchID) != "" {
-		matchLabel = fmt.Sprintf(" | match=%s", strings.TrimSpace(matchID))
+		matchLabel = fmt.Sprintf(" | match=%s", boundedLogValue(strings.TrimSpace(matchID)))
 	}
 
 	statusLabel := ""
 	if errorText, ok := entry.Details["error"].(string); ok && strings.TrimSpace(errorText) != "" {
-		statusLabel = fmt.Sprintf(" | error=%s", strings.TrimSpace(errorText))
+		statusLabel = fmt.Sprintf(" | error=%s", boundedLogValue(strings.TrimSpace(errorText)))
 	}
 
-	if _, err := fmt.Fprintf(readableFile, "[%s] %s | %s%s%s%s\n", localTimestamp, entry.Event, pageLabel, mapLabel, matchLabel, statusLabel); err != nil {
-		return fmt.Errorf("write readable usage log: %w", err)
-	}
-
-	return nil
+	readableLine := fmt.Sprintf("[%s] %s | %s%s%s%s\n", localTimestamp, entry.Event, pageLabel, mapLabel, matchLabel, statusLabel)
+	return appendTelemetryLogs(usageLogPath, line, readableLine)
 }

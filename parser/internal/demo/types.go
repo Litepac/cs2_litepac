@@ -9,6 +9,7 @@ import (
 
 type Options struct {
 	DemoPath       string
+	SourceFileName string
 	OutputPath     string
 	SchemaPath     string
 	AssetsRoot     string
@@ -23,12 +24,10 @@ type ParseProgress struct {
 
 type playerRef struct {
 	Player replay.Player
-	Index  int
 }
 
 type teamRef struct {
-	Team  replay.Team
-	Index int
+	Team replay.Team
 }
 
 type parseState struct {
@@ -36,9 +35,9 @@ type parseState struct {
 	replay            replay.Replay
 	currentRound      *rounds.Builder
 	roundList         []replay.Round
-	roundCount        int
 	expectedRounds    int
 	lastBombCarrierID string
+	hasBombCarrier    bool
 
 	mapID string
 	notes []string
@@ -63,6 +62,16 @@ type livePlayerState struct {
 	activeWeapon      *string
 	activeWeaponClass *string
 	mainWeapon        *string
+	isScoped          *bool
+	zoomLevel         *int
+	viewmodelFOV      *float64
+	viewmodelOffsetX  *float64
+	viewmodelOffsetY  *float64
+	viewmodelOffsetZ  *float64
+	recoilIndex       *float64
+	isWalking         *bool
+	isDucking         *bool
+	isOnGround        *bool
 	flashbangs        *int
 	smokes            *int
 	heGrenades        *int

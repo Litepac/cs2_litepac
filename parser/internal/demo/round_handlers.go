@@ -17,13 +17,18 @@ func (s *parseState) registerRoundHandlers() {
 			return
 		}
 
-		if s.currentRound != nil && !s.currentRound.HasEnded() {
-			s.finalizeOpenRound(s.parser.CurrentFrame() - 1)
+		scoreBefore := currentScore(s.parser.GameState())
+		if s.currentRound != nil {
+			if s.currentRound.HasEnded() && !sameScoreOrientation(s.currentRound.ScoreAfter(), scoreBefore) {
+				s.discardOpenRound()
+			} else {
+				s.finalizeOpenRound(s.parser.CurrentFrame() - 1)
+			}
 		}
 
-		s.roundCount++
-		s.currentRound = rounds.NewBuilder(s.roundCount, s.parser.CurrentFrame(), currentScore(s.parser.GameState()))
+		s.currentRound = rounds.NewBuilder(len(s.roundList)+1, s.parser.CurrentFrame(), scoreBefore)
 		s.lastBombCarrierID = ""
+		s.hasBombCarrier = false
 	})
 
 	s.parser.RegisterEventHandler(func(e demoevents.RoundFreezetimeEnd) {
@@ -40,13 +45,7 @@ func (s *parseState) registerRoundHandlers() {
 			return
 		}
 
-		scoreAfter := currentScore(s.parser.GameState())
-		switch e.Winner {
-		case common.TeamTerrorists:
-			scoreAfter.T++
-		case common.TeamCounterTerrorists:
-			scoreAfter.CT++
-		}
+		scoreAfter := scoreAfterRoundEnd(s.currentRound.ScoreBefore(), e.Winner)
 
 		s.currentRound.SetEnd(s.parser.CurrentFrame(), norm.SideFromTeam(e.Winner), norm.RoundEndReason(e.Reason), scoreAfter)
 	})
@@ -75,6 +74,7 @@ func (s *parseState) finalizeOpenRound(endTick int) {
 		s.currentRound.SetOfficialEnd(endTick)
 	}
 
+	s.currentRound.SetRoundNumber(len(s.roundList) + 1)
 	s.roundList = append(s.roundList, s.currentRound.Build(s.parser.TickRate()))
 	if s.progress != nil {
 		s.progress(ParseProgress{
@@ -84,6 +84,13 @@ func (s *parseState) finalizeOpenRound(endTick int) {
 	}
 	s.currentRound = nil
 	s.lastBombCarrierID = ""
+	s.hasBombCarrier = false
+}
+
+func (s *parseState) discardOpenRound() {
+	s.currentRound = nil
+	s.lastBombCarrierID = ""
+	s.hasBombCarrier = false
 }
 
 func currentScore(gs demoinfocs.GameState) replay.Score {
@@ -96,4 +103,24 @@ func currentScore(gs demoinfocs.GameState) replay.Score {
 	}
 
 	return score
+}
+
+func scoreAfterRoundEnd(scoreBefore replay.Score, winner common.Team) replay.Score {
+	scoreAfter := scoreBefore
+	switch winner {
+	case common.TeamTerrorists:
+		scoreAfter.T++
+	case common.TeamCounterTerrorists:
+		scoreAfter.CT++
+	}
+
+	return scoreAfter
+}
+
+func sameScore(left, right replay.Score) bool {
+	return left.T == right.T && left.CT == right.CT
+}
+
+func sameScoreOrientation(left, right replay.Score) bool {
+	return sameScore(left, right) || (left.T == right.CT && left.CT == right.T)
 }

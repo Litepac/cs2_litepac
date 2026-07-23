@@ -3,7 +3,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { applyCameraTransform, resolveViewportDimensions } from "./replayStage/camera";
 import { DEFAULT_STAGE_HEIGHT, DEFAULT_STAGE_WIDTH } from "./replayStage/constants";
 import { attachStageInteractions } from "./replayStage/interaction";
-import { createStageState, ensureStageMap, resolveStageRenderResolution } from "./replayStage/mapStage";
+import { createStageState, destroyStageState, detachMapClipMaskUsers, ensureStageMap, resolveStageRenderResolution } from "./replayStage/mapStage";
 import { renderDynamicFrame } from "./replayStage/renderFrame";
 import type { ReplayStageProps, StageState } from "./replayStage/types";
 
@@ -191,7 +191,7 @@ export function ReplayStage({
 
       const stage = await createStageState(hostRef.current);
       if (cancelled) {
-        stage.app.destroy(true, { children: true });
+        destroyStageState(stage);
         return;
       }
 
@@ -205,7 +205,7 @@ export function ReplayStage({
     return () => {
       cancelled = true;
       if (stageRef.current) {
-        stageRef.current.app.destroy(true, { children: true });
+        destroyStageState(stageRef.current);
         stageRef.current = null;
       }
     };
@@ -218,6 +218,8 @@ export function ReplayStage({
     }
 
     const renderResolution = resolveStageRenderResolution();
+    detachMapClipMaskUsers(stage);
+    stage.mapClipMask = null;
     stage.app.renderer.resize(viewportSize.width, viewportSize.height, renderResolution);
     stage.currentRenderResolution = renderResolution;
     applyCameraTransform(stage);
@@ -242,9 +244,12 @@ export function ReplayStage({
       }
 
       try {
-        await ensureStageMap(stage, replayRef.current, viewportSize.width, viewportSize.height);
+        const mapChanged = await ensureStageMap(stage, replayRef.current, viewportSize.width, viewportSize.height);
         if (!cancelled) {
           setRenderError(null);
+          if (mapChanged) {
+            setStageRevision((value) => value + 1);
+          }
         }
       } catch (error) {
         if (!cancelled) {
@@ -267,34 +272,37 @@ export function ReplayStage({
     }
 
     try {
-      renderDynamicFrame(
-        stage,
-        analysisModeRef.current,
-        replayRef.current,
-        roundRef.current,
-        currentTickRef.current,
-        selectedPlayerIdRef.current,
-        selectedUtilityAtlasKeyRef.current,
-        activeRoundIndexRef.current,
-        heatmapCellSizeRef.current,
-        heatmapScopeRef.current,
-        heatmapBucketsRef.current,
-        heatmapMaxSampleCountRef.current,
-        livePlayerContextModeRef.current,
-        deathReviewEntriesRef.current,
-        selectedDeathReviewKeyRef.current,
-        positionPlayerSnapshotsRef.current,
-        positionTrailEntriesRef.current,
-        showPositionRoundNumbersRef.current,
-        positionsViewRef.current,
-        utilityAtlasEntriesRef.current,
-        utilityFocusRef.current,
-        playerByIdRef.current,
-        onSelectPlayerRef.current,
-        onSelectDeathReviewEntryRef.current,
-        onSelectAtlasEntryRef.current,
-        onSelectPositionSnapshotRef.current,
-      );
+      renderDynamicFrame(stage, {
+        activeRoundIndex: activeRoundIndexRef.current,
+        analysisMode: analysisModeRef.current,
+        callbacks: {
+          onSelectAtlasEntry: onSelectAtlasEntryRef.current,
+          onSelectDeathReviewEntry: onSelectDeathReviewEntryRef.current,
+          onSelectPlayer: onSelectPlayerRef.current,
+          onSelectPositionSnapshot: onSelectPositionSnapshotRef.current,
+        },
+        currentTick: currentTickRef.current,
+        deathReviewEntries: deathReviewEntriesRef.current,
+        heatmap: {
+          buckets: heatmapBucketsRef.current,
+          cellSize: heatmapCellSizeRef.current,
+          maxSampleCount: heatmapMaxSampleCountRef.current,
+          scope: heatmapScopeRef.current,
+        },
+        livePlayerContextMode: livePlayerContextModeRef.current,
+        playerById: playerByIdRef.current,
+        positionPlayerSnapshots: positionPlayerSnapshotsRef.current,
+        positionTrailEntries: positionTrailEntriesRef.current,
+        positionsView: positionsViewRef.current,
+        replay: replayRef.current,
+        round: roundRef.current,
+        selectedDeathReviewKey: selectedDeathReviewKeyRef.current,
+        selectedPlayerId: selectedPlayerIdRef.current,
+        selectedUtilityAtlasKey: selectedUtilityAtlasKeyRef.current,
+        showPositionRoundNumbers: showPositionRoundNumbersRef.current,
+        utilityAtlasEntries: utilityAtlasEntriesRef.current,
+        utilityFocus: utilityFocusRef.current,
+      });
       if (renderErrorRef.current != null) {
         renderErrorRef.current = null;
         setRenderError(null);

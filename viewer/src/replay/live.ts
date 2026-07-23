@@ -1,7 +1,4 @@
 import type { Replay, Round } from "./types";
-import { teamName } from "./derived";
-import { utilityMatchesFocus, type UtilityFocus } from "./utilityFilter";
-import { activeUtilityCount as countActiveUtilities, isUtilityVisibleAtTick } from "./utility";
 import type { WeaponClass } from "./weapons";
 
 export type LivePlayerState = {
@@ -24,33 +21,6 @@ export type LivePlayerState = {
   activeWeapon: string | null;
   activeWeaponClass: WeaponClass | null;
 };
-
-export type RoundLiveState = {
-  activeUtilityCount: number;
-  bombCarrier: LivePlayerState | null;
-  ctAlive: number;
-  selectedPlayer: LivePlayerState | null;
-  tAlive: number;
-  players: LivePlayerState[];
-};
-
-export function roundLiveState(
-  replay: Replay,
-  round: Round,
-  currentTick: number,
-  selectedPlayerId: string | null,
-  utilityFocus: UtilityFocus,
-): RoundLiveState {
-  const players = livePlayersAtTick(replay, round, currentTick);
-  return {
-    activeUtilityCount: activeUtilityCount(round, currentTick, utilityFocus),
-    bombCarrier: players.find((entry) => entry.hasBomb) ?? null,
-    ctAlive: players.filter((entry) => entry.side === "CT" && entry.alive).length,
-    selectedPlayer: players.find((entry) => entry.playerId === selectedPlayerId) ?? null,
-    tAlive: players.filter((entry) => entry.side === "T" && entry.alive).length,
-    players,
-  };
-}
 
 export function livePlayersAtTick(replay: Replay, round: Round, currentTick: number): LivePlayerState[] {
   return round.playerStreams
@@ -115,18 +85,4 @@ export function livePlayersAtTick(replay: Replay, round: Round, currentTick: num
 
       return left.name.localeCompare(right.name);
     });
-}
-
-export function playerTeamLabel(replay: Replay, player: LivePlayerState) {
-  return teamName(replay, player.teamId);
-}
-
-function activeUtilityCount(round: Round, currentTick: number, utilityFocus: UtilityFocus) {
-  if (utilityFocus === "all") {
-    return countActiveUtilities(round, currentTick);
-  }
-
-  return round.utilityEntities.filter(
-    (utility) => utilityMatchesFocus(utility.kind, utilityFocus) && isUtilityVisibleAtTick(utility, currentTick),
-  ).length;
 }

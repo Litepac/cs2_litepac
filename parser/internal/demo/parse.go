@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	demoinfocs "github.com/markus-wa/demoinfocs-golang/v5/pkg/demoinfocs"
 
@@ -58,7 +59,7 @@ func Parse(opts Options) (err error) {
 	}
 
 	state.replay.SourceDemo = replay.SourceDemo{
-		FileName:     filepath.Base(opts.DemoPath),
+		FileName:     sourceDemoFileName(opts),
 		SHA256:       fingerprint,
 		TickRate:     0,
 		TickCount:    0,
@@ -123,6 +124,14 @@ func Parse(opts Options) (err error) {
 	}
 
 	return writeReplay(opts.OutputPath, state.replay)
+}
+
+func sourceDemoFileName(opts Options) string {
+	if name := filepath.Base(strings.TrimSpace(opts.SourceFileName)); name != "." && name != string(filepath.Separator) {
+		return name
+	}
+
+	return filepath.Base(opts.DemoPath)
 }
 
 func (s *parseState) registerHandlers() {

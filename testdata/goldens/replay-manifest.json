@@ -1,6 +1,21 @@
 {
   "files": [
     {
+      "replayFile": "Mirage.replay.json",
+      "map": "de_mirage",
+      "rounds": 22,
+      "players": 14,
+      "teams": 2,
+      "tickRate": 64,
+      "kills": 150,
+      "bombEvents": 99,
+      "utility": 447,
+      "emptyStreams": 0,
+      "zeroTrajectories": 0,
+      "shortRounds": 0,
+      "longestRoundTicks": 12156
+    },
+    {
       "replayFile": "test1.replay.json",
       "map": "de_ancient",
       "rounds": 24,
@@ -44,6 +59,22 @@
       "zeroTrajectories": 0,
       "shortRounds": 0,
       "longestRoundTicks": 10870
+    },
+    {
+      "replayFile": "download-65deb0c2.replay.json",
+      "map": "de_mirage",
+      "rounds": 21,
+      "players": 10,
+      "teams": 2,
+      "tickRate": 64,
+      "kills": 153,
+      "bombEvents": 112,
+      "utility": 380,
+      "emptyStreams": 0,
+      "zeroTrajectories": 0,
+      "shortRounds": 0,
+      "longestRoundTicks": 7942,
+      "sourceDemoSha256": "ee6810cd184dd174ae8a08d93cad63b3acf2f8452c4621f523737bfb1928e74a"
     }
   ]
 }

@@ -32,15 +32,16 @@ func (s *parseState) ensurePlayer(player *common.Player) string {
 	if player.SteamID64 > 0 {
 		steamID = replay.String(fmt.Sprintf("%d", player.SteamID64))
 	}
+	crosshairCode := optionalString(player.CrosshairCode())
 
 	s.players[playerID] = playerRef{
 		Player: replay.Player{
-			PlayerID:    playerID,
-			DisplayName: player.Name,
-			SteamID:     steamID,
-			TeamID:      teamID,
+			PlayerID:      playerID,
+			DisplayName:   player.Name,
+			SteamID:       steamID,
+			TeamID:        teamID,
+			CrosshairCode: crosshairCode,
 		},
-		Index: len(s.players),
 	}
 
 	return playerID
@@ -67,7 +68,6 @@ func (s *parseState) ensureTeam(team *common.TeamState) string {
 			DisplayName: displayName,
 			ClanName:    optionalString(team.ClanName()),
 		},
-		Index: len(s.teams),
 	}
 
 	return teamID

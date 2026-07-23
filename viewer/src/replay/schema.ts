@@ -7,6 +7,10 @@ import type { Replay } from "./types";
 // strict mode off so Ajv does not reject newer schema keywords before the validator
 // dependency is upgraded, while replay shape errors still fail validation normally.
 const ajv = new Ajv2020({ allErrors: true, strict: false });
+ajv.addFormat("date-time", {
+  type: "string",
+  validate: (value: string) => !Number.isNaN(Date.parse(value)),
+});
 const validate = ajv.compile<Replay>(schema);
 
 export function validateReplay(value: unknown): { ok: true; replay: Replay } | { ok: false; errors: string[] } {

@@ -23,7 +23,7 @@ func ParseFlags(args []string, stderr io.Writer) (Flags, error) {
 	fs.StringVar(&flags.DemoPath, "demo", "", "Path to the source .dem file")
 	fs.StringVar(&flags.OutputPath, "out", "", "Path to write mastermind.replay.json")
 	fs.StringVar(&flags.SchemaPath, "schema", "", "Path to schema/mastermind.replay.schema.json")
-	fs.StringVar(&flags.AssetsRoot, "assets-root", "", "Path to assets/maps")
+	fs.StringVar(&flags.AssetsRoot, "assets-root", "", "Path to public/maps")
 
 	if err := fs.Parse(args); err != nil {
 		return Flags{}, err

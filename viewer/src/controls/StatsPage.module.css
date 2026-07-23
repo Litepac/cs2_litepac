@@ -1,0 +1,694 @@
+.stats-page {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 6px;
+  width: min(1660px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 2px 0 12px;
+}
+
+.stats-header {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 16px;
+  align-items: center;
+  padding: 11px 16px 9px;
+  border: 1px solid rgba(42, 52, 63, 0.88);
+  background:
+    linear-gradient(180deg, rgba(16, 22, 28, 0.96), rgba(12, 18, 24, 0.98)),
+    rgba(13, 18, 24, 0.98);
+  overflow: hidden;
+}
+
+.stats-header-backdrop {
+  position: absolute;
+  inset: 0;
+  background-position: center;
+  background-size: cover;
+  opacity: 0.46;
+  filter: saturate(0.86);
+}
+
+.stats-header::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(8, 12, 16, 0.4), rgba(8, 12, 16, 0.84)),
+    linear-gradient(90deg, rgba(8, 12, 16, 0.86), rgba(8, 12, 16, 0.48) 32%, rgba(8, 12, 16, 0.86));
+  pointer-events: none;
+}
+
+.stats-header-main {
+  min-width: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.stats-header-controls {
+  display: grid;
+  justify-items: end;
+  gap: 5px;
+  position: relative;
+  z-index: 1;
+}
+
+.stats-view-shell {
+  display: grid;
+  gap: 2px;
+  margin-top: 0;
+}
+
+.stats-view-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  width: fit-content;
+  border: 1px solid rgba(42, 51, 60, 0.74);
+  background: rgba(8, 11, 15, 0.82);
+}
+
+.stats-view-tab {
+  min-height: 30px;
+  padding: 0 12px;
+  border: none;
+  border-right: 1px solid rgba(60, 71, 81, 0.9);
+  background: transparent;
+  color: #aab6bf;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.stats-view-tab:last-child {
+  border-right: none;
+}
+
+.stats-view-tab-active {
+  background: rgba(29, 36, 43, 0.96);
+  color: #fbfdff;
+}
+
+.stats-heading {
+  display: grid;
+  gap: 4px;
+}
+
+.stats-match-band {
+  display: grid;
+  grid-template-columns: minmax(200px, auto) minmax(0, 1fr);
+  align-items: center;
+  gap: 18px;
+}
+
+.stats-map-block {
+  display: grid;
+  gap: 3px;
+}
+
+.stats-map-block h1 {
+  margin: 0;
+  font-size: clamp(24px, 1.85vw, 31px);
+  line-height: 0.92;
+  letter-spacing: -0.04em;
+}
+
+.stats-context-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.stats-score-band {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+}
+
+.stats-team-mark {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.stats-team-mark-right {
+  justify-items: end;
+  text-align: right;
+}
+
+.stats-score-band strong {
+  font-size: clamp(19px, 1.35vw, 24px);
+  font-weight: 760;
+  letter-spacing: -0.03em;
+  color: #f7fbff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stats-team-mark small {
+  color: #d4dde4;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.9;
+}
+
+.stats-score-value {
+  font-size: clamp(32px, 2.2vw, 40px);
+  font-weight: 700;
+  letter-spacing: -0.05em;
+  color: #e9fbf2;
+  text-shadow: 0 0 22px rgba(0, 255, 136, 0.1);
+}
+
+.stats-context-line {
+  color: #a9bac5;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 10px;
+  font-weight: 760;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.stats-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.stats-header-button {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid rgba(37, 58, 74, 0.9);
+  background: rgba(12, 19, 26, 0.82);
+  color: var(--text);
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.stats-header-button:hover {
+  border-color: var(--line-strong);
+  background: rgba(16, 25, 33, 0.94);
+}
+
+.stats-header-button-primary {
+  border-color: rgba(0, 255, 136, 0.3);
+  background: rgba(0, 255, 136, 0.06);
+  color: #c7f9de;
+}
+
+.stats-header-button-secondary {
+  color: #c5d5df;
+}
+
+.stats-side-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  border: 1px solid rgba(26, 59, 55, 0.58);
+  background: rgba(18, 24, 30, 0.92);
+}
+
+.stats-side-filter-button {
+  min-height: 28px;
+  padding: 0 10px;
+  border: none;
+  border-right: 1px solid rgba(26, 59, 55, 0.52);
+  background: transparent;
+  color: #9ab2c0;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.stats-side-filter-button:last-child {
+  border-right: none;
+}
+
+.stats-side-filter-button-active {
+  background: linear-gradient(180deg, rgba(0, 255, 136, 0.16), rgba(12, 19, 26, 0.96));
+  color: #e7f8ef;
+}
+
+.stats-team-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+}
+
+.stats-team-card,
+.stats-rounds-card {
+  display: grid;
+  gap: 4px;
+  padding: 7px 11px 8px;
+  border: 1px solid rgba(45, 53, 61, 0.76);
+  background: rgba(7, 10, 13, 0.92);
+}
+
+.stats-team-card {
+  backdrop-filter: none;
+}
+
+.stats-team-card-winner {
+  box-shadow: inset 0 1px 0 rgba(0, 255, 136, 0.44);
+}
+
+.stats-team-card-trailing {
+  box-shadow: inset 0 1px 0 rgba(121, 137, 149, 0.34);
+}
+
+.stats-team-card-header,
+.stats-rounds-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 8px;
+}
+
+.stats-team-card-header strong,
+.stats-rounds-header strong {
+  display: block;
+  margin-top: 1px;
+  font-size: 19px;
+  line-height: 1.05;
+  color: #fbfeff;
+}
+
+.stats-team-card-header span,
+.stats-rounds-header span {
+  color: #c0ccd4;
+  font-size: 11px;
+  font-weight: 650;
+  text-align: right;
+}
+
+.stats-team-card-header .card-title {
+  color: #d5dee5;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+.stats-team-card-winner .card-title {
+  color: #8dffca;
+}
+
+.stats-team-card-trailing .card-title {
+  color: #e0e7ec;
+}
+
+.stats-table {
+  display: grid;
+  gap: 0;
+}
+
+.stats-table-scroll {
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(55, 90, 104, 0.78) transparent;
+}
+
+.stats-table-head,
+.stats-table-row {
+  display: grid;
+  column-gap: 0;
+  align-items: center;
+}
+
+.stats-table-head {
+  padding: 7px 10px 6px;
+  background: rgba(30, 35, 40, 0.988);
+  color: #eef4f8;
+  border-bottom: 1px solid rgba(154, 163, 171, 0.92);
+}
+
+.stats-sort-head {
+  min-height: 24px;
+  padding: 0 10px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 12px;
+  font-weight: 860;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.stats-sort-head-active {
+  color: #f8fbfd;
+}
+
+.stats-sort-head-metric {
+  color: #f2f7fb;
+}
+
+.stats-table-head > *,
+.stats-table-row > * {
+  min-width: 0;
+}
+
+.stats-table-head > *:not(:first-child),
+.stats-table-row > *:not(:first-child) {
+  border-left: 1px solid rgba(116, 127, 137, 0.14);
+}
+
+.stats-table-head > :first-child,
+.stats-table-row > :first-child {
+  padding-left: 4px;
+  border-left: none;
+}
+
+.stats-table-align-left {
+  justify-self: stretch;
+  text-align: left;
+}
+
+.stats-table-align-right {
+  justify-self: end;
+  text-align: right;
+}
+
+.stats-table-align-center {
+  justify-self: stretch;
+  text-align: center;
+}
+
+.stats-table-group-start {
+  border-left-color: rgba(170, 180, 190, 0.24) !important;
+}
+
+.stats-table-body {
+  display: grid;
+  gap: 0;
+}
+
+.stats-table-body > .stats-table-row:nth-child(even) {
+  background: rgba(8, 12, 16, 0.94);
+}
+
+.stats-table-row {
+  padding: 5px 10px;
+  border-top: 1px solid rgba(92, 101, 110, 0.34);
+  background: rgba(4, 7, 10, 0.95);
+}
+
+.stats-table-row:hover {
+  background: rgba(9, 13, 17, 0.99);
+}
+
+.stats-player-cell {
+  display: grid;
+  gap: 2px;
+  padding-right: 10px;
+}
+
+.stats-player-cell strong {
+  font-size: 18px;
+  font-weight: 820;
+  color: #f7fafc;
+}
+
+.stats-player-cell small {
+  color: #afbec8;
+  font-size: 12px;
+  font-weight: 560;
+  letter-spacing: 0.02em;
+}
+
+.stats-table-cell {
+  padding-left: 10px;
+}
+
+.stats-table-cell-primary {
+  padding-right: 8px;
+}
+
+.stats-table-cell-metric {
+  background: rgba(255, 255, 255, 0.012);
+}
+
+.stats-stat-text,
+.stats-kad-cell strong,
+.stats-rating-cell,
+.stats-rival-cell strong,
+.stats-role-cell strong {
+  font-size: 15px;
+  font-weight: 690;
+  color: #dbe5eb;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.stats-rating-cell {
+  padding: 0 10px;
+  font-weight: 760;
+  color: #eef4f8;
+}
+
+.stats-kad-cell {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.stats-rival-cell,
+.stats-role-cell {
+  display: grid;
+  gap: 2px;
+}
+
+.stats-role-note {
+  display: grid;
+  align-items: center;
+  min-height: 100%;
+  padding-right: 10px;
+}
+
+.stats-role-note span {
+  color: #c6d4dc;
+  font-size: 12px;
+  font-weight: 620;
+  line-height: 1.3;
+}
+
+.stats-rival-cell small,
+.stats-role-cell small,
+.stats-muted {
+  color: #9fb0bb;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.stats-stat-positive {
+  color: #b8f0cb;
+}
+
+.stats-stat-negative {
+  color: #f2b4af;
+}
+
+.stats-round-matrix {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(74px, 1fr));
+  gap: 3px;
+}
+
+.stats-round-cell {
+  position: relative;
+  display: grid;
+  gap: 3px;
+  min-height: 64px;
+  padding: 7px 8px 6px;
+  border: 1px solid rgba(49, 57, 65, 0.76);
+  background:
+    linear-gradient(180deg, rgba(24, 29, 34, 0.98), rgba(14, 19, 24, 0.985)),
+    rgba(14, 19, 24, 0.985);
+  align-content: start;
+  transition: border-color 150ms ease, background 150ms ease;
+  overflow: hidden;
+}
+
+.stats-round-cell:hover {
+  border-color: rgba(110, 133, 150, 0.7);
+  background: rgba(24, 31, 38, 0.98);
+}
+
+.stats-round-cell-ct {
+  background:
+    linear-gradient(180deg, rgba(70, 120, 155, 0.54), rgba(18, 24, 30, 0.96)),
+    rgba(18, 24, 30, 0.98);
+  box-shadow: inset 0 -3px 0 rgba(79, 179, 255, 0.88);
+}
+
+.stats-round-cell-t {
+  background:
+    linear-gradient(180deg, rgba(143, 101, 38, 0.52), rgba(18, 24, 30, 0.96)),
+    rgba(18, 24, 30, 0.98);
+  box-shadow: inset 0 -3px 0 rgba(255, 177, 79, 0.9);
+}
+
+.stats-round-cell-topline {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 6px;
+}
+
+.stats-round-cell-number {
+  color: #b3c1cc;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.stats-round-cell-score {
+  font-size: 16px;
+  line-height: 1.05;
+  font-weight: 800;
+  color: #fbfeff;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.18);
+}
+
+.stats-round-cell-content {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 3px;
+}
+
+.stats-round-cell-outcome-watermark {
+  position: absolute;
+  inset: 8px 8px 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(240, 246, 251, 0.1);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.stats-round-cell-ct .stats-round-cell-outcome-watermark {
+  color: rgba(201, 231, 255, 0.18);
+}
+
+.stats-round-cell-t .stats-round-cell-outcome-watermark {
+  color: rgba(255, 226, 182, 0.18);
+}
+
+.stats-round-cell-outcome-watermark svg {
+  width: 100%;
+  height: 100%;
+}
+
+.stats-round-cell-outcome-watermark-elimination {
+  inset: 9px 8px 10px 18px;
+}
+
+.stats-round-cell-outcome-watermark-bomb {
+  inset: 7px 6px 7px 10px;
+}
+
+.stats-round-cell-outcome-watermark-defuse {
+  inset: 8px 7px 8px 15px;
+}
+
+.stats-round-cell-survivors {
+  display: grid;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.stats-round-survivor-row {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 3px;
+}
+
+.stats-round-survivor-dot {
+  min-height: 4px;
+  border-radius: 999px;
+  background: rgba(132, 144, 155, 0.4);
+}
+
+.stats-round-survivor-row-ct .stats-round-survivor-dot-active {
+  background: rgba(92, 191, 255, 0.98);
+  box-shadow: 0 0 0 1px rgba(8, 13, 17, 0.35);
+}
+
+.stats-round-survivor-row-t .stats-round-survivor-dot-active {
+  background: rgba(255, 188, 96, 0.98);
+  box-shadow: 0 0 0 1px rgba(8, 13, 17, 0.35);
+}
+
+.stats-empty {
+  position: relative;
+  z-index: 1;
+  width: min(960px, calc(100% - 28px));
+  margin: 28px auto;
+  padding: 22px;
+  border: 1px solid rgba(45, 53, 61, 0.76);
+  background: rgba(7, 10, 13, 0.92);
+  color: #cbd6de;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+@media (max-width: 1500px) {
+  .stats-page {
+    width: min(100%, calc(100% - 28px));
+    padding-top: 6px;
+  }
+
+  .stats-round-matrix {
+    grid-template-columns: repeat(auto-fit, minmax(68px, 1fr));
+  }
+}
+
+@media (max-width: 1180px) {
+  .stats-header {
+    grid-template-columns: 1fr;
+  }
+
+  .stats-header-controls {
+    justify-items: start;
+  }
+
+  .stats-match-band {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .stats-score-band {
+    grid-template-columns: 1fr;
+    justify-items: start;
+    gap: 6px;
+  }
+
+  .stats-team-mark-right {
+    justify-items: start;
+    text-align: left;
+  }
+
+  .stats-round-matrix {
+    grid-template-columns: repeat(auto-fit, minmax(62px, 1fr));
+  }
+}

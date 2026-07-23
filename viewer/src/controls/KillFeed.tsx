@@ -1,12 +1,13 @@
 import type { Replay, Round } from "../replay/types";
-import blindKillIcon from "../assets/icons/cs2-deathnotice/panorama/images/hud/deathnotice/blind_kill.svg";
-import headshotIcon from "../assets/icons/cs2-deathnotice/panorama/images/hud/deathnotice/icon_headshot.svg";
-import noScopeIcon from "../assets/icons/cs2-deathnotice/panorama/images/hud/deathnotice/noscope.svg";
-import penetrateIcon from "../assets/icons/cs2-deathnotice/panorama/images/hud/deathnotice/penetrate.svg";
-import smokeKillIcon from "../assets/icons/cs2-deathnotice/panorama/images/hud/deathnotice/smoke_kill.svg";
-import flashAssistIcon from "../assets/icons/cs2-equipment/panorama/images/icons/equipment/flashbang_assist.svg";
+import blindKillIcon from "../icons/cs2-deathnotice/panorama/images/hud/deathnotice/blind_kill.svg";
+import headshotIcon from "../icons/cs2-deathnotice/panorama/images/hud/deathnotice/icon_headshot.svg";
+import noScopeIcon from "../icons/cs2-deathnotice/panorama/images/hud/deathnotice/noscope.svg";
+import penetrateIcon from "../icons/cs2-deathnotice/panorama/images/hud/deathnotice/penetrate.svg";
+import smokeKillIcon from "../icons/cs2-deathnotice/panorama/images/hud/deathnotice/smoke_kill.svg";
+import flashAssistIcon from "../icons/cs2-equipment/panorama/images/icons/equipment/flashbang_assist.svg";
 import { formatWeaponLabel } from "../replay/weapons";
 import { WeaponGlyph } from "./WeaponGlyph";
+import styles from "./KillFeed.module.css";
 
 type Props = {
   replay: Replay;
@@ -15,11 +16,12 @@ type Props = {
 };
 
 const MAX_ITEMS = 4;
-const KILL_FEED_WINDOW_TICKS = 64 * 12;
+const KILL_FEED_WINDOW_SECONDS = 12;
 
 export function KillFeed({ replay, round, currentTick }: Props) {
+  const killFeedWindowTicks = Math.max(1, Math.round(replay.match.tickRate * KILL_FEED_WINDOW_SECONDS));
   const items = round.killEvents
-    .filter((event) => event.tick <= currentTick && currentTick - event.tick <= KILL_FEED_WINDOW_TICKS)
+    .filter((event) => event.tick <= currentTick && currentTick - event.tick <= killFeedWindowTicks)
     .slice(-MAX_ITEMS)
     .reverse()
     .map((event) => {
@@ -50,13 +52,13 @@ export function KillFeed({ replay, round, currentTick }: Props) {
   }
 
   return (
-    <div className="killfeed">
+    <div className={styles.root}>
       {items.map((item) => (
-        <div key={item.key} className="killfeed-item">
+        <div key={item.key} className={styles.item}>
           <span className={nameClass(item.killerSide)}>
             {item.killerName}
           </span>
-          {item.assisterName ? <span className="killfeed-assist">+ {item.assisterName}</span> : null}
+          {item.assisterName ? <span className={styles.assist}>+ {item.assisterName}</span> : null}
           {item.assistedFlash ? <KillFeedModifierIcon kind="flashAssist" title="Flash assist" /> : null}
           {item.attackerBlind ? <KillFeedModifierIcon kind="attackerBlind" title="Blind kill" /> : null}
           {item.noScope ? <KillFeedModifierIcon kind="noScope" title="No-scope" /> : null}
@@ -65,11 +67,11 @@ export function KillFeed({ replay, round, currentTick }: Props) {
             <KillFeedModifierIcon kind="wallbang" title={`${item.penetratedObjects} penetrated object${item.penetratedObjects === 1 ? "" : "s"}`} />
           ) : null}
           {item.headshot ? <KillFeedModifierIcon kind="headshot" title="Headshot" /> : null}
-          <span className="killfeed-weapon" title={item.weaponLabel}>
-            <WeaponGlyph className="killfeed-weapon-icon" weaponName={item.weaponName} />
+          <span className={styles.weapon} title={item.weaponLabel}>
+            <WeaponGlyph className={styles.weaponIcon} weaponName={item.weaponName} />
             <span>{item.weaponLabel}</span>
           </span>
-          <span className={nameClass(item.victimSide, "killfeed-name-victim")}>{item.victimName}</span>
+          <span className={nameClass(item.victimSide, styles.nameVictim)}>{item.victimName}</span>
         </div>
       ))}
     </div>
@@ -86,7 +88,7 @@ function KillFeedModifierIcon({
   const icon = modifierIcons[kind];
 
   return (
-    <span aria-label={title} className={`killfeed-mod killfeed-mod-img killfeed-mod-${kind}`} title={title}>
+    <span aria-label={title} className={modifierClass(kind)} title={title}>
       <img alt="" aria-hidden="true" src={icon} />
     </span>
   );
@@ -102,14 +104,22 @@ const modifierIcons = {
 };
 
 function nameClass(side: "CT" | "T" | null, extraClass?: string) {
-  const classes = ["killfeed-name"];
+  const classes = [styles.name];
   if (side === "CT") {
-    classes.push("killfeed-name-ct");
+    classes.push(styles.nameCt);
   } else if (side === "T") {
-    classes.push("killfeed-name-t");
+    classes.push(styles.nameT);
   }
   if (extraClass) {
     classes.push(extraClass);
+  }
+  return classes.join(" ");
+}
+
+function modifierClass(kind: "attackerBlind" | "flashAssist" | "headshot" | "noScope" | "throughSmoke" | "wallbang") {
+  const classes = [styles.modifier, styles.modifierImage];
+  if (kind === "headshot") {
+    classes.push(styles.modifierHeadshot);
   }
   return classes.join(" ");
 }

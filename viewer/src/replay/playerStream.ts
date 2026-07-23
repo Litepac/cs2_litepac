@@ -10,7 +10,22 @@ export type InterpolatedPlayerStreamSample = {
   mainWeapon: string | null;
   x: number | null;
   y: number | null;
+  z: number | null;
   yaw: number | null;
+  pitch: number | null;
+  eyeX: number | null;
+  eyeY: number | null;
+  eyeZ: number | null;
+  isScoped: boolean | null;
+  zoomLevel: number | null;
+  viewmodelFov: number | null;
+  viewmodelOffsetX: number | null;
+  viewmodelOffsetY: number | null;
+  viewmodelOffsetZ: number | null;
+  recoilIndex: number | null;
+  isWalking: boolean | null;
+  isDucking: boolean | null;
+  isOnGround: boolean | null;
 };
 
 export function interpolatePlayerStreamSample(
@@ -32,6 +47,20 @@ export function interpolatePlayerStreamSample(
 
   const nextIndex = Math.min(stream.x.length - 1, baseIndex + 1);
   const mix = Math.max(0, Math.min(1, relativeSampleIndex - baseIndex));
+  const pitch = stream.pitch ?? [];
+  const eyeX = stream.eyeX ?? [];
+  const eyeY = stream.eyeY ?? [];
+  const eyeZ = stream.eyeZ ?? [];
+  const isScoped = stream.isScoped ?? [];
+  const zoomLevel = stream.zoomLevel ?? [];
+  const viewmodelFov = stream.viewmodelFov ?? [];
+  const viewmodelOffsetX = stream.viewmodelOffsetX ?? [];
+  const viewmodelOffsetY = stream.viewmodelOffsetY ?? [];
+  const viewmodelOffsetZ = stream.viewmodelOffsetZ ?? [];
+  const recoilIndex = stream.recoilIndex ?? [];
+  const isWalking = stream.isWalking ?? [];
+  const isDucking = stream.isDucking ?? [];
+  const isOnGround = stream.isOnGround ?? [];
 
   return {
     activeWeapon: stream.activeWeapon[baseIndex] ?? null,
@@ -42,21 +71,36 @@ export function interpolatePlayerStreamSample(
     mainWeapon: stream.mainWeapon[baseIndex] ?? null,
     x: interpolateNullableNumber(stream.x[baseIndex], stream.x[nextIndex], mix),
     y: interpolateNullableNumber(stream.y[baseIndex], stream.y[nextIndex], mix),
+    z: interpolateNullableNumber(stream.z[baseIndex], stream.z[nextIndex], mix),
     yaw: interpolateAngle(stream.yaw[baseIndex], stream.yaw[nextIndex], mix),
+    pitch: interpolateNullableNumber(pitch[baseIndex] ?? null, pitch[nextIndex] ?? null, mix),
+    eyeX: interpolateNullableNumber(eyeX[baseIndex] ?? null, eyeX[nextIndex] ?? null, mix),
+    eyeY: interpolateNullableNumber(eyeY[baseIndex] ?? null, eyeY[nextIndex] ?? null, mix),
+    eyeZ: interpolateNullableNumber(eyeZ[baseIndex] ?? null, eyeZ[nextIndex] ?? null, mix),
+    isScoped: isScoped[baseIndex] ?? null,
+    zoomLevel: zoomLevel[baseIndex] ?? null,
+    viewmodelFov: interpolateNullableNumber(viewmodelFov[baseIndex] ?? null, viewmodelFov[nextIndex] ?? null, mix),
+    viewmodelOffsetX: interpolateNullableNumber(viewmodelOffsetX[baseIndex] ?? null, viewmodelOffsetX[nextIndex] ?? null, mix),
+    viewmodelOffsetY: interpolateNullableNumber(viewmodelOffsetY[baseIndex] ?? null, viewmodelOffsetY[nextIndex] ?? null, mix),
+    viewmodelOffsetZ: interpolateNullableNumber(viewmodelOffsetZ[baseIndex] ?? null, viewmodelOffsetZ[nextIndex] ?? null, mix),
+    recoilIndex: interpolateNullableNumber(recoilIndex[baseIndex] ?? null, recoilIndex[nextIndex] ?? null, mix),
+    isWalking: isWalking[baseIndex] ?? null,
+    isDucking: isDucking[baseIndex] ?? null,
+    isOnGround: isOnGround[baseIndex] ?? null,
   };
 }
 
 function interpolateNullableNumber(left: number | null, right: number | null, mix: number) {
-  if (left == null && right == null) {
-    return null;
+  if (mix <= 0) {
+    return left;
   }
 
-  if (left == null) {
+  if (mix >= 1) {
     return right;
   }
 
-  if (right == null) {
-    return left;
+  if (left == null || right == null) {
+    return null;
   }
 
   return left + (right - left) * mix;
@@ -64,11 +108,11 @@ function interpolateNullableNumber(left: number | null, right: number | null, mi
 
 function interpolateAngle(left: number | null, right: number | null, mix: number) {
   if (mix <= 0) {
-    return left ?? right;
+    return left;
   }
 
   if (mix >= 1) {
-    return right ?? left;
+    return right;
   }
 
   if (left == null || right == null) {

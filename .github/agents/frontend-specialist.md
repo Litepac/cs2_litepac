@@ -28,6 +28,8 @@ Render canonical replay truth into a clean, operator-style 2D replay surface.
 - Keep business logic out of presentational components when practical.
 - Reuse a new pattern consistently once it is introduced.
 - Treat loading, empty, and error states as part of the feature, not follow-up polish.
+- Use CSS Modules for new component-owned CSS. Keep global CSS limited to reset/tokens/shell surfaces and existing migration exceptions.
+- When removing or replacing a surface, remove its dead component files and old global selectors in the same cleanup pass.
 
 ## Do Not
 - Reconstruct parser truth in React state.
@@ -36,6 +38,11 @@ Render canonical replay truth into a clean, operator-style 2D replay surface.
 - Reintroduce facing indicators unless their semantics are verified.
 - Leave placeholder-grade product shell UI behind after the main flow works.
 - Default to generic dashboard layout or empty metric tiles just because the screen needs content.
+- Add new non-module component CSS files without a deliberate global ownership reason.
+
+## Structure Guard
+- Run `npm.cmd run check:structure` from `viewer/` after frontend ownership cleanup.
+- The guard should fail if retired folders/files, stale asset paths, or old global selectors are reintroduced.
 
 ## Visual Heuristics
 - The map should dominate the workspace.

@@ -9,7 +9,7 @@ Render a trustworthy 2D replay from `mastermind.replay.json` with clean controls
 Allowed inputs:
 
 - `mastermind.replay.json`
-- static map assets from `assets/maps/`
+- static map assets from `public/maps/`
 - a parser-backed demo upload endpoint that returns canonical `mastermind.replay.json`
 
 Disallowed inputs:

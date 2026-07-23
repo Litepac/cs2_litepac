@@ -1,0 +1,12 @@
+{
+    "mapId":  "de_cache",
+    "displayName":  "Cache",
+    "radarImageKey":  "de_cache/radar.png",
+    "coordinateSystem":  {
+                             "worldXMin":  -2000,
+                             "worldXMax":  3632,
+                             "worldYMin":  -2382,
+                             "worldYMax":  3250,
+                             "rotateDegrees":  0
+                         }
+}

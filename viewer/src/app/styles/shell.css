@@ -214,140 +214,6 @@
   pointer-events: none;
 }
 
-.feedback-widget {
-  position: relative;
-  z-index: 30;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.feedback-panel,
-.feedback-launch-button {
-  pointer-events: auto;
-}
-
-.feedback-launch-button,
-.feedback-close-button,
-.feedback-submit-button {
-  border: 1px solid rgba(217, 54, 40, 0.42);
-  background: rgba(8, 8, 9, 0.92);
-  color: #ebe3dc;
-  font-family: "JetBrains Mono", "Fira Code", monospace;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.feedback-launch-button {
-  min-height: 34px;
-  padding: 0 2px 2px;
-  border-color: transparent;
-  background: transparent;
-  color: #b8a9a2;
-  box-shadow: none;
-}
-
-.feedback-launch-button:hover,
-.feedback-close-button:hover,
-.feedback-submit-button:hover:not(:disabled) {
-  border-color: rgba(217, 54, 40, 0.78);
-  background: rgba(217, 54, 40, 0.1);
-}
-
-.feedback-panel {
-  position: absolute;
-  top: calc(100% + 12px);
-  right: 0;
-  width: min(360px, calc(100vw - 32px));
-  display: grid;
-  gap: 12px;
-  padding: 14px;
-  border: 1px solid rgba(217, 54, 40, 0.34);
-  background:
-    linear-gradient(rgba(255, 255, 255, 0.022) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(12, 12, 13, 0.98), rgba(7, 7, 8, 0.98)),
-    rgba(8, 8, 9, 0.98);
-  background-size: 28px 28px, 28px 28px, auto, auto;
-  box-shadow: none;
-}
-
-.feedback-panel-head,
-.feedback-panel-foot {
-  display: flex;
-  justify-content: space-between;
-  align-items: start;
-  gap: 12px;
-}
-
-.feedback-panel-head h2 {
-  margin: 4px 0 0;
-  color: #ebe3dc;
-  font-size: 18px;
-  line-height: 1;
-  letter-spacing: -0.04em;
-}
-
-.feedback-close-button,
-.feedback-submit-button {
-  min-height: 32px;
-  padding: 0 12px;
-}
-
-.feedback-field {
-  display: grid;
-  gap: 8px;
-}
-
-.feedback-field span,
-.feedback-status-copy {
-  color: #aaa39d;
-  font-size: 12px;
-  line-height: 1.35;
-}
-
-.feedback-field textarea {
-  width: 100%;
-  resize: vertical;
-  min-height: 112px;
-  max-height: 240px;
-  padding: 10px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.11);
-  background: rgba(6, 6, 7, 0.88);
-  color: #ebe3dc;
-  font-size: 13px;
-  line-height: 1.45;
-  outline: none;
-}
-
-.feedback-field textarea:focus {
-  border-color: rgba(217, 54, 40, 0.66);
-}
-
-.feedback-panel-foot {
-  align-items: center;
-}
-
-.feedback-status-copy {
-  margin: 0;
-  max-width: 220px;
-}
-
-.feedback-status-copy-success {
-  color: #ebe3dc;
-}
-
-.feedback-status-copy-error {
-  color: #ff9b91;
-}
-
-.feedback-submit-button:disabled {
-  cursor: default;
-  opacity: 0.55;
-}
-
 .viewer-shell-matches {
   background:
     linear-gradient(rgba(255, 255, 255, 0.012) 1px, transparent 1px),
@@ -397,4 +263,14 @@
   background:
     linear-gradient(90deg, rgba(5, 9, 13, 0.5), rgba(5, 9, 13, 0.12) 18%, rgba(5, 9, 13, 0.08) 78%, rgba(5, 9, 13, 0.4)),
     linear-gradient(180deg, rgba(8, 13, 18, 0.1), transparent 18%);
+}
+
+.matches-surface.stats-surface::before {
+  background:
+    linear-gradient(rgba(0, 255, 136, 0.028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 255, 136, 0.028) 1px, transparent 1px),
+    radial-gradient(circle at 18% 16%, rgba(0, 255, 136, 0.05), transparent 20%),
+    radial-gradient(circle at 84% 12%, rgba(79, 179, 255, 0.05), transparent 16%);
+  background-size: 48px 48px, 48px 48px, auto, auto;
+  opacity: 0.42;
 }

@@ -1,9 +1,10 @@
 import { Circle, Container, Graphics, Text } from "pixi.js";
 
-import type { RadarViewport } from "../maps/transform";
-import { worldToScreen } from "../maps/transform";
+import type { RadarViewport } from "../mapGeometry/transform";
+import { worldToScreen } from "../mapGeometry/transform";
 import type { DeathReviewEntry } from "../replay/deathReview";
 import type { Replay } from "../replay/types";
+import { attachReplayHitTarget } from "./replayStage/hitTargets";
 
 const CT_COLOR = 0x56b3ff;
 const T_COLOR = 0xf2a64b;
@@ -42,19 +43,11 @@ export function drawDeathReviewMarker(
   marker.lineTo(point.x - 5.5, point.y + 5.5);
   marker.stroke({ color, width: selected ? 2.2 : 1.55, alpha: selected ? 0.94 : 0.72, cap: "round", join: "round" });
 
-  marker.eventMode = "static";
-  marker.cursor = "pointer";
-  marker.hitArea = new Circle(point.x, point.y, 22);
-  marker.on("pointerdown", (event) => {
-    const nativeEvent = event.nativeEvent as (PointerEvent & { __drIgnoreStagePan?: boolean }) | undefined;
-    if (nativeEvent) {
-      nativeEvent.__drIgnoreStagePan = true;
-      nativeEvent.preventDefault();
-    }
-    event.stopPropagation();
-    onSelect(entry);
+  attachReplayHitTarget(marker, {
+    activateOn: "pointerdown",
+    hitArea: new Circle(point.x, point.y, 22),
+    onActivate: () => onSelect(entry),
   });
-  marker.on("pointertap", (event) => event.stopPropagation());
   layer.addChild(marker);
 
   if (selected) {

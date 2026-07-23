@@ -3,10 +3,10 @@ type Props = {
 };
 
 const DEMOREAD_LOGO_PARTS = {
-  icon: "/DR Icon.png",
-  demo: "/Demo.png",
-  read: "/Read.png",
-  tagline: "/DemoRead_tagline.png",
+  icon: "/brand/dr-icon.png",
+  demo: "/brand/demo.png",
+  read: "/brand/read.png",
+  tagline: "/brand/demoread-tagline.png",
 } as const;
 
 const heroTimelineTicks = Array.from({ length: 18 }, (_, index) => index);
@@ -57,14 +57,33 @@ export function HomePage({
           </div>
         </div>
 
-        <aside className="landing-brand-film" aria-label="DemoRead animated brand identity">
+        <aside className="landing-brand-film" aria-label="DemoRead animated logo">
           <div className="landing-brand-film-logo" aria-hidden="true">
-            <img className="landing-brand-film-logo-part landing-brand-film-logo-icon" src={DEMOREAD_LOGO_PARTS.icon} alt="" decoding="async" />
-            <img className="landing-brand-film-logo-part landing-brand-film-logo-demo" src={DEMOREAD_LOGO_PARTS.demo} alt="" decoding="async" />
-            <img className="landing-brand-film-logo-part landing-brand-film-logo-read" src={DEMOREAD_LOGO_PARTS.read} alt="" decoding="async" />
-            <img className="landing-brand-film-logo-part landing-brand-film-logo-tagline" src={DEMOREAD_LOGO_PARTS.tagline} alt="" decoding="async" />
+            <img
+              className="landing-brand-film-logo-part landing-brand-film-logo-icon"
+              src={DEMOREAD_LOGO_PARTS.icon}
+              alt=""
+              decoding="async"
+            />
+            <img
+              className="landing-brand-film-logo-part landing-brand-film-logo-demo"
+              src={DEMOREAD_LOGO_PARTS.demo}
+              alt=""
+              decoding="async"
+            />
+            <img
+              className="landing-brand-film-logo-part landing-brand-film-logo-read"
+              src={DEMOREAD_LOGO_PARTS.read}
+              alt=""
+              decoding="async"
+            />
+            <img
+              className="landing-brand-film-logo-part landing-brand-film-logo-tagline"
+              src={DEMOREAD_LOGO_PARTS.tagline}
+              alt=""
+              decoding="async"
+            />
           </div>
-
           <div className="landing-brand-film-timeline" aria-hidden="true">
             {heroTimelineTicks.map((tick) => (
               <i key={tick} />

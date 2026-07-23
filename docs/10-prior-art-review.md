@@ -26,6 +26,7 @@ That conflicts with this project's canonical contract:
 - Keep the timeline flat, dense, and operator-oriented.
 - Keep the right-side team rail compact and information-first.
 - Keep utility visuals calm and readable rather than debug-heavy.
+- Keep Valve-standard radar images as the default replay truth surface because they align with official overview coordinates. If DemoRead later adds a Skybox-style grey tactical map, treat it as a separate derived visual skin over the same calibration, with map-by-map QA before it replaces the standard radar.
 - For the replay dock, prefer grouped event lanes over one undifferentiated marker strip when kills, utility, and bomb events are all visible. Sports-analysis tools commonly use timeline markers to jump to tagged events, and session-analysis tools group dense events into easier-to-read buckets; DemoRead should adapt that idea as parser-owned "round evidence" lanes rather than a copied media scrubber.
 - For live roster cards, ESL-style broadcast overlays are a useful density reference: lead with side-colored HP/name/weapon identity, then compactly expose utility, money/equipment, and current-round impact. Do not copy broadcast-only economy guesses such as loss bonus/equipment value unless parser truth exists.
 - Keep renderer concerns separate from replay extraction concerns.
@@ -42,6 +43,17 @@ Current CS2 review products converge on a few tool families rather than a large 
 - Notes/bookmarks/playlists matter because replay review is a workflow. A timestamped note that jumps back to a round/tick is often more useful than another passive visual layer.
 - Timing tools are a strong fit for this product if kept parser-backed: first contact, first utility, execute/contact timing, rotate timing, bomb plant/defuse timing, and repeated player position at a shared round clock.
 - Heatmaps should remain secondary unless user feedback proves a clear job. If kept, the tool needs a sharply defined question such as "where did this player spend time?" or "where did deaths happen?", not broad movement coloring.
+
+## RoundIQ 3D Reference Boundary
+RoundIQ publicly positions its replayer around 2D, 3D, and POV viewing modes, including volumetric smokes and grenade lineup review: https://roundiq.gg/
+
+The useful reference is the product shape, not the implementation claim:
+- A real 3D mode should render the CS2 map world from Source 2 assets, not a tilted radar.
+- A tactical 2D radar overlay/cutaway can coexist with the 3D world to keep round context readable.
+- Player and utility placement must come from canonical replay `x/y/z/yaw` and trajectory truth.
+- POV/crosshair review should wait until parser truth includes pitch, eye position, FOV/scoped state, and enough map collision/visibility data to avoid fake line-of-sight claims.
+
+The implementation target for DemoRead is captured in `docs/18-real-3d-replay-mode.md`.
 
 ## Tool Priority Implication
 DemoRead should not add more sidebar modes until the current modes are shaped into sharper workflows. The next high-value additions are likely:

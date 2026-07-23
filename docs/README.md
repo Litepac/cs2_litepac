@@ -18,6 +18,8 @@ Read the design and implementation docs in this order:
 14. `docs/14-replay-v1-product-spec.md`
 15. `docs/15-domain-alpha-readiness.md`
 16. `docs/16-alpha-qa-checklist.md`
+17. `docs/17-round-understanding-tooling.md`
+18. `docs/18-real-3d-replay-mode.md`
 
 Historical review records:
 

@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import { demoIngestStepLabel, demoIngestStatusCopy, demoIngestSteps, type DemoIngestState } from "../replay/ingestState";
+import styles from "./IngestTracker.module.css";
 
 type IngestIssue = {
   hint?: string;
@@ -43,48 +44,50 @@ export function IngestTracker({ issue, state }: Props) {
   const statusCopy = failed ? issue.message : state ? demoIngestStatusCopy(state) : "Waiting for local demo processing.";
 
   return (
-    <section className={`ingest-tracker ${failed ? "ingest-tracker-failed" : ""} ${ready ? "ingest-tracker-ready" : ""}`}>
-      <div className="ingest-tracker-header">
+    <section className={[styles.tracker, failed ? styles.failed : "", ready ? styles.ready : ""].filter(Boolean).join(" ")}>
+      <div className={styles.header}>
         <div>
-          <div className="ingest-tracker-kicker">{failed ? "Demo upload failed" : ready ? "Demo ready" : "Preparing demo"}</div>
-          <strong>{title}</strong>
+          <div className={styles.kicker}>{failed ? "Demo upload failed" : ready ? "Demo ready" : "Preparing demo"}</div>
+          <strong className={styles.title}>{title}</strong>
         </div>
-        <span>{state?.fileName ?? "Local demo"}</span>
+        <span className={styles.fileName}>{state?.fileName ?? "Local demo"}</span>
       </div>
 
-      <div className="ingest-step-row">
+      <div className={styles.stepRow}>
         {demoIngestSteps.map((step, index) => {
           const status =
             index < activeIndex
-              ? "ingest-step-complete"
+              ? styles.stepComplete
               : index === activeIndex
                 ? failed
-                  ? "ingest-step-failed"
-                  : "ingest-step-active"
+                  ? styles.stepFailed
+                  : styles.stepActive
                 : "";
 
           return (
-            <div key={step} className={`ingest-step ${status}`}>
+            <div key={step} className={[styles.step, status].filter(Boolean).join(" ")}>
               <span>{demoIngestStepLabel(step)}</span>
             </div>
           );
         })}
       </div>
 
-      <div className="ingest-status-block">
-        <p className="ingest-status-copy">{statusCopy}</p>
-        {failed && issue.hint ? <p className="ingest-status-hint">{issue.hint}</p> : null}
+      <div className={styles.statusBlock}>
+        <p className={styles.statusCopy}>{statusCopy}</p>
+        {failed && issue.hint ? <p className={styles.statusHint}>{issue.hint}</p> : null}
       </div>
 
-      <div className="ingest-rounds">
-        <div className="ingest-rounds-header">
+      <div className={styles.rounds}>
+        <div className={styles.roundsHeader}>
           <strong>Rounds</strong>
           <span>{roundProgressLabel}</span>
         </div>
         <div
-          className={`ingest-round-grid ${roundsTotal != null ? "ingest-round-grid-known" : ""} ${
-            roundsTotal == null && !failed ? "ingest-round-grid-scanning" : ""
-          }`}
+          className={[
+            styles.roundGrid,
+            roundsTotal != null ? styles.roundGridKnown : "",
+            roundsTotal == null && !failed ? styles.roundGridScanning : "",
+          ].filter(Boolean).join(" ")}
           style={{ "--ingest-round-progress": roundProgressPercent } as CSSProperties}
         >
           {placeholderRounds.map((index) => (
@@ -99,17 +102,19 @@ export function IngestTracker({ issue, state }: Props) {
                     ? `Processed round ${index + 1}`
                     : `Round ${index + 1} waiting for structure`
               }
-              className={`ingest-round-chip ${
+              className={[styles.roundChip,
                 index < roundsIndexed
-                  ? "ingest-round-chip-active"
+                  ? styles.roundChipActive
                   : roundsTotal != null && index === currentRoundIndex
-                    ? "ingest-round-chip-current"
+                    ? styles.roundChipCurrent
                     : roundsTotal == null && !failed
-                      ? "ingest-round-chip-placeholder"
+                      ? styles.roundChipPlaceholder
                       : roundsTotal != null
-                        ? "ingest-round-chip-waiting"
+                        ? styles.roundChipWaiting
                         : ""
-              } ${showProvisionalRoundNumbers && index >= roundsIndexed ? "ingest-round-chip-provisional" : ""}`}
+                ,
+                showProvisionalRoundNumbers && index >= roundsIndexed ? styles.roundChipProvisional : "",
+              ].filter(Boolean).join(" ")}
               title={
                 roundsTotal != null
                   ? `Round ${index + 1}${
@@ -120,7 +125,7 @@ export function IngestTracker({ issue, state }: Props) {
                     : `Round ${index + 1} waiting for structure`
               }
             >
-              <span className="ingest-round-number">
+              <span className={styles.roundNumber}>
                 {roundsTotal != null || index < roundsIndexed || showProvisionalRoundNumbers ? index + 1 : ""}
               </span>
             </span>

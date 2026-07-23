@@ -350,6 +350,8 @@ What still needs more refinement later:
   - `de_nuke`
   - `de_train`
   - `de_vertigo`
+- map-asset-supported but not role-authored yet:
+  - `de_cache`
 
 ### Product honesty
 

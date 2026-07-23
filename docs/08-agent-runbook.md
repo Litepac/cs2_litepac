@@ -54,7 +54,7 @@ Use this on the current machine when you want the known-good local launcher. It 
 .\start-localhost.cmd
 ```
 
-Use this as the default operator shortcut on this machine. It clears stale localhost temp logs, opens a dedicated console window, runs the known-good local path without tying up the current shell, and asks Vite to open `http://127.0.0.1:4173/` in the default browser after the viewer is ready. The underlying `npm.cmd run dev:local` command remains non-opening for terminal and automation use.
+Use this as the default operator shortcut on this machine. If the viewer health endpoint is already reachable, the shortcut reopens `http://127.0.0.1:4173/` without starting a duplicate strict-port process. Otherwise it clears stale localhost temp logs, opens a dedicated console window, runs the known-good local path without tying up the current shell, and asks Vite to open the browser after the viewer is ready. The underlying `npm.cmd run dev:local` command remains non-opening for terminal and automation use.
 
 ### Start Cloudflare tunnel for friend testing
 ```powershell

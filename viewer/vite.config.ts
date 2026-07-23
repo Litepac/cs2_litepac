@@ -29,7 +29,11 @@ async function copyReleasePublicAssets(sourceRoot: string, destinationRoot: stri
   for (const entry of entries) {
     const nextRelativePath = path.join(relativePath, entry.name);
     const pathSegments = nextRelativePath.split(path.sep);
-    if (RELEASE_PUBLIC_EXCLUDES.has(pathSegments[0]) || pathSegments.includes("3d")) {
+    if (
+      RELEASE_PUBLIC_EXCLUDES.has(pathSegments[0]) ||
+      pathSegments.includes("3d") ||
+      pathSegments.includes("bomb-damage")
+    ) {
       continue;
     }
 

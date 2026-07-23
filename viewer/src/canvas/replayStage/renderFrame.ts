@@ -277,7 +277,14 @@ export function renderDynamicFrame(stage: StageState, context: StageRenderContex
   stage.lastRoundNumber = round.roundNumber;
   stage.lastSelectedPlayerId = selectedPlayerId;
 
-  renderBombOverlays(stage.bombLayer, replay, round, fullRenderTick, radarViewport);
+  renderBombOverlays(
+    stage.bombLayer,
+    replay,
+    round,
+    fullRenderTick,
+    radarViewport,
+    stage.bombDamageField,
+  );
   renderCombatOverlays(stage.killLayer, replay, round, fullRenderTick, radarViewport);
   renderPlayers(
     stage.playerLayer,

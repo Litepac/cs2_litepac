@@ -1,4 +1,4 @@
-import { Container, Graphics } from "pixi.js";
+import { Container, Graphics, Sprite } from "pixi.js";
 
 import type { RadarViewport } from "../../mapGeometry/transform";
 import { worldToScreen } from "../../mapGeometry/transform";
@@ -8,10 +8,15 @@ import { drawTintedEquipmentIcon } from "../equipmentIconGraphics";
 import c4IconSvg from "../../icons/cs2-equipment/panorama/images/icons/equipment/c4.svg?raw";
 import { RECENT_BOMB_WINDOW_TICKS } from "./constants";
 import { clamp } from "./camera";
-import { drawBombExplosionEventWave } from "./bombExplosionCue";
+import { drawBombExplosionEventCue } from "./bombExplosionCue";
+import {
+  resolveBombDamageSite,
+  type BombDamageField,
+} from "./bombDamageField";
 
 const BOMB_ICON_SIZE = 32;
 const BOMB_ICON = { svg: c4IconSvg, width: BOMB_ICON_SIZE, height: BOMB_ICON_SIZE };
+const FIELD_CUE_SECONDS = 1.35;
 
 export function renderBombOverlays(
   layer: Container,
@@ -19,6 +24,7 @@ export function renderBombOverlays(
   round: Round,
   currentTick: number,
   radarViewport: RadarViewport,
+  bombDamageField: BombDamageField | null,
 ) {
   const bombState = resolveActiveBombState(replay, round, currentTick);
   if (bombState) {
@@ -31,7 +37,7 @@ export function renderBombOverlays(
   }
 
   for (const bombEvent of round.bombEvents) {
-    drawBombEvent(layer, replay, bombEvent, currentTick, radarViewport);
+    drawBombEvent(layer, replay, bombEvent, currentTick, radarViewport, bombDamageField);
   }
 }
 
@@ -274,6 +280,7 @@ function drawBombEvent(
   event: Round["bombEvents"][number],
   currentTick: number,
   radarViewport: RadarViewport,
+  bombDamageField: BombDamageField | null,
 ) {
   if (!["defused", "exploded"].includes(event.type)) {
     return;
@@ -290,6 +297,17 @@ function drawBombEvent(
   const ageRatio = 1 - (currentTick - event.tick) / (RECENT_BOMB_WINDOW_TICKS / 2);
   const eventAgeSeconds = (currentTick - event.tick) / replay.match.tickRate;
   const point = worldToScreen(replay, radarViewport, event.x, event.y);
+  if (event.type === "exploded") {
+    drawMapBombDamageCue(
+      layer,
+      replay,
+      event.x,
+      event.y,
+      eventAgeSeconds,
+      radarViewport,
+      bombDamageField,
+    );
+  }
   const marker = new Graphics();
   marker.circle(point.x, point.y, 10.5);
   marker.fill({ color: 0x081017, alpha: 0.52 + ageRatio * 0.2 });
@@ -302,7 +320,7 @@ function drawBombEvent(
     marker.lineTo(point.x, point.y + 3.3);
     marker.stroke({ color: 0xd9f1ff, width: 1.5, alpha: 0.56 + ageRatio * 0.3, cap: "round" });
   } else {
-    drawBombExplosionEventWave(marker, point.x, point.y, eventAgeSeconds);
+    drawBombExplosionEventCue(marker, point.x, point.y, eventAgeSeconds);
     marker.circle(point.x, point.y, 5.8 + ageRatio * 1.05);
     marker.fill({ color: 0xffb25a, alpha: 0.14 + ageRatio * 0.16 });
     marker.moveTo(point.x - 3.7, point.y - 3.7);
@@ -312,4 +330,46 @@ function drawBombEvent(
     marker.stroke({ color: 0xffb25a, width: 1.9, alpha: 0.54 + ageRatio * 0.24, cap: "round" });
   }
   layer.addChild(marker);
+}
+
+function drawMapBombDamageCue(
+  layer: Container,
+  replay: Replay,
+  worldX: number,
+  worldY: number,
+  eventAgeSeconds: number,
+  radarViewport: RadarViewport,
+  field: BombDamageField | null,
+) {
+  if (
+    !field ||
+    field.mapId !== replay.map.mapId ||
+    !field.compatibleSourceDemoSha256.has(replay.sourceDemo.sha256.toLowerCase()) ||
+    field.radarWidth !== radarViewport.imageWidth ||
+    field.radarHeight !== radarViewport.imageHeight ||
+    eventAgeSeconds < 0 ||
+    eventAgeSeconds > FIELD_CUE_SECONDS
+  ) {
+    return;
+  }
+
+  const site = resolveBombDamageSite(field, worldX, worldY);
+  if (!site) {
+    return;
+  }
+
+  // The mask extent and wall-following shape come from the exact compiled map
+  // resource identified by the field manifest. Opacity is only a short event
+  // emphasis; it does not claim exact damage, arrival time, or player outcome.
+  const attack = clamp(eventAgeSeconds / 0.16, 0, 1);
+  const decay = 1 - clamp((eventAgeSeconds - 0.2) / (FIELD_CUE_SECONDS - 0.2), 0, 1);
+  const sprite = new Sprite(site.texture);
+  sprite.x = radarViewport.offsetX;
+  sprite.y = radarViewport.offsetY;
+  sprite.width = radarViewport.imageWidth * radarViewport.scale;
+  sprite.height = radarViewport.imageHeight * radarViewport.scale;
+  sprite.alpha = attack * decay * 0.42;
+  sprite.tint = 0xff9c42;
+  sprite.blendMode = "add";
+  layer.addChild(sprite);
 }

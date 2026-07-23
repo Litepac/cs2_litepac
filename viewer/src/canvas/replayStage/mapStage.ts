@@ -4,6 +4,7 @@ import { createRadarViewport, loadRadarImageSize } from "../../mapGeometry/trans
 import type { Replay } from "../../replay/types";
 import { DEFAULT_STAGE_HEIGHT, DEFAULT_STAGE_WIDTH } from "./constants";
 import { applyCameraTransform } from "./camera";
+import { loadBombDamageField } from "./bombDamageField";
 import type { StageState } from "./types";
 
 export function resolveStageRenderResolution() {
@@ -61,6 +62,7 @@ export async function createStageState(hostElement: HTMLDivElement) {
     utilityTrailLayer,
     deathReviewLayer,
     bombLayer,
+    bombDamageField: null,
     killLayer,
     mapClipMask: null,
     trailLayer,
@@ -112,6 +114,7 @@ export async function ensureStageMap(
   const requestId = stage.mapLoadRequestId + 1;
   stage.mapLoadRequestId = requestId;
   const radarURL = radarImageURL(replay.map.radarImageKey);
+  const bombDamageFieldPromise = loadBombDamageField(replay.map.mapId);
   if (stage.currentMapKey != null && stage.currentMapKey !== replay.map.radarImageKey) {
     clearStageMap(stage);
   }
@@ -153,6 +156,7 @@ export async function ensureStageMap(
   } catch {
     maskTexture = null;
   }
+  const bombDamageField = await bombDamageFieldPromise;
 
   if (isStaleMapRequest(stage, requestId)) {
     destroyOwnedTexture(croppedTexture, false);
@@ -186,6 +190,7 @@ export async function ensureStageMap(
   stage.lastFullRenderTick = null;
   stage.lastRoundNumber = null;
   stage.lastSelectedPlayerId = null;
+  stage.bombDamageField = bombDamageField;
   stage.mapClipMask = mapClipMask;
   stage.ownedMapTextures = {
     alphaMaskTexture: maskTexture,
@@ -217,6 +222,7 @@ function clearStageMap(stage: StageState) {
     croppedTexture: null,
   };
   stage.mapClipMask = null;
+  stage.bombDamageField = null;
   stage.radarViewport = null;
 }
 

@@ -8,6 +8,7 @@ import type { HeatmapScope } from "../../replay/heatmapAnalysis";
 import type { RadarViewport } from "../../mapGeometry/transform";
 import type { UtilityFocus } from "../../replay/utilityFilter";
 import type { Replay } from "../../replay/types";
+import type { BombDamageField } from "./bombDamageField";
 
 export type ReplayStageProps = {
   activeRoundIndex: number;
@@ -44,6 +45,7 @@ export type StageState = {
   utilityTrailLayer: Container;
   deathReviewLayer: Container;
   bombLayer: Container;
+  bombDamageField: BombDamageField | null;
   killLayer: Container;
   mapClipMask: Container | null;
   trailLayer: Container;

@@ -45,3 +45,35 @@ func TestSameScoreOrientationAllowsHalftimeSideSwap(t *testing.T) {
 		t.Fatal("expected an unrelated score to be rejected")
 	}
 }
+
+func TestRoundFreezetimeEndOpensMissingSourceTVRound(t *testing.T) {
+	state := &parseState{}
+	scoreBefore := replay.Score{T: 2, CT: 3}
+
+	state.handleRoundFreezetimeEnd(416, false, scoreBefore)
+
+	if state.currentRound == nil {
+		t.Fatal("expected freeze-end to recover a missing non-warmup round")
+	}
+	if state.currentRound.StartTick() != 416 {
+		t.Fatalf("expected recovered round to start at observable tick 416, got %d", state.currentRound.StartTick())
+	}
+	if state.currentRound.ScoreBefore() != scoreBefore {
+		t.Fatalf("expected score %+v, got %+v", scoreBefore, state.currentRound.ScoreBefore())
+	}
+
+	round := state.currentRound.Build(64)
+	if round.FreezeEndTick == nil || *round.FreezeEndTick != 416 {
+		t.Fatalf("expected freeze-end tick 416, got %v", round.FreezeEndTick)
+	}
+}
+
+func TestRoundFreezetimeEndDoesNotOpenWarmupRound(t *testing.T) {
+	state := &parseState{}
+
+	state.handleRoundFreezetimeEnd(268, true, replay.Score{})
+
+	if state.currentRound != nil {
+		t.Fatal("expected warmup freeze-end to remain omitted")
+	}
+}

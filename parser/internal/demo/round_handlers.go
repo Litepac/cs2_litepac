@@ -26,18 +26,16 @@ func (s *parseState) registerRoundHandlers() {
 			}
 		}
 
-		s.currentRound = rounds.NewBuilder(len(s.roundList)+1, s.parser.CurrentFrame(), scoreBefore)
-		s.lastBombCarrierID = ""
-		s.hasBombCarrier = false
+		s.openRound(s.parser.CurrentFrame(), scoreBefore)
 	})
 
 	s.parser.RegisterEventHandler(func(e demoevents.RoundFreezetimeEnd) {
 		_ = e
-		if s.currentRound == nil {
-			return
-		}
-
-		s.currentRound.SetFreezeEnd(s.parser.CurrentFrame())
+		s.handleRoundFreezetimeEnd(
+			s.parser.CurrentFrame(),
+			s.parser.GameState().IsWarmupPeriod(),
+			currentScore(s.parser.GameState()),
+		)
 	})
 
 	s.parser.RegisterEventHandler(func(e demoevents.RoundEnd) {
@@ -59,6 +57,27 @@ func (s *parseState) registerRoundHandlers() {
 		s.currentRound.SetOfficialEnd(s.parser.CurrentFrame())
 		s.finalizeOpenRound(s.currentRound.EndTick())
 	})
+}
+
+func (s *parseState) openRound(startTick int, scoreBefore replay.Score) {
+	s.currentRound = rounds.NewBuilder(len(s.roundList)+1, startTick, scoreBefore)
+	s.lastBombCarrierID = ""
+	s.hasBombCarrier = false
+}
+
+func (s *parseState) handleRoundFreezetimeEnd(frame int, isWarmup bool, scoreBefore replay.Score) {
+	if isWarmup {
+		return
+	}
+
+	// Current bot-only SourceTV demos can omit RoundStart while still emitting
+	// RoundFreezetimeEnd and RoundEnd. In that case, freeze-end is the earliest
+	// observable trustworthy boundary for the round.
+	if s.currentRound == nil {
+		s.openRound(frame, scoreBefore)
+	}
+
+	s.currentRound.SetFreezeEnd(frame)
 }
 
 func (s *parseState) finalizeOpenRound(endTick int) {

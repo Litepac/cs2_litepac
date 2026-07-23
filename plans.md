@@ -8,7 +8,6 @@ Planning note:
 
 ## Planned
 ### Next Up
-- Record a short offline CS2 bot-match `.dem` with explicit project-owned redistribution provenance, then add it as the clean-checkout extraction fixture; the local 307-523 MB demos and upstream parser test downloads do not currently provide a defensible small fixture with recorded content provenance.
 - Split the 4,366-line development-only `Replay3DStage.tsx` by responsibility without changing behavior: keep React lifecycle/orchestration in the component, and extract stage ownership, asset loading/material preparation, player/model rendering, camera/POV control, utility/gunfire effects, and disposal/picking into owned `replay3d` modules before adding another 3D feature or considering a release-path return.
 - Reverse-engineer the remaining per-site 16-bit member, exact propagation-cost-to-arrival conversion, and damage formula in `baked_bomb_damage.vdata_c` against multiple map builds and controlled outcomes before animating arrival or presenting damage. Preserve the compiled resource SHA-256 as the version boundary; keep extracted/derived Valve data local and do not label unknown members without proof.
 - Replace process-local friend-tunnel safeguards with authentication/invite gating, durable quotas, and proxy-grade distributed controls before any public-domain deployment.
@@ -48,7 +47,7 @@ Planning note:
 - Revisit a separate internal AI runtime surface only if direct VSCode/Codex integration becomes valuable enough to justify a true runtime-first sidecar instead of another staged prototype
 
 ## In Progress
-- None. The next bounded implementation path is the first item under `Next Up`.
+- Publish the verified current-build parser compatibility and owned extraction-fixture milestone as focused commits, pass Linux CI, merge it to `main`, then start the queued behavior-preserving `Replay3DStage.tsx` split.
 
 ## Done
 ### Recent Done

@@ -8,6 +8,10 @@ require (
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
 )
 
+// Keep current client demos parseable until demoinfocs releases the
+// m_bStartedArming nil-value guard carried by our local v5.2.0 snapshot.
+replace github.com/markus-wa/demoinfocs-golang/v5 => ./third_party/demoinfocs
+
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/golang/snappy v1.0.0 // indirect

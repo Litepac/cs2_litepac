@@ -9,6 +9,7 @@ on:
 jobs:
   parser:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: parser
@@ -21,11 +22,24 @@ jobs:
         with:
           go-version-file: parser/go.mod
 
+      - name: Verify Go modules
+        run: go mod verify
+
+      - name: Vet parser
+        run: go vet ./...
+
+      - name: Run committed replay regression gate
+        run: go test ./internal/validate -run '^TestCommittedReplayRegression$' -count=1
+
       - name: Run parser tests
         run: go test ./...
 
+      - name: Build parser commands
+        run: go build ./...
+
   viewer:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: viewer
@@ -46,5 +60,11 @@ jobs:
       - name: Check viewer structure
         run: npm run check:structure
 
+      - name: Run viewer tests
+        run: npm test
+
       - name: Build viewer
         run: npm run build
+
+      - name: Check release bundle
+        run: npm run check:release

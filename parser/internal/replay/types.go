@@ -4,7 +4,7 @@ import "time"
 
 const (
 	FormatName    = "mastermind.replay"
-	SchemaVersion = "1.0.0-draft"
+	SchemaVersion = "1.1.0-draft"
 )
 
 type Replay struct {
@@ -66,10 +66,11 @@ type Team struct {
 }
 
 type Player struct {
-	PlayerID    string  `json:"playerId"`
-	DisplayName string  `json:"displayName"`
-	SteamID     *string `json:"steamId"`
-	TeamID      string  `json:"teamId"`
+	PlayerID      string  `json:"playerId"`
+	DisplayName   string  `json:"displayName"`
+	SteamID       *string `json:"steamId"`
+	TeamID        string  `json:"teamId"`
+	CrosshairCode *string `json:"crosshairCode,omitempty"`
 }
 
 type Round struct {
@@ -106,6 +107,20 @@ type PlayerStream struct {
 	Y                   []*float64 `json:"y"`
 	Z                   []*float64 `json:"z"`
 	Yaw                 []*float64 `json:"yaw"`
+	Pitch               []*float64 `json:"pitch"`
+	EyeX                []*float64 `json:"eyeX"`
+	EyeY                []*float64 `json:"eyeY"`
+	EyeZ                []*float64 `json:"eyeZ"`
+	IsScoped            []*bool    `json:"isScoped"`
+	ZoomLevel           []*int     `json:"zoomLevel"`
+	ViewmodelFOV        []*float64 `json:"viewmodelFov"`
+	ViewmodelOffsetX    []*float64 `json:"viewmodelOffsetX"`
+	ViewmodelOffsetY    []*float64 `json:"viewmodelOffsetY"`
+	ViewmodelOffsetZ    []*float64 `json:"viewmodelOffsetZ"`
+	RecoilIndex         []*float64 `json:"recoilIndex"`
+	IsWalking           []*bool    `json:"isWalking"`
+	IsDucking           []*bool    `json:"isDucking"`
+	IsOnGround          []*bool    `json:"isOnGround"`
 	Alive               []bool     `json:"alive"`
 	HasBomb             []bool     `json:"hasBomb"`
 	Health              []*int     `json:"health"`

@@ -1,3 +1,5 @@
+import { lazy, Suspense, useEffect, useState } from "react";
+
 import { ReplayStage } from "../canvas/ReplayStage";
 import type { DeathReviewEntry } from "../replay/deathReview";
 import { scoreForSide, sideTeam, type Side } from "../replay/derived";
@@ -26,6 +28,7 @@ import { ReplayDock } from "./replay-map-first/ReplayDock";
 import { ReplayHud } from "./replay-map-first/ReplayHud";
 import { ReplayModeRail } from "./replay-map-first/ReplayModeRail";
 import { ReplayRosterColumn } from "./replay-map-first/ReplayRosterColumn";
+import { ReplayViewModeToggle, type ReplayViewMode } from "./replay-map-first/ReplayViewModeToggle";
 import { useReplayDrawing } from "./replay-map-first/useReplayDrawing";
 import { useReplayHotkeys } from "./replay-map-first/useReplayHotkeys";
 import "./ReplayMapFirstPage.css";
@@ -54,6 +57,9 @@ const ROUND_SET_OPTIONS: Array<{ label: string; value: RoundSetFilter }> = [
   { label: "T side", value: "tSide" },
   { label: "Match", value: "match" },
 ];
+const Replay3DStage = import.meta.env.DEV
+  ? lazy(() => import("../canvas/Replay3DStage").then((module) => ({ default: module.Replay3DStage })))
+  : null;
 
 type PlaybackState = {
   changeTick: (tick: number) => void;
@@ -178,6 +184,7 @@ export function ReplayMapFirstPage({
   onUtilityAtlasTeamFilterChange,
   onUtilityFocusChange,
 }: Props) {
+  const [viewMode, setViewMode] = useState<ReplayViewMode>("2d");
   const {
     clearDrawings,
     continueDrawing,
@@ -192,6 +199,8 @@ export function ReplayMapFirstPage({
   });
   const liveMode = analysisMode === "live";
   const deathReviewMode = analysisMode === "deathReview";
+  const threeDimensionalReviewEnabled = import.meta.env.DEV && liveMode && Replay3DStage !== null;
+  const renderThreeDimensionalStage = viewMode === "3d" && threeDimensionalReviewEnabled;
   const timer = resolveRoundTimer(replay, round, playback.renderTickRounded);
   const livePlayers = livePlayersAtTick(replay, round, playback.renderTickRounded);
   const selectedLivePlayer = livePlayers.find((entry) => entry.playerId === selectedPlayerId) ?? null;
@@ -201,6 +210,12 @@ export function ReplayMapFirstPage({
   const tTeam = sideTeam(replay, round, "T");
   const ctScore = scoreForSide(round, "CT", "before");
   const tScore = scoreForSide(round, "T", "before");
+
+  useEffect(() => {
+    if (!threeDimensionalReviewEnabled && viewMode === "3d") {
+      setViewMode("2d");
+    }
+  }, [threeDimensionalReviewEnabled, viewMode]);
 
   useReplayHotkeys({
     clearDrawings,
@@ -245,7 +260,7 @@ export function ReplayMapFirstPage({
     ) : null;
 
   return (
-    <div className="dr-mapfirst-page">
+    <div className={renderThreeDimensionalStage ? "dr-mapfirst-page dr-mapfirst-page-3d" : "dr-mapfirst-page"}>
       <ReplayModeRail
         analysisMode={analysisMode}
         onOpenHome={onOpenHome}
@@ -256,69 +271,87 @@ export function ReplayMapFirstPage({
       />
 
       <section className="dr-mapfirst-stage" aria-label="Replay map workspace">
-        <ReplayStage
-          key={`${replay.sourceDemo.fileName}:${round.roundNumber}`}
-          activeRoundIndex={activeRoundIndex}
-          analysisMode={analysisMode}
-          currentTick={playback.renderTick}
-          heatmapCellSize={heatmapSnapshot.cellSize}
-          heatmapScope={heatmapScope}
-          heatmapBuckets={heatmapSnapshot.buckets}
-          heatmapMaxSampleCount={heatmapSnapshot.maxSampleCount}
-          livePlayerContextMode={liveMode && livePlayerContextMode}
-          deathReviewEntries={deathReviewEntries}
-          selectedDeathReviewKey={selectedDeathReviewKey}
-          onSelectAtlasEntry={onSelectAtlasEntry}
-          onSelectDeathReviewEntry={onSelectDeathReviewEntry}
-          positionPlayerSnapshots={positionPlayerSnapshots}
-          positionTrailEntries={displayedPositionTrailEntries}
-          showPositionRoundNumbers={showPositionRoundNumbers}
-          positionsView={positionsView}
-          replay={replay}
-          round={round}
-          selectedPlayerId={selectedPlayerId}
-          selectedUtilityAtlasKey={selectedUtilityAtlasKey}
-          utilityAtlasEntries={utilityAtlasEntries}
-          utilityFocus={utilityFocus}
-          onSelectPositionSnapshot={onSelectPositionSnapshot}
-          onSelectPlayer={onReplayPlayerSelect}
-        />
+        {renderThreeDimensionalStage && Replay3DStage !== null ? (
+          <Suspense fallback={<div className="stage-shell"><div className="stage-error">Loading 3D renderer...</div></div>}>
+            <Replay3DStage
+              currentTick={playback.renderTick}
+              replay={replay}
+              round={round}
+              selectedPlayerId={selectedPlayerId}
+              onSelectPlayer={onReplayPlayerSelect}
+            />
+          </Suspense>
+        ) : (
+          <ReplayStage
+            key={`${replay.sourceDemo.fileName}:${round.roundNumber}`}
+            activeRoundIndex={activeRoundIndex}
+            analysisMode={analysisMode}
+            currentTick={playback.renderTick}
+            heatmapCellSize={heatmapSnapshot.cellSize}
+            heatmapScope={heatmapScope}
+            heatmapBuckets={heatmapSnapshot.buckets}
+            heatmapMaxSampleCount={heatmapSnapshot.maxSampleCount}
+            livePlayerContextMode={liveMode && livePlayerContextMode}
+            deathReviewEntries={deathReviewEntries}
+            selectedDeathReviewKey={selectedDeathReviewKey}
+            onSelectAtlasEntry={onSelectAtlasEntry}
+            onSelectDeathReviewEntry={onSelectDeathReviewEntry}
+            positionPlayerSnapshots={positionPlayerSnapshots}
+            positionTrailEntries={displayedPositionTrailEntries}
+            showPositionRoundNumbers={showPositionRoundNumbers}
+            positionsView={positionsView}
+            replay={replay}
+            round={round}
+            selectedPlayerId={selectedPlayerId}
+            selectedUtilityAtlasKey={selectedUtilityAtlasKey}
+            utilityAtlasEntries={utilityAtlasEntries}
+            utilityFocus={utilityFocus}
+            onSelectPositionSnapshot={onSelectPositionSnapshot}
+            onSelectPlayer={onReplayPlayerSelect}
+          />
+        )}
+
+        {threeDimensionalReviewEnabled ? <ReplayViewModeToggle mode={viewMode} onChange={setViewMode} /> : null}
 
         {deathReviewMode ? <div className="dr-mapfirst-death-review-inspector">{analysisControls}</div> : null}
 
-        <div className="dr-mapfirst-stage-tool-stack">
-          {deathReviewMode ? null : analysisControls}
+        {!renderThreeDimensionalStage ? (
+          <div className="dr-mapfirst-stage-tool-stack">
+            {deathReviewMode ? null : analysisControls}
 
-          <div className="dr-mapfirst-stage-toolbar">
-            <ReplayDrawingToolbar
-              mode={stageToolMode}
-              hasDrawings={drawingStrokes.length > 0}
-              onClear={clearDrawings}
-              onSelectDraw={() => setStageToolMode("draw")}
-              onSelectMove={() => setStageToolMode("move")}
-            />
+            <div className="dr-mapfirst-stage-toolbar">
+              <ReplayDrawingToolbar
+                mode={stageToolMode}
+                hasDrawings={drawingStrokes.length > 0}
+                onClear={clearDrawings}
+                onSelectDraw={() => setStageToolMode("draw")}
+                onSelectMove={() => setStageToolMode("move")}
+              />
+            </div>
           </div>
-        </div>
+        ) : null}
 
-        <svg
-          aria-hidden="true"
-          className={`dr-mapfirst-drawing-layer ${stageToolMode === "draw" ? "dr-mapfirst-drawing-layer-active" : ""}`}
-          onPointerCancel={stopDrawing}
-          onPointerDown={startDrawing}
-          onPointerLeave={stopDrawing}
-          onPointerMove={continueDrawing}
-          onPointerUp={stopDrawing}
-          preserveAspectRatio="none"
-          viewBox="0 0 100 100"
-        >
-          {drawingStrokes.map((stroke) => (
-            <polyline
-              key={stroke.id}
-              className="dr-mapfirst-drawing-stroke"
-              points={stroke.points.map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(" ")}
-            />
-          ))}
-        </svg>
+        {!renderThreeDimensionalStage ? (
+          <svg
+            aria-hidden="true"
+            className={`dr-mapfirst-drawing-layer ${stageToolMode === "draw" ? "dr-mapfirst-drawing-layer-active" : ""}`}
+            onPointerCancel={stopDrawing}
+            onPointerDown={startDrawing}
+            onPointerLeave={stopDrawing}
+            onPointerMove={continueDrawing}
+            onPointerUp={stopDrawing}
+            preserveAspectRatio="none"
+            viewBox="0 0 100 100"
+          >
+            {drawingStrokes.map((stroke) => (
+              <polyline
+                key={stroke.id}
+                className="dr-mapfirst-drawing-stroke"
+                points={stroke.points.map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(" ")}
+              />
+            ))}
+          </svg>
+        ) : null}
 
         <ReplayHud
           ctScore={ctScore}

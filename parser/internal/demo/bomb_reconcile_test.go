@@ -4,28 +4,35 @@ import "testing"
 
 func TestBombCarrierTransitionEvents(t *testing.T) {
 	t.Run("no change yields no events", func(t *testing.T) {
-		events := bombCarrierTransitionEvents("player:a", "player:a")
+		events := bombCarrierTransitionEvents("player:a", "player:a", true)
 		if len(events) != 0 {
 			t.Fatalf("expected no transition events, got %d", len(events))
 		}
 	})
 
+	t.Run("initial carrier observation yields no pickup", func(t *testing.T) {
+		events := bombCarrierTransitionEvents("", "player:a", false)
+		if len(events) != 0 {
+			t.Fatalf("expected initial carrier observation to establish a baseline, got %#v", events)
+		}
+	})
+
 	t.Run("ground to carrier yields pickup", func(t *testing.T) {
-		events := bombCarrierTransitionEvents("", "player:a")
+		events := bombCarrierTransitionEvents("", "player:a", true)
 		if len(events) != 1 || events[0].eventType != "pickup" || events[0].playerID == nil || *events[0].playerID != "player:a" {
 			t.Fatalf("expected pickup for player:a, got %#v", events)
 		}
 	})
 
 	t.Run("carrier to ground yields drop", func(t *testing.T) {
-		events := bombCarrierTransitionEvents("player:a", "")
+		events := bombCarrierTransitionEvents("player:a", "", true)
 		if len(events) != 1 || events[0].eventType != "drop" || events[0].playerID == nil || *events[0].playerID != "player:a" {
 			t.Fatalf("expected drop for player:a, got %#v", events)
 		}
 	})
 
 	t.Run("carrier swap yields drop then pickup", func(t *testing.T) {
-		events := bombCarrierTransitionEvents("player:a", "player:b")
+		events := bombCarrierTransitionEvents("player:a", "player:b", true)
 		if len(events) != 2 {
 			t.Fatalf("expected 2 transition events, got %d", len(events))
 		}

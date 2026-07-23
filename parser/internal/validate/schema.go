@@ -32,8 +32,23 @@ func SchemaPath(explicit string) (string, error) {
 }
 
 func ValidateSchema(path string, data replay.Replay) error {
+	rawSchema, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("read schema: %w", err)
+	}
+
+	var schemaDocument any
+	if err := json.Unmarshal(rawSchema, &schemaDocument); err != nil {
+		return fmt.Errorf("decode schema: %w", err)
+	}
+
+	const schemaResourceURL = "https://mastermind.local/schema/mastermind.replay.schema.json"
 	compiler := jsonschema.NewCompiler()
-	compiled, err := compiler.Compile(path)
+	if err := compiler.AddResource(schemaResourceURL, schemaDocument); err != nil {
+		return fmt.Errorf("add schema resource: %w", err)
+	}
+
+	compiled, err := compiler.Compile(schemaResourceURL)
 	if err != nil {
 		return fmt.Errorf("compile schema: %w", err)
 	}

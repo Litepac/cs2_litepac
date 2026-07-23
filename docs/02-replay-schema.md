@@ -45,7 +45,7 @@ Rounds are explicit objects with start, freeze end, and end ticks. Side swaps ar
 ```json
 {
   "format": "mastermind.replay",
-  "schemaVersion": "1.0.0-draft",
+  "schemaVersion": "1.1.0-draft",
   "generatedAt": "2026-03-14T20:00:00Z",
   "generator": {
     "name": "mastermind-parser",
@@ -144,6 +144,20 @@ Example:
   "y": [-411.2, -409.5, -407.0],
   "z": [64.0, 64.0, 64.0],
   "yaw": [90.0, 91.5, 95.2],
+  "pitch": [0.0, -2.5, -4.0],
+  "eyeX": [12.4, 13.0, 13.7],
+  "eyeY": [-411.2, -409.5, -407.0],
+  "eyeZ": [128.0, 128.0, 128.0],
+  "isScoped": [false, false, true],
+  "zoomLevel": [null, null, 1],
+  "viewmodelFov": [68, 68, 68],
+  "viewmodelOffsetX": [2.5, 2.5, 2.5],
+  "viewmodelOffsetY": [0, 0, 0],
+  "viewmodelOffsetZ": [-1.5, -1.5, -1.5],
+  "recoilIndex": [0, 0, 1],
+  "isWalking": [false, false, true],
+  "isDucking": [false, false, null],
+  "isOnGround": [true, true, null],
   "alive": [true, true, true],
   "hasBomb": [false, false, false]
 }
@@ -156,6 +170,10 @@ Invariants:
 - `sampleIntervalTicks` is `1` in V1
 - streams must stay within the round window, extending through `officialEndTick` when that later post-result boundary is present
 - values may be `null` when the parser cannot trust them
+- `yaw` and `pitch` are parser-owned view angles normalized to degrees (`yaw` -180..180, `pitch` -90..90)
+- `eyeX`/`eyeY`/`eyeZ` are present only when the parser can read CS2 pawn eye-offset fields; the viewer must not synthesize POV eye height when these are `null`
+- `isScoped`, `zoomLevel`, `viewmodelFov`, `viewmodelOffsetX/Y/Z`, `recoilIndex`, `isWalking`, `isDucking`, and `isOnGround` are parser-owned CS2 pawn/weapon state when demoinfocs exposes those fields; unavailable movement/stance state is `null`, never an inferred `false`
+- `viewmodelFov` and `viewmodelOffsetX/Y/Z` describe first-person viewmodel settings, not guaranteed world camera FOV or exact Source 2 viewmodel animation
 
 ## Event Model
 
@@ -224,6 +242,8 @@ Bomb events cover:
 
 Rounds may also carry an optional `droppedBombStream` with sampled bomb world positions while the bomb is on the ground and not carried. This is separate from discrete bomb events because the bomb can still slide or settle between a `drop` and a later `pickup`, and the viewer should not have to infer that movement from one stale event position.
 
+An `exploded` event owns the canonical explosion tick and origin only. Since the July 2026 C4 redesign, official-map damage uses precomputed simulation values embedded in the compiled map and a shockwave that expands from the explosion center instead of applying instantly. That occlusion-aware damage shape is not a circular radius and is not currently present in the canonical replay. Viewers may show a short screen-space event cue, but must not present guessed world-radius bands, wall penetration, arrival time, or predicted damage as replay truth.
+
 ### Utility
 
 Each utility object covers its lifecycle:
@@ -251,6 +271,10 @@ Player streams also carry parser-owned active-equipment semantics so the viewer 
 - `activeWeapon`: active equipment display name such as `AK-47`, `HE Grenade`, or `Knife`
 - `activeWeaponClass`: parser-owned coarse class such as `pistol`, `smg`, `heavy`, `rifle`, `sniper`, `knife`, `utility`, or `equipment`
 - `mainWeapon`: parser-owned primary combat weapon display name when one exists
+- `isScoped` / `zoomLevel`: parser-owned scope/zoom state from player and active weapon entities
+- `viewmodelFov` / `viewmodelOffsetX/Y/Z`: parser-owned viewmodel settings for first-person review placement when present
+- `recoilIndex`: parser-owned weapon recoil index, exported as state only; viewers must not turn it into exact recoil/spread claims without validated CS2 client parity
+- `isWalking`, `isDucking`, `isOnGround`: parser-owned movement/stance flags for conservative 3D presentation
 
 This keeps player token mode on the parser/canonical side of the boundary instead of letting map and roster UI reinterpret weapon strings independently. Exact held-grenade kind can still be derived in one shared viewer resolver from the already-canonical `activeWeapon` display name without duplicating another full per-tick semantic array.
 
@@ -263,6 +287,7 @@ The canonical artifact does not include:
 - visibility inference
 - line-of-sight probability
 - guessed bomb site names when not confirmed
+- guessed C4 shockwave reach, wall occlusion, arrival timing, or damage preview
 
 ## Reference
 

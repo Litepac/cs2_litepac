@@ -8,6 +8,20 @@ type Sample struct {
 	Y            *float64
 	Z            *float64
 	Yaw          *float64
+	Pitch        *float64
+	EyeX         *float64
+	EyeY         *float64
+	EyeZ         *float64
+	IsScoped     *bool
+	ZoomLevel    *int
+	ViewmodelFOV *float64
+	ViewmodelX   *float64
+	ViewmodelY   *float64
+	ViewmodelZ   *float64
+	RecoilIndex  *float64
+	IsWalking    *bool
+	IsDucking    *bool
+	IsOnGround   *bool
 	Alive        bool
 	HasBomb      bool
 	Health       *int
@@ -37,6 +51,20 @@ type Builder struct {
 	y       []*float64
 	z       []*float64
 	yaw     []*float64
+	pitch   []*float64
+	eyeX    []*float64
+	eyeY    []*float64
+	eyeZ    []*float64
+	scoped  []*bool
+	zoom    []*int
+	vmFov   []*float64
+	vmX     []*float64
+	vmY     []*float64
+	vmZ     []*float64
+	recoil  []*float64
+	walking []*bool
+	ducking []*bool
+	ground  []*bool
 	alive   []bool
 	hasBomb []bool
 	health  []*int
@@ -61,6 +89,20 @@ func NewBuilder(playerID string, side *string) *Builder {
 		y:        []*float64{},
 		z:        []*float64{},
 		yaw:      []*float64{},
+		pitch:    []*float64{},
+		eyeX:     []*float64{},
+		eyeY:     []*float64{},
+		eyeZ:     []*float64{},
+		scoped:   []*bool{},
+		zoom:     []*int{},
+		vmFov:    []*float64{},
+		vmX:      []*float64{},
+		vmY:      []*float64{},
+		vmZ:      []*float64{},
+		recoil:   []*float64{},
+		walking:  []*bool{},
+		ducking:  []*bool{},
+		ground:   []*bool{},
 		alive:    []bool{},
 		hasBomb:  []bool{},
 		health:   []*int{},
@@ -110,6 +152,20 @@ func (b *Builder) Build() *replay.PlayerStream {
 		Y:                   b.y,
 		Z:                   b.z,
 		Yaw:                 b.yaw,
+		Pitch:               b.pitch,
+		EyeX:                b.eyeX,
+		EyeY:                b.eyeY,
+		EyeZ:                b.eyeZ,
+		IsScoped:            b.scoped,
+		ZoomLevel:           b.zoom,
+		ViewmodelFOV:        b.vmFov,
+		ViewmodelOffsetX:    b.vmX,
+		ViewmodelOffsetY:    b.vmY,
+		ViewmodelOffsetZ:    b.vmZ,
+		RecoilIndex:         b.recoil,
+		IsWalking:           b.walking,
+		IsDucking:           b.ducking,
+		IsOnGround:          b.ground,
 		Alive:               b.alive,
 		HasBomb:             b.hasBomb,
 		Health:              b.health,
@@ -132,6 +188,20 @@ func (b *Builder) appendSample(sample Sample) {
 	b.y = append(b.y, sample.Y)
 	b.z = append(b.z, sample.Z)
 	b.yaw = append(b.yaw, sample.Yaw)
+	b.pitch = append(b.pitch, sample.Pitch)
+	b.eyeX = append(b.eyeX, sample.EyeX)
+	b.eyeY = append(b.eyeY, sample.EyeY)
+	b.eyeZ = append(b.eyeZ, sample.EyeZ)
+	b.scoped = append(b.scoped, sample.IsScoped)
+	b.zoom = append(b.zoom, sample.ZoomLevel)
+	b.vmFov = append(b.vmFov, sample.ViewmodelFOV)
+	b.vmX = append(b.vmX, sample.ViewmodelX)
+	b.vmY = append(b.vmY, sample.ViewmodelY)
+	b.vmZ = append(b.vmZ, sample.ViewmodelZ)
+	b.recoil = append(b.recoil, sample.RecoilIndex)
+	b.walking = append(b.walking, sample.IsWalking)
+	b.ducking = append(b.ducking, sample.IsDucking)
+	b.ground = append(b.ground, sample.IsOnGround)
 	b.alive = append(b.alive, sample.Alive)
 	b.hasBomb = append(b.hasBomb, sample.HasBomb)
 	b.health = append(b.health, sample.Health)

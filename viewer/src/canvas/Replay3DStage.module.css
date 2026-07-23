@@ -1,0 +1,206 @@
+.shell {
+  position: absolute;
+  inset: var(--dr-stage-hud-safe) 0 0;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.014) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.012) 1px, transparent 1px),
+    #050607;
+  background-size: 64px 64px, 64px 64px, auto;
+}
+
+.viewport {
+  width: 100%;
+  height: 100%;
+}
+
+.reviewCrosshairPov,
+.reviewCrosshairFree {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 4;
+  width: 34px;
+  height: 34px;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+.reviewCrosshairPov::before,
+.reviewCrosshairPov::after,
+.reviewCrosshairFree::before,
+.reviewCrosshairFree::after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: block;
+  width: 100%;
+  height: 100%;
+  content: "";
+  transform: translate(-50%, -50%);
+}
+
+.reviewCrosshairPov::before,
+.reviewCrosshairFree::before {
+  width: 30px;
+  height: 2px;
+  background: linear-gradient(90deg, currentColor 0 11px, transparent 11px 19px, currentColor 19px 30px);
+  color: rgba(255, 240, 214, 0.78);
+}
+
+.reviewCrosshairPov::after,
+.reviewCrosshairFree::after {
+  width: 2px;
+  height: 30px;
+  background: linear-gradient(180deg, currentColor 0 11px, transparent 11px 19px, currentColor 19px 30px);
+  color: rgba(255, 240, 214, 0.78);
+}
+
+.reviewCrosshairPov {
+  color: rgba(255, 245, 224, 0.92);
+  filter:
+    drop-shadow(0 0 1px rgba(0, 0, 0, 1))
+    drop-shadow(0 0 5px rgba(0, 0, 0, 0.78));
+}
+
+.reviewCrosshairFree {
+  color: rgba(174, 223, 255, 0.7);
+  opacity: 0.9;
+  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.86));
+}
+
+.overlay {
+  position: absolute;
+  left: clamp(10px, 0.9dvw, 16px);
+  bottom: clamp(10px, 1dvh, 16px);
+  z-index: 4;
+  display: grid;
+  gap: 6px;
+  max-width: min(420px, calc(100% - 20px));
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.105);
+  border-left: 2px solid rgba(217, 54, 40, 0.82);
+  background: rgba(5, 6, 7, 0.78);
+  color: rgba(235, 227, 220, 0.78);
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  line-height: 1.35;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+.overlay strong {
+  color: #fff0ea;
+  font-family: "Inter Tight", "Inter", system-ui, sans-serif;
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1.05;
+  text-transform: none;
+}
+
+.overlay span {
+  color: rgba(235, 227, 220, 0.62);
+}
+
+.cameraControls {
+  position: absolute;
+  top: clamp(10px, 1dvh, 16px);
+  left: 50%;
+  z-index: 4;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(5, 6, 7, 0.74);
+  transform: translateX(-50%);
+}
+
+.cameraButton,
+.cameraButtonActive {
+  min-width: 74px;
+  height: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.045);
+  color: rgba(235, 227, 220, 0.68);
+  cursor: pointer;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cameraButton:hover,
+.cameraButton:focus-visible {
+  border-color: rgba(255, 240, 234, 0.32);
+  color: rgba(255, 240, 234, 0.92);
+  outline: none;
+}
+
+.cameraButtonActive {
+  border-color: rgba(217, 54, 40, 0.76);
+  background: rgba(217, 54, 40, 0.22);
+  color: #fff0ea;
+}
+
+.cameraButton:disabled,
+.cameraButtonActive:disabled {
+  cursor: not-allowed;
+  opacity: 0.38;
+}
+
+.emptyState,
+.errorState {
+  position: absolute;
+  inset: clamp(54px, 8dvh, 84px) clamp(12px, 1.2dvw, 22px) clamp(12px, 1.2dvh, 22px);
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.emptyPanel,
+.errorPanel {
+  display: grid;
+  gap: 8px;
+  width: min(520px, 100%);
+  padding: clamp(16px, 2dvh, 22px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-top: 1px solid rgba(217, 54, 40, 0.76);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 72%),
+    rgba(7, 8, 9, 0.92);
+  box-shadow: 0 20px 46px rgba(0, 0, 0, 0.34);
+  color: rgba(235, 227, 220, 0.74);
+}
+
+.emptyPanel strong,
+.errorPanel strong {
+  color: #fff0ea;
+  font-family: "Inter Tight", "Inter", system-ui, sans-serif;
+  font-size: clamp(22px, 1.8dvw, 30px);
+  font-weight: 920;
+  letter-spacing: -0.04em;
+  line-height: 0.95;
+}
+
+.emptyPanel span,
+.errorPanel span,
+.emptyPanel code {
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  line-height: 1.45;
+  text-transform: uppercase;
+}
+
+.emptyPanel code {
+  color: rgba(255, 177, 79, 0.9);
+  word-break: break-word;
+}

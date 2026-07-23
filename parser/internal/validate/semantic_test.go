@@ -47,12 +47,171 @@ func TestValidateReplayRejectsImpossibleYawStates(t *testing.T) {
 	})
 }
 
+func TestValidateReplayRejectsImpossibleViewStates(t *testing.T) {
+	t.Run("pitch while dead", func(t *testing.T) {
+		err := ValidateReplay(replayWithYawSample(func(stream *replay.PlayerStream) {
+			stream.Alive[0] = false
+			stream.Yaw[0] = nil
+			stream.EyeX[0] = nil
+			stream.EyeY[0] = nil
+			stream.EyeZ[0] = nil
+		}))
+		assertValidationErrorContains(t, err, "has pitch while not alive")
+	})
+
+	t.Run("non-finite pitch", func(t *testing.T) {
+		err := ValidateReplay(replayWithYawSample(func(stream *replay.PlayerStream) {
+			stream.Pitch[0] = replay.Float64(math.Inf(1))
+		}))
+		assertValidationErrorContains(t, err, "has non-finite pitch")
+	})
+
+	t.Run("out of range pitch", func(t *testing.T) {
+		err := ValidateReplay(replayWithYawSample(func(stream *replay.PlayerStream) {
+			stream.Pitch[0] = replay.Float64(91)
+		}))
+		assertValidationErrorContains(t, err, "has out-of-range pitch")
+	})
+
+	t.Run("partial eye position", func(t *testing.T) {
+		err := ValidateReplay(replayWithYawSample(func(stream *replay.PlayerStream) {
+			stream.EyeZ[0] = nil
+		}))
+		assertValidationErrorContains(t, err, "has partial eye position")
+	})
+
+	t.Run("eye position without full position", func(t *testing.T) {
+		err := ValidateReplay(replayWithYawSample(func(stream *replay.PlayerStream) {
+			stream.X[0] = nil
+			stream.Yaw[0] = nil
+			stream.Pitch[0] = nil
+		}))
+		assertValidationErrorContains(t, err, "has eye position without full position")
+	})
+}
+
+func TestValidateReplayRejectsInvalidPovState(t *testing.T) {
+	t.Run("scoped while dead", func(t *testing.T) {
+		err := ValidateReplay(replayWithYawSample(func(stream *replay.PlayerStream) {
+			stream.Alive[0] = false
+			stream.Yaw[0] = nil
+			stream.Pitch[0] = nil
+			stream.EyeX[0] = nil
+			stream.EyeY[0] = nil
+			stream.EyeZ[0] = nil
+			stream.IsScoped[0] = replay.Bool(true)
+			stream.ViewmodelFOV[0] = nil
+			stream.ViewmodelOffsetX[0] = nil
+			stream.ViewmodelOffsetY[0] = nil
+			stream.ViewmodelOffsetZ[0] = nil
+		}))
+		assertValidationErrorContains(t, err, "has scoped state while not alive")
+	})
+
+	t.Run("partial viewmodel offset", func(t *testing.T) {
+		err := ValidateReplay(replayWithYawSample(func(stream *replay.PlayerStream) {
+			stream.ViewmodelOffsetZ[0] = nil
+		}))
+		assertValidationErrorContains(t, err, "has partial viewmodel offset")
+	})
+
+	t.Run("invalid recoil index", func(t *testing.T) {
+		err := ValidateReplay(replayWithYawSample(func(stream *replay.PlayerStream) {
+			stream.RecoilIndex[0] = replay.Float64(math.Inf(1))
+		}))
+		assertValidationErrorContains(t, err, "has invalid recoil index")
+	})
+
+	t.Run("unknown movement state remains valid", func(t *testing.T) {
+		err := ValidateReplay(replayWithYawSample(func(stream *replay.PlayerStream) {
+			stream.IsWalking[0] = nil
+			stream.IsDucking[0] = nil
+			stream.IsOnGround[0] = nil
+		}))
+		if err != nil {
+			t.Fatalf("expected unknown movement state to remain valid, got %v", err)
+		}
+	})
+}
+
+func TestValidateReplayRejectsInvalidRoundTruth(t *testing.T) {
+	t.Run("non-sequential round number", func(t *testing.T) {
+		data := replayWithYawSample(func(stream *replay.PlayerStream) {
+			_ = stream
+		})
+		data.Rounds[0].RoundNumber = 2
+		assertValidationErrorContains(t, ValidateReplay(data), "has number 2, expected 1")
+	})
+
+	t.Run("score advances twice", func(t *testing.T) {
+		data := replayWithYawSample(func(stream *replay.PlayerStream) {
+			_ = stream
+		})
+		data.Rounds[0].ScoreAfter.T = 2
+		assertValidationErrorContains(t, ValidateReplay(data), "score advances by more than one point")
+	})
+
+	t.Run("winner does not match score", func(t *testing.T) {
+		data := replayWithYawSample(func(stream *replay.PlayerStream) {
+			_ = stream
+		})
+		data.Rounds[0].WinnerSide = replay.String("CT")
+		data.Rounds[0].ScoreAfter.T = 1
+		assertValidationErrorContains(t, ValidateReplay(data), "winner side does not match score advance")
+	})
+
+	t.Run("score is discontinuous between rounds", func(t *testing.T) {
+		data := replayWithYawSample(func(stream *replay.PlayerStream) {
+			_ = stream
+		})
+		data.Rounds[0].ScoreAfter.T = 1
+		data.Rounds = append(data.Rounds, replay.Round{
+			RoundNumber:     2,
+			StartTick:       1,
+			EndTick:         1,
+			ScoreBefore:     replay.Score{},
+			ScoreAfter:      replay.Score{},
+			PlayerStreams:   []replay.PlayerStream{},
+			BlindEvents:     []replay.BlindEvent{},
+			FireEvents:      []replay.FireEvent{},
+			HurtEvents:      []replay.HurtEvent{},
+			KillEvents:      []replay.KillEvent{},
+			BombEvents:      []replay.BombEvent{},
+			UtilityEntities: []replay.UtilityEntity{},
+		})
+		assertValidationErrorContains(t, ValidateReplay(data), "score before does not match previous score after")
+	})
+}
+
+func TestSameOrSwappedScoreAllowsHalftimeSideSwap(t *testing.T) {
+	if !sameOrSwappedScore(replay.Score{T: 7, CT: 5}, replay.Score{T: 5, CT: 7}) {
+		t.Fatal("expected halftime side swap to preserve score continuity")
+	}
+	if sameOrSwappedScore(replay.Score{T: 8, CT: 5}, replay.Score{T: 5, CT: 7}) {
+		t.Fatal("expected an unrelated score transition to remain invalid")
+	}
+}
+
 func TestValidateReplayAcceptsPlayerStreamsThroughOfficialEnd(t *testing.T) {
 	data := replayWithYawSample(func(stream *replay.PlayerStream) {
 		stream.X = append(stream.X, replay.Float64(11), replay.Float64(12))
 		stream.Y = append(stream.Y, replay.Float64(21), replay.Float64(22))
 		stream.Z = append(stream.Z, replay.Float64(31), replay.Float64(32))
 		stream.Yaw = append(stream.Yaw, replay.Float64(90), replay.Float64(90))
+		stream.Pitch = append(stream.Pitch, replay.Float64(0), replay.Float64(0))
+		stream.EyeX = append(stream.EyeX, replay.Float64(11), replay.Float64(12))
+		stream.EyeY = append(stream.EyeY, replay.Float64(21), replay.Float64(22))
+		stream.EyeZ = append(stream.EyeZ, replay.Float64(95), replay.Float64(96))
+		stream.IsScoped = append(stream.IsScoped, replay.Bool(false), replay.Bool(false))
+		stream.ZoomLevel = append(stream.ZoomLevel, nil, nil)
+		stream.ViewmodelFOV = append(stream.ViewmodelFOV, replay.Float64(68), replay.Float64(68))
+		stream.ViewmodelOffsetX = append(stream.ViewmodelOffsetX, replay.Float64(2.5), replay.Float64(2.5))
+		stream.ViewmodelOffsetY = append(stream.ViewmodelOffsetY, replay.Float64(0), replay.Float64(0))
+		stream.ViewmodelOffsetZ = append(stream.ViewmodelOffsetZ, replay.Float64(-1.5), replay.Float64(-1.5))
+		stream.RecoilIndex = append(stream.RecoilIndex, replay.Float64(0), replay.Float64(0))
+		stream.IsWalking = append(stream.IsWalking, replay.Bool(false), replay.Bool(false))
+		stream.IsDucking = append(stream.IsDucking, replay.Bool(false), replay.Bool(false))
+		stream.IsOnGround = append(stream.IsOnGround, replay.Bool(true), replay.Bool(true))
 		stream.Alive = append(stream.Alive, true, true)
 		stream.HasBomb = append(stream.HasBomb, false, false)
 		stream.Health = append(stream.Health, replay.Int(100), replay.Int(100))
@@ -106,6 +265,20 @@ func TestValidateReplayRejectsInvalidStreamBounds(t *testing.T) {
 			stream.Y = append(stream.Y, replay.Float64(21))
 			stream.Z = append(stream.Z, replay.Float64(31))
 			stream.Yaw = append(stream.Yaw, replay.Float64(90))
+			stream.Pitch = append(stream.Pitch, replay.Float64(0))
+			stream.EyeX = append(stream.EyeX, replay.Float64(11))
+			stream.EyeY = append(stream.EyeY, replay.Float64(21))
+			stream.EyeZ = append(stream.EyeZ, replay.Float64(95))
+			stream.IsScoped = append(stream.IsScoped, replay.Bool(false))
+			stream.ZoomLevel = append(stream.ZoomLevel, nil)
+			stream.ViewmodelFOV = append(stream.ViewmodelFOV, replay.Float64(68))
+			stream.ViewmodelOffsetX = append(stream.ViewmodelOffsetX, replay.Float64(2.5))
+			stream.ViewmodelOffsetY = append(stream.ViewmodelOffsetY, replay.Float64(0))
+			stream.ViewmodelOffsetZ = append(stream.ViewmodelOffsetZ, replay.Float64(-1.5))
+			stream.RecoilIndex = append(stream.RecoilIndex, replay.Float64(0))
+			stream.IsWalking = append(stream.IsWalking, replay.Bool(false))
+			stream.IsDucking = append(stream.IsDucking, replay.Bool(false))
+			stream.IsOnGround = append(stream.IsOnGround, replay.Bool(true))
 			stream.Alive = append(stream.Alive, true)
 			stream.HasBomb = append(stream.HasBomb, false)
 			stream.Health = append(stream.Health, replay.Int(100))
@@ -161,6 +334,42 @@ func TestValidateReplayRejectsInvalidUtilityTruth(t *testing.T) {
 		})
 
 		assertValidationErrorContains(t, ValidateReplay(data), "trajectory has non-finite position")
+	})
+
+	t.Run("trajectory extends after round end", func(t *testing.T) {
+		data := replayWithUtilityEntity(replay.UtilityEntity{
+			UtilityID: "utility:he",
+			Kind:      "he",
+			StartTick: 4,
+			Trajectory: replay.Trajectory{
+				SampleOriginTick:    4,
+				SampleIntervalTicks: 1,
+				X:                   []*float64{replay.Float64(1), replay.Float64(2)},
+				Y:                   []*float64{replay.Float64(1), replay.Float64(2)},
+				Z:                   []*float64{replay.Float64(1), replay.Float64(2)},
+			},
+			PhaseEvents: []replay.UtilityPhaseEvent{{Tick: 4, Type: "thrown"}},
+		})
+
+		assertValidationErrorContains(t, ValidateReplay(data), "trajectory ends after round end")
+	})
+
+	t.Run("phase occurs after round end", func(t *testing.T) {
+		data := replayWithUtilityEntity(replay.UtilityEntity{
+			UtilityID: "utility:flash",
+			Kind:      "flashbang",
+			StartTick: 0,
+			Trajectory: replay.Trajectory{
+				SampleOriginTick:    0,
+				SampleIntervalTicks: 1,
+				X:                   []*float64{replay.Float64(1)},
+				Y:                   []*float64{replay.Float64(2)},
+				Z:                   []*float64{replay.Float64(3)},
+			},
+			PhaseEvents: []replay.UtilityPhaseEvent{{Tick: 5, Type: "detonate"}},
+		})
+
+		assertValidationErrorContains(t, ValidateReplay(data), "phase detonate at tick 5 is after round end")
 	})
 
 	t.Run("unsorted phase events", func(t *testing.T) {
@@ -317,6 +526,35 @@ func TestValidateReplayRejectsInvalidBombTruth(t *testing.T) {
 
 		assertValidationErrorContains(t, ValidateReplay(data), "occurs before planted")
 	})
+
+	t.Run("event after terminal bomb event", func(t *testing.T) {
+		data := replayWithYawSample(func(stream *replay.PlayerStream) {
+			_ = stream
+		})
+		data.Rounds[0].EndTick = 4
+		site := "A"
+		data.Rounds[0].BombEvents = []replay.BombEvent{
+			bombEvent(1, "planted", &site),
+			bombEvent(2, "defused", &site),
+			bombEvent(3, "exploded", &site),
+		}
+
+		assertValidationErrorContains(t, ValidateReplay(data), "occurs after terminal bomb event")
+	})
+
+	t.Run("defuse abort without active defuse", func(t *testing.T) {
+		data := replayWithYawSample(func(stream *replay.PlayerStream) {
+			_ = stream
+		})
+		data.Rounds[0].EndTick = 4
+		site := "B"
+		data.Rounds[0].BombEvents = []replay.BombEvent{
+			bombEvent(1, "planted", &site),
+			bombEvent(2, "defuse_abort", nil),
+		}
+
+		assertValidationErrorContains(t, ValidateReplay(data), "has no active defuse")
+	})
 }
 
 func replayWithYawSample(mutator func(stream *replay.PlayerStream)) replay.Replay {
@@ -329,6 +567,20 @@ func replayWithYawSample(mutator func(stream *replay.PlayerStream)) replay.Repla
 		Y:                   []*float64{replay.Float64(20)},
 		Z:                   []*float64{replay.Float64(30)},
 		Yaw:                 []*float64{replay.Float64(90)},
+		Pitch:               []*float64{replay.Float64(0)},
+		EyeX:                []*float64{replay.Float64(10)},
+		EyeY:                []*float64{replay.Float64(20)},
+		EyeZ:                []*float64{replay.Float64(94)},
+		IsScoped:            []*bool{replay.Bool(false)},
+		ZoomLevel:           []*int{nil},
+		ViewmodelFOV:        []*float64{replay.Float64(68)},
+		ViewmodelOffsetX:    []*float64{replay.Float64(2.5)},
+		ViewmodelOffsetY:    []*float64{replay.Float64(0)},
+		ViewmodelOffsetZ:    []*float64{replay.Float64(-1.5)},
+		RecoilIndex:         []*float64{replay.Float64(0)},
+		IsWalking:           []*bool{replay.Bool(false)},
+		IsDucking:           []*bool{replay.Bool(false)},
+		IsOnGround:          []*bool{replay.Bool(true)},
 		Alive:               []bool{true},
 		HasBomb:             []bool{false},
 		Health:              []*int{replay.Int(100)},

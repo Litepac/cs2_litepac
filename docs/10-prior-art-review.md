@@ -44,6 +44,17 @@ Current CS2 review products converge on a few tool families rather than a large 
 - Timing tools are a strong fit for this product if kept parser-backed: first contact, first utility, execute/contact timing, rotate timing, bomb plant/defuse timing, and repeated player position at a shared round clock.
 - Heatmaps should remain secondary unless user feedback proves a clear job. If kept, the tool needs a sharply defined question such as "where did this player spend time?" or "where did deaths happen?", not broad movement coloring.
 
+## RoundIQ 3D Reference Boundary
+RoundIQ publicly positions its replayer around 2D, 3D, and POV viewing modes, including volumetric smokes and grenade lineup review: https://roundiq.gg/
+
+The useful reference is the product shape, not the implementation claim:
+- A real 3D mode should render the CS2 map world from Source 2 assets, not a tilted radar.
+- A tactical 2D radar overlay/cutaway can coexist with the 3D world to keep round context readable.
+- Player and utility placement must come from canonical replay `x/y/z/yaw` and trajectory truth.
+- POV/crosshair review should wait until parser truth includes pitch, eye position, FOV/scoped state, and enough map collision/visibility data to avoid fake line-of-sight claims.
+
+The implementation target for DemoRead is captured in `docs/18-real-3d-replay-mode.md`.
+
 ## Tool Priority Implication
 DemoRead should not add more sidebar modes until the current modes are shaped into sharper workflows. The next high-value additions are likely:
 

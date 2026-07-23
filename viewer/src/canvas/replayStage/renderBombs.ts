@@ -9,9 +9,9 @@ import c4IconSvg from "../../icons/cs2-equipment/panorama/images/icons/equipment
 import { RECENT_BOMB_WINDOW_TICKS } from "./constants";
 import { clamp } from "./camera";
 
-const BOMB_EXPLOSION_OUTER_RADIUS_WORLD = 1750;
-const BOMB_EXPLOSION_MID_RADIUS_WORLD = 1100;
-const BOMB_EXPLOSION_CORE_RADIUS_WORLD = 620;
+const BOMB_EXPLOSION_EVENT_PULSE_SECONDS = 0.9;
+const BOMB_EXPLOSION_EVENT_PULSE_START_PX = 9;
+const BOMB_EXPLOSION_EVENT_PULSE_END_PX = 36;
 const BOMB_ICON_SIZE = 32;
 const BOMB_ICON = { svg: c4IconSvg, width: BOMB_ICON_SIZE, height: BOMB_ICON_SIZE };
 
@@ -290,6 +290,7 @@ function drawBombEvent(
   }
 
   const ageRatio = 1 - (currentTick - event.tick) / (RECENT_BOMB_WINDOW_TICKS / 2);
+  const eventAgeSeconds = (currentTick - event.tick) / replay.match.tickRate;
   const point = worldToScreen(replay, radarViewport, event.x, event.y);
   const marker = new Graphics();
   marker.circle(point.x, point.y, 10.5);
@@ -303,7 +304,7 @@ function drawBombEvent(
     marker.lineTo(point.x, point.y + 3.3);
     marker.stroke({ color: 0xd9f1ff, width: 1.5, alpha: 0.56 + ageRatio * 0.3, cap: "round" });
   } else {
-    drawBombExplosionRadius(marker, replay, radarViewport, point.x, point.y, ageRatio);
+    drawBombExplosionEventPulse(marker, point.x, point.y, eventAgeSeconds);
     marker.circle(point.x, point.y, 5.8 + ageRatio * 1.05);
     marker.fill({ color: 0xffb25a, alpha: 0.14 + ageRatio * 0.16 });
     marker.moveTo(point.x - 3.7, point.y - 3.7);
@@ -315,40 +316,27 @@ function drawBombEvent(
   layer.addChild(marker);
 }
 
-function drawBombExplosionRadius(
+function drawBombExplosionEventPulse(
   marker: Graphics,
-  replay: Replay,
-  radarViewport: RadarViewport,
   centerX: number,
   centerY: number,
-  ageRatio: number,
+  eventAgeSeconds: number,
 ) {
-  const outerRadius = worldRadiusToScreenRadius(replay, radarViewport, BOMB_EXPLOSION_OUTER_RADIUS_WORLD);
-  const midRadius = worldRadiusToScreenRadius(replay, radarViewport, BOMB_EXPLOSION_MID_RADIUS_WORLD);
-  const coreRadius = worldRadiusToScreenRadius(replay, radarViewport, BOMB_EXPLOSION_CORE_RADIUS_WORLD);
-  const pulseScale = 0.96 + (1 - ageRatio) * 0.06;
-  const alpha = clamp(ageRatio, 0, 1);
+  if (eventAgeSeconds < 0 || eventAgeSeconds > BOMB_EXPLOSION_EVENT_PULSE_SECONDS) {
+    return;
+  }
 
-  marker.circle(centerX, centerY, outerRadius * pulseScale);
-  marker.fill({ color: 0xffc05a, alpha: 0.018 + alpha * 0.026 });
-  marker.circle(centerX, centerY, midRadius * pulseScale);
-  marker.fill({ color: 0xff7a35, alpha: 0.032 + alpha * 0.048 });
-  marker.circle(centerX, centerY, coreRadius * pulseScale);
-  marker.fill({ color: 0xff3e34, alpha: 0.052 + alpha * 0.078 });
+  // Screen-space event emphasis only. CS2's current C4 damage wave is driven by
+  // map-compiled, occlusion-aware simulation data that is not present here.
+  const progress = clamp(eventAgeSeconds / BOMB_EXPLOSION_EVENT_PULSE_SECONDS, 0, 1);
+  const easedProgress = 1 - (1 - progress) ** 2;
+  const radius =
+    BOMB_EXPLOSION_EVENT_PULSE_START_PX +
+    (BOMB_EXPLOSION_EVENT_PULSE_END_PX - BOMB_EXPLOSION_EVENT_PULSE_START_PX) * easedProgress;
+  const alpha = 1 - progress;
 
-  marker.circle(centerX, centerY, outerRadius * pulseScale);
-  marker.stroke({ color: 0xffd58a, width: 1.2, alpha: 0.18 + alpha * 0.28 });
-  marker.circle(centerX, centerY, midRadius * pulseScale);
-  marker.stroke({ color: 0xff8d45, width: 1.5, alpha: 0.22 + alpha * 0.36 });
-  marker.circle(centerX, centerY, coreRadius * pulseScale);
-  marker.stroke({ color: 0xffefc2, width: 1.15, alpha: 0.2 + alpha * 0.34 });
-}
-
-function worldRadiusToScreenRadius(replay: Replay, radarViewport: RadarViewport, worldRadius: number) {
-  const { worldXMin, worldXMax, worldYMin, worldYMax } = replay.map.coordinateSystem;
-  const worldWidth = Math.max(1, worldXMax - worldXMin);
-  const worldHeight = Math.max(1, worldYMax - worldYMin);
-  const pixelsPerWorldX = (radarViewport.imageWidth * radarViewport.scale) / worldWidth;
-  const pixelsPerWorldY = (radarViewport.imageHeight * radarViewport.scale) / worldHeight;
-  return worldRadius * ((pixelsPerWorldX + pixelsPerWorldY) / 2);
+  marker.circle(centerX, centerY, radius);
+  marker.stroke({ color: 0xffb25a, width: 2.2, alpha: 0.16 + alpha * 0.62 });
+  marker.circle(centerX, centerY, Math.max(BOMB_EXPLOSION_EVENT_PULSE_START_PX, radius * 0.64));
+  marker.stroke({ color: 0xffe1b3, width: 1.15, alpha: alpha * 0.46 });
 }

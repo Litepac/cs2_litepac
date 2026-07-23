@@ -6,6 +6,8 @@ import (
 
 	demoinfocs "github.com/markus-wa/demoinfocs-golang/v5/pkg/demoinfocs"
 	demoevents "github.com/markus-wa/demoinfocs-golang/v5/pkg/demoinfocs/events"
+
+	"mastermind/parser/internal/replay"
 )
 
 func CountRounds(demoPath string) (rounds int, err error) {
@@ -31,6 +33,9 @@ func CountRounds(demoPath string) (rounds int, err error) {
 
 	activeRound := false
 	finalizedRound := false
+	endedRound := false
+	scoreBefore := replay.Score{}
+	scoreAfter := replay.Score{}
 
 	parser.RegisterEventHandler(func(e demoevents.RoundStart) {
 		_ = e
@@ -38,11 +43,23 @@ func CountRounds(demoPath string) (rounds int, err error) {
 			return
 		}
 
-		if activeRound && !finalizedRound {
+		nextScore := currentScore(parser.GameState())
+		if activeRound && !finalizedRound && (!endedRound || sameScoreOrientation(scoreAfter, nextScore)) {
 			rounds++
 		}
 		activeRound = true
 		finalizedRound = false
+		endedRound = false
+		scoreBefore = nextScore
+	})
+
+	parser.RegisterEventHandler(func(e demoevents.RoundEnd) {
+		if !activeRound || finalizedRound {
+			return
+		}
+
+		endedRound = true
+		scoreAfter = scoreAfterRoundEnd(scoreBefore, e.Winner)
 	})
 
 	parser.RegisterEventHandler(func(e demoevents.RoundEndOfficial) {

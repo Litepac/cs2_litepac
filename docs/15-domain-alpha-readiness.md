@@ -43,17 +43,17 @@ The product is ready for a private hosted alpha when all of the following are tr
 ## Highest-priority work before a real domain push
 
 ### Readiness audit snapshot
-The April 2026 repo audit confirmed that the current product is good enough for local friend testing through Cloudflare Tunnel, but not for a true domain-backed alpha yet.
+The July 2026 repo audit confirmed that the current product is good enough for bounded local friend testing through Cloudflare Tunnel, but not for a true domain-backed alpha yet.
 
 Critical gaps:
 
 - hosted ingest is still synchronous/local-first instead of an async job/artifact flow
 - match persistence is still browser-local instead of server-backed
-- public API hardening is not in place yet: auth/invite gating, origin policy, upload limits, rate limits, and parser concurrency limits
-- validation needs stricter canonical invariants before more viewer assumptions depend on it
-- the frontend still carries too much old/experimental code in the active bundle
+- public API hardening is still incomplete: the Go API now has same-origin defaults, bounded uploads/log writes, HTTP timeouts, rate limits, and parser concurrency limits, but auth/invite gating and proxy-grade distributed controls are not in place
+- validation now enforces round/score continuity, bomb lifecycle ordering, utility bounds, and nullable player-stream truth; clean-checkout CI still needs a redistributable `.dem` extraction fixture
+- the production frontend now excludes the experimental 3D asset tree and code-splits Replay, but the development-only 3D stage still needs internal decomposition
 
-### April 2026 implementation map
+### July 2026 implementation map
 
 Current local flow:
 
@@ -65,7 +65,8 @@ Current local flow:
 
 First hosted-alpha hardening already started:
 
-- `cmd/mastermind-api` now accepts `-max-upload-bytes` and `-allowed-origin`, preserving local defaults while giving hosted deployments explicit upload-size and origin-policy controls.
+- `cmd/mastermind-api` accepts `-max-upload-bytes`, `-max-concurrent-parses`, and `-allowed-origin`. Local defaults cap uploads at 512 MiB, admit one parser at a time, and emit no cross-origin header so the Vite same-origin proxy remains the normal path.
+- The built-in limits are process-local friend-tunnel safeguards, not a replacement for authentication, durable quotas, or edge rate limiting in a hosted deployment.
 
 Near-term cleanup:
 

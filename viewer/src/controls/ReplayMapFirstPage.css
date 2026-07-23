@@ -476,6 +476,72 @@
   right: var(--dr-roster-edge);
 }
 
+.dr-mapfirst-page.dr-mapfirst-page-3d {
+  --dr-roster-w: clamp(220px, 10.6dvw, 270px);
+  --dr-roster-top-clear: clamp(84px, 8.8dvh, 116px);
+  --dr-roster-bottom-clear: clamp(132px, 15.8dvh, 186px);
+  --dr-roster-card-h: clamp(46px, 5.4dvh, 60px);
+  --dr-roster-card-gap: 3px;
+}
+
+.dr-mapfirst-page-3d .dr-mapfirst-roster-rail {
+  z-index: 6;
+  opacity: 0.62;
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+
+.dr-mapfirst-page-3d .dr-mapfirst-roster-rail:hover,
+.dr-mapfirst-page-3d .dr-mapfirst-roster-rail:focus-within {
+  opacity: 0.94;
+}
+
+.dr-mapfirst-page-3d .dr-mapfirst-roster-column {
+  background: rgba(5, 6, 7, 0.34);
+  backdrop-filter: blur(1px);
+}
+
+.dr-mapfirst-page-3d .dr-mapfirst-roster-header {
+  gap: 4px;
+  padding: 5px 7px;
+  background: rgba(4, 5, 6, 0.28);
+}
+
+.dr-mapfirst-page-3d .dr-mapfirst-roster-utility-summary {
+  min-height: 16px;
+  padding: 3px 5px;
+}
+
+.dr-mapfirst-page-3d .dr-mapfirst-player-chip {
+  grid-template-columns: minmax(0, 1fr) minmax(54px, auto);
+  grid-template-areas:
+    "main main"
+    "loadout utility";
+  gap: 2px 6px;
+  padding: 4px 7px;
+  background: rgba(255, 255, 255, 0.004);
+}
+
+.dr-mapfirst-page-3d .dr-mapfirst-player-impact,
+.dr-mapfirst-page-3d .dr-mapfirst-player-meta {
+  display: none;
+}
+
+.dr-mapfirst-page-3d .dr-mapfirst-player-main {
+  min-height: 20px;
+  margin: -4px -7px 0;
+  padding: 2px 7px;
+}
+
+.dr-mapfirst-page-3d .dr-mapfirst-weapon-glyph {
+  width: clamp(34px, 2.4dvw, 50px);
+  height: clamp(14px, 1.6dvh, 18px);
+}
+
+.dr-mapfirst-page-3d .dr-mapfirst-weapon-slot span,
+.dr-mapfirst-page-3d .dr-mapfirst-player-money {
+  font-size: 8px;
+}
+
 .dr-mapfirst-roster-column {
   min-width: 0;
   min-height: 0;

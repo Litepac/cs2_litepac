@@ -36,9 +36,9 @@ type parseState struct {
 	replay            replay.Replay
 	currentRound      *rounds.Builder
 	roundList         []replay.Round
-	roundCount        int
 	expectedRounds    int
 	lastBombCarrierID string
+	hasBombCarrier    bool
 
 	mapID string
 	notes []string
@@ -63,6 +63,16 @@ type livePlayerState struct {
 	activeWeapon      *string
 	activeWeaponClass *string
 	mainWeapon        *string
+	isScoped          *bool
+	zoomLevel         *int
+	viewmodelFOV      *float64
+	viewmodelOffsetX  *float64
+	viewmodelOffsetY  *float64
+	viewmodelOffsetZ  *float64
+	recoilIndex       *float64
+	isWalking         *bool
+	isDucking         *bool
+	isOnGround        *bool
 	flashbangs        *int
 	smokes            *int
 	heGrenades        *int

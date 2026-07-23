@@ -31,3 +31,12 @@ func TestBuilderHasNearbyBombEvent(t *testing.T) {
 		t.Fatalf("did not expect mismatched event type to match")
 	}
 }
+
+func TestBuilderRoundNumberCanBeAssignedAtFinalization(t *testing.T) {
+	builder := NewBuilder(8, 100, replay.Score{})
+	builder.SetRoundNumber(1)
+
+	if got := builder.Build(64).RoundNumber; got != 1 {
+		t.Fatalf("expected finalized round number 1, got %d", got)
+	}
+}

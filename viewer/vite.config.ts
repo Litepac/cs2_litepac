@@ -7,7 +7,47 @@ import { defineConfig, type Plugin } from "vite";
 const rootDir = fileURLToPath(new URL(".", import.meta.url));
 const repoRoot = path.resolve(rootDir, "..");
 const parserRoot = path.resolve(repoRoot, "parser");
+const publicRoot = path.resolve(repoRoot, "public");
 const testReplayRoot = path.resolve(repoRoot, "testdata", "replays");
+
+const RELEASE_PUBLIC_EXCLUDES = new Set(["fixtures", "models"]);
+
+function releasePublicAssetsPlugin(): Plugin {
+  return {
+    name: "release-public-assets",
+    apply: "build",
+    async closeBundle() {
+      await copyReleasePublicAssets(publicRoot, path.resolve(rootDir, "dist"));
+    },
+  };
+}
+
+async function copyReleasePublicAssets(sourceRoot: string, destinationRoot: string, relativePath = ""): Promise<void> {
+  const sourcePath = path.resolve(sourceRoot, relativePath);
+  const entries = await fs.promises.readdir(sourcePath, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const nextRelativePath = path.join(relativePath, entry.name);
+    const pathSegments = nextRelativePath.split(path.sep);
+    if (RELEASE_PUBLIC_EXCLUDES.has(pathSegments[0]) || pathSegments.includes("3d")) {
+      continue;
+    }
+
+    const nextSourcePath = path.resolve(sourceRoot, nextRelativePath);
+    const nextDestinationPath = path.resolve(destinationRoot, nextRelativePath);
+    if (entry.isDirectory()) {
+      await fs.promises.mkdir(nextDestinationPath, { recursive: true });
+      await copyReleasePublicAssets(sourceRoot, destinationRoot, nextRelativePath);
+      continue;
+    }
+    if (!entry.isFile()) {
+      continue;
+    }
+
+    await fs.promises.mkdir(path.dirname(nextDestinationPath), { recursive: true });
+    await fs.promises.copyFile(nextSourcePath, nextDestinationPath);
+  }
+}
 
 function localParserApiPlugin(): Plugin {
   let parserProcess: ChildProcess | null = null;
@@ -118,12 +158,21 @@ function localFixturePlugin(): Plugin {
 
 export default defineConfig(({ command }) => ({
   plugins: [
+    ...(command === "build" ? [releasePublicAssetsPlugin()] : []),
     ...(command === "serve" ? [localFixturePlugin()] : []),
     ...(command === "serve" && process.env.LITEPAC_SKIP_LOCAL_PARSER_API !== "1" ? [localParserApiPlugin()] : []),
   ],
-  publicDir: path.resolve(repoRoot, "public"),
+  optimizeDeps: {
+    exclude: [
+      "three/examples/jsm/controls/OrbitControls.js",
+      "three/examples/jsm/loaders/GLTFLoader.js",
+      "three/examples/jsm/utils/SkeletonUtils.js",
+    ],
+  },
+  publicDir: command === "serve" ? publicRoot : false,
   server: {
     allowedHosts: [".trycloudflare.com"],
+    strictPort: true,
     fs: {
       allow: [repoRoot],
     },

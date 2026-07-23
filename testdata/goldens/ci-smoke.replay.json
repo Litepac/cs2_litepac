@@ -1,0 +1,116 @@
+{
+  "format": "mastermind.replay",
+  "schemaVersion": "1.1.0-draft",
+  "generatedAt": "2026-01-01T00:00:00Z",
+  "generator": {
+    "name": "mastermind-parser",
+    "version": "0.1.0"
+  },
+  "sourceDemo": {
+    "fileName": "ci-smoke.dem",
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "tickRate": 64,
+    "tickCount": 2,
+    "demoProtocol": null
+  },
+  "match": {
+    "matchId": null,
+    "tickRate": 64,
+    "totalRounds": 1,
+    "roundTimeSeconds": 115,
+    "freezeTimeSeconds": 15,
+    "bombTimeSeconds": 40,
+    "gameMode": "competitive"
+  },
+  "map": {
+    "mapId": "de_ci_smoke",
+    "displayName": "CI Smoke",
+    "radarImageKey": "de_ci_smoke",
+    "coordinateSystem": {
+      "worldXMin": -1024,
+      "worldXMax": 1024,
+      "worldYMin": -1024,
+      "worldYMax": 1024,
+      "rotateDegrees": 0
+    }
+  },
+  "teams": [
+    {
+      "teamId": "team:t",
+      "displayName": "T"
+    }
+  ],
+  "players": [
+    {
+      "playerId": "steam:1",
+      "displayName": "CI Player",
+      "steamId": "1",
+      "teamId": "team:t"
+    }
+  ],
+  "rounds": [
+    {
+      "roundNumber": 1,
+      "startTick": 0,
+      "freezeEndTick": 0,
+      "endTick": 1,
+      "officialEndTick": 1,
+      "scoreBefore": {
+        "t": 0,
+        "ct": 0
+      },
+      "scoreAfter": {
+        "t": 1,
+        "ct": 0
+      },
+      "winnerSide": "T",
+      "endReason": "ci_smoke",
+      "playerStreams": [
+        {
+          "playerId": "steam:1",
+          "side": "T",
+          "sampleOriginTick": 0,
+          "sampleIntervalTicks": 1,
+          "x": [100],
+          "y": [200],
+          "z": [10],
+          "yaw": [90],
+          "pitch": [0],
+          "eyeX": [100],
+          "eyeY": [200],
+          "eyeZ": [74],
+          "isScoped": [false],
+          "zoomLevel": [0],
+          "viewmodelFov": [68],
+          "viewmodelOffsetX": [2.5],
+          "viewmodelOffsetY": [0],
+          "viewmodelOffsetZ": [-1.5],
+          "recoilIndex": [0],
+          "isWalking": [false],
+          "isDucking": [false],
+          "isOnGround": [true],
+          "alive": [true],
+          "hasBomb": [true],
+          "health": [100],
+          "armor": [100],
+          "hasHelmet": [true],
+          "money": [800],
+          "activeWeapon": ["weapon_glock"],
+          "activeWeaponClass": ["pistol"],
+          "mainWeapon": ["weapon_glock"],
+          "flashbangs": [0],
+          "smokes": [0],
+          "heGrenades": [0],
+          "fireGrenades": [0],
+          "decoys": [0]
+        }
+      ],
+      "blindEvents": [],
+      "fireEvents": [],
+      "hurtEvents": [],
+      "killEvents": [],
+      "bombEvents": [],
+      "utilityEntities": []
+    }
+  ]
+}

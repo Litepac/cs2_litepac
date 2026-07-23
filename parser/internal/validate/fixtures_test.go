@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"mastermind/parser/internal/replay"
@@ -28,6 +29,7 @@ type manifestEntry struct {
 	ZeroTrajectories  int     `json:"zeroTrajectories"`
 	ShortRounds       int     `json:"shortRounds"`
 	LongestRoundTicks int     `json:"longestRoundTicks"`
+	SourceDemoSHA256  string  `json:"sourceDemoSha256,omitempty"`
 }
 
 func TestReplayFixturesMatchManifest(t *testing.T) {
@@ -63,12 +65,42 @@ func TestReplayFixturesMatchManifest(t *testing.T) {
 			if err := validate.ValidateReplay(data); err != nil {
 				t.Fatalf("semantic validation failed: %v", err)
 			}
+			if expected.SourceDemoSHA256 != "" && !strings.EqualFold(data.SourceDemo.SHA256, expected.SourceDemoSHA256) {
+				t.Fatalf("source demo hash mismatch: got %q, expected %q", data.SourceDemo.SHA256, expected.SourceDemoSHA256)
+			}
 
 			actual := summarize(data, expected.ReplayFile)
+			actual.SourceDemoSHA256 = expected.SourceDemoSHA256
 			if actual != expected {
 				t.Fatalf("fixture summary mismatch\nactual:   %+v\nexpected: %+v", actual, expected)
 			}
 		})
+	}
+}
+
+func TestCommittedReplayRegression(t *testing.T) {
+	repoRoot := filepath.Join("..", "..", "..")
+	schemaPath := filepath.Join(repoRoot, "schema", "mastermind.replay.schema.json")
+	replayPath := filepath.Join(repoRoot, "testdata", "goldens", "ci-smoke.replay.json")
+
+	var data replay.Replay
+	readJSON(t, replayPath, &data)
+
+	if err := validate.ValidateSchema(schemaPath, data); err != nil {
+		t.Fatalf("committed replay schema validation failed: %v", err)
+	}
+	if err := validate.ValidateReplay(data); err != nil {
+		t.Fatalf("committed replay semantic validation failed: %v", err)
+	}
+
+	if data.Format != replay.FormatName || data.SchemaVersion != replay.SchemaVersion {
+		t.Fatalf("unexpected replay identity: format=%q schemaVersion=%q", data.Format, data.SchemaVersion)
+	}
+	if data.Match.TotalRounds != 1 || len(data.Rounds) != 1 {
+		t.Fatalf("expected one committed smoke round, got match total %d and %d round records", data.Match.TotalRounds, len(data.Rounds))
+	}
+	if len(data.Rounds[0].PlayerStreams) != 1 || len(data.Rounds[0].PlayerStreams[0].X) != 1 {
+		t.Fatal("expected committed smoke replay to retain one player sample")
 	}
 }
 

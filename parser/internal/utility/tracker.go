@@ -14,9 +14,10 @@ import (
 )
 
 type Tracker struct {
-	byID     map[string]*replay.UtilityEntity
-	byUnique map[int64]string
-	byEntity map[int]string
+	byID            map[string]*replay.UtilityEntity
+	byUnique        map[int64]string
+	byInfernoUnique map[int64]string
+	byEntity        map[int]string
 
 	infernoEntityByUtility  map[string]int
 	lastInfernoPosByUtility map[string]r3.Vector
@@ -32,6 +33,7 @@ func NewTracker() *Tracker {
 	return &Tracker{
 		byID:                    map[string]*replay.UtilityEntity{},
 		byUnique:                map[int64]string{},
+		byInfernoUnique:         map[int64]string{},
 		byEntity:                map[int]string{},
 		infernoEntityByUtility:  map[string]int{},
 		lastInfernoPosByUtility: map[string]r3.Vector{},
@@ -165,9 +167,7 @@ func (t *Tracker) TrackInfernoStart(tick int, inferno *common.Inferno, pos r3.Ve
 	}
 
 	if inferno != nil {
-		entityID := inferno.Entity.ID()
-		t.byEntity[entityID] = entry.UtilityID
-		t.infernoEntityByUtility[entry.UtilityID] = entityID
+		t.rememberInferno(inferno, entry)
 	}
 
 	t.lastInfernoPosByUtility[entry.UtilityID] = pos
@@ -189,9 +189,7 @@ func (t *Tracker) TrackInfernoExpire(tick int, inferno *common.Inferno, pos r3.V
 	}
 
 	if inferno != nil {
-		entityID := inferno.Entity.ID()
-		t.byEntity[entityID] = entry.UtilityID
-		t.infernoEntityByUtility[entry.UtilityID] = entityID
+		t.rememberInferno(inferno, entry)
 	}
 
 	t.expireInfernoEntry(entry, tick, pos)
@@ -268,8 +266,7 @@ func (t *Tracker) SyncInfernos(tick int, infernos map[int]*common.Inferno) {
 		t.appendInfernoFootprintSample(entry, tick, InfernoActiveFirePositions(inferno))
 
 		activeEntityIDs[entityID] = struct{}{}
-		t.byEntity[entityID] = entry.UtilityID
-		t.infernoEntityByUtility[entry.UtilityID] = entityID
+		t.rememberInferno(inferno, entry)
 	}
 
 	for utilityID, entityID := range t.infernoEntityByUtility {
@@ -390,8 +387,15 @@ func (t *Tracker) byInferno(inferno *common.Inferno) *replay.UtilityEntity {
 		return nil
 	}
 
-	if entry := t.byEntityID(inferno.Entity.ID()); entry != nil {
-		return entry
+	if utilityID, ok := t.byInfernoUnique[inferno.UniqueID()]; ok {
+		if entry := t.byID[utilityID]; isFireUtility(entry) {
+			return entry
+		}
+	}
+
+	entityEntry := t.byEntityID(inferno.Entity.ID())
+	if isActiveFireUtility(entityEntry) && entityEntry.DetonateTick == nil {
+		return entityEntry
 	}
 
 	thrower := inferno.Thrower()
@@ -418,7 +422,38 @@ func (t *Tracker) byInferno(inferno *common.Inferno) *replay.UtilityEntity {
 		}
 	}
 
-	return candidate
+	if candidate != nil {
+		return candidate
+	}
+
+	if isActiveFireUtility(entityEntry) {
+		return entityEntry
+	}
+
+	return nil
+}
+
+func (t *Tracker) rememberInferno(inferno *common.Inferno, entry *replay.UtilityEntity) {
+	if inferno == nil || entry == nil {
+		return
+	}
+
+	if t.byInfernoUnique == nil {
+		t.byInfernoUnique = map[int64]string{}
+	}
+
+	entityID := inferno.Entity.ID()
+	t.byInfernoUnique[inferno.UniqueID()] = entry.UtilityID
+	t.byEntity[entityID] = entry.UtilityID
+	t.infernoEntityByUtility[entry.UtilityID] = entityID
+}
+
+func isFireUtility(entry *replay.UtilityEntity) bool {
+	return entry != nil && (entry.Kind == "molotov" || entry.Kind == "incendiary")
+}
+
+func isActiveFireUtility(entry *replay.UtilityEntity) bool {
+	return isFireUtility(entry) && entry.EndTick == nil
 }
 
 func phaseEvent(tick int, phaseType string, pos r3.Vector) replay.UtilityPhaseEvent {

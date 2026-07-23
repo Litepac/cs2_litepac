@@ -13,7 +13,11 @@ type bombCarrierTransition struct {
 	playerID  *string
 }
 
-func bombCarrierTransitionEvents(previousCarrierID, currentCarrierID string) []bombCarrierTransition {
+func bombCarrierTransitionEvents(previousCarrierID, currentCarrierID string, hasPreviousObservation bool) []bombCarrierTransition {
+	if !hasPreviousObservation {
+		return nil
+	}
+
 	switch {
 	case previousCarrierID == currentCarrierID:
 		return nil
@@ -32,11 +36,12 @@ func bombCarrierTransitionEvents(previousCarrierID, currentCarrierID string) []b
 func (s *parseState) reconcileBombCarrierTransition(tick int, bomb *common.Bomb, currentCarrierID string) {
 	if s.currentRound == nil || s.currentRound.HasEnded() {
 		s.lastBombCarrierID = currentCarrierID
+		s.hasBombCarrier = true
 		return
 	}
 
 	pos := positionOrBomb(bomb)
-	for _, transition := range bombCarrierTransitionEvents(s.lastBombCarrierID, currentCarrierID) {
+	for _, transition := range bombCarrierTransitionEvents(s.lastBombCarrierID, currentCarrierID, s.hasBombCarrier) {
 		if s.currentRound.HasNearbyBombEvent(tick, syntheticBombEventTickWindow, transition.eventType, transition.playerID) {
 			continue
 		}
@@ -52,4 +57,5 @@ func (s *parseState) reconcileBombCarrierTransition(tick int, bomb *common.Bomb,
 	}
 
 	s.lastBombCarrierID = currentCarrierID
+	s.hasBombCarrier = true
 }

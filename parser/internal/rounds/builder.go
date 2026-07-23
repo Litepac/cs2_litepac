@@ -47,11 +47,17 @@ func NewBuilder(roundNumber, startTick int, scoreBefore replay.Score) *Builder {
 
 func (b *Builder) RoundNumber() int { return b.round.RoundNumber }
 
+func (b *Builder) SetRoundNumber(roundNumber int) { b.round.RoundNumber = roundNumber }
+
 func (b *Builder) StartTick() int { return b.round.StartTick }
 
 func (b *Builder) EndTick() int { return b.round.EndTick }
 
 func (b *Builder) HasEnded() bool { return b.ended }
+
+func (b *Builder) ScoreBefore() replay.Score { return b.round.ScoreBefore }
+
+func (b *Builder) ScoreAfter() replay.Score { return b.round.ScoreAfter }
 
 func (b *Builder) SetFreezeEnd(tick int) {
 	b.round.FreezeEndTick = replay.Int(tick)
@@ -123,6 +129,9 @@ func (b *Builder) SamplePlayer(
 	pos r3.Vector,
 	hasPosition bool,
 	yaw *float64,
+	pitch *float64,
+	eyePos r3.Vector,
+	hasEyePosition bool,
 	alive bool,
 	hasBomb bool,
 	health *int,
@@ -132,6 +141,16 @@ func (b *Builder) SamplePlayer(
 	activeWeapon *string,
 	activeWeaponClass *string,
 	mainWeapon *string,
+	isScoped *bool,
+	zoomLevel *int,
+	viewmodelFOV *float64,
+	viewmodelOffsetX *float64,
+	viewmodelOffsetY *float64,
+	viewmodelOffsetZ *float64,
+	recoilIndex *float64,
+	isWalking *bool,
+	isDucking *bool,
+	isOnGround *bool,
 	flashbangs *int,
 	smokes *int,
 	heGrenades *int,
@@ -151,12 +170,23 @@ func (b *Builder) SamplePlayer(
 		z = replay.Float64(pos.Z)
 	}
 
+	var eyeX, eyeY, eyeZ *float64
+	if hasEyePosition {
+		eyeX = replay.Float64(eyePos.X)
+		eyeY = replay.Float64(eyePos.Y)
+		eyeZ = replay.Float64(eyePos.Z)
+	}
+
 	stream.Append(positions.Sample{
 		Tick:         tick,
 		X:            x,
 		Y:            y,
 		Z:            z,
 		Yaw:          yaw,
+		Pitch:        pitch,
+		EyeX:         eyeX,
+		EyeY:         eyeY,
+		EyeZ:         eyeZ,
 		Alive:        alive,
 		HasBomb:      hasBomb,
 		Health:       health,
@@ -166,6 +196,16 @@ func (b *Builder) SamplePlayer(
 		Weapon:       activeWeapon,
 		WeaponClass:  activeWeaponClass,
 		MainWeapon:   mainWeapon,
+		IsScoped:     isScoped,
+		ZoomLevel:    zoomLevel,
+		ViewmodelFOV: viewmodelFOV,
+		ViewmodelX:   viewmodelOffsetX,
+		ViewmodelY:   viewmodelOffsetY,
+		ViewmodelZ:   viewmodelOffsetZ,
+		RecoilIndex:  recoilIndex,
+		IsWalking:    isWalking,
+		IsDucking:    isDucking,
+		IsOnGround:   isOnGround,
 		Flashbangs:   flashbangs,
 		Smokes:       smokes,
 		HEGrenades:   heGrenades,

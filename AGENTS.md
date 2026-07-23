@@ -37,6 +37,14 @@ These refine this file. They do not override it.
 - Keep one concrete responsibility per subagent so findings stay actionable.
 - Work autonomously once the task is clear. Do not stop for confirmation unless blocked by missing access or destructive action.
 
+## Commit discipline
+- Commit one coherent, verified change at a time; keep unrelated user changes out of the commit.
+- Stage explicit paths, inspect the staged diff, and run `git diff --check` before committing.
+- Use an imperative summary that explains the outcome, ideally no more than 50 characters. Avoid vague `checkpoint`, `updates`, or `fix stuff` subjects.
+- For non-trivial changes, add a body after a blank line that records why the change was needed, the important behavior/truth boundary, and the verification performed. Keep body lines readable at roughly 72 characters.
+- Do not claim verification that was not run. If a relevant check is unavailable, record the residual risk in the handoff rather than hiding it in the commit.
+- After committing, confirm the intended paths are included and the worktree is clean. Do not rewrite pushed history unless the user explicitly requests it.
+
 ## Core boundary
 - Parser and canonical replay own replay truth
 - Viewer only maps, interpolates, and presents that truth

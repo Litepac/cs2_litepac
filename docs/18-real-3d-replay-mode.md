@@ -158,6 +158,17 @@ Current modules:
 - `viewer/src/replay3d/replay3dCoordinates.ts`
 - `viewer/src/controls/replay-map-first/ReplayViewModeToggle.tsx`
 
+`Replay3DStage.tsx` is currently 4,366 physical lines and owns too many unrelated concerns. Before another 3D feature is added, split it without changing behavior:
+- keep React lifecycle, mode selection, and high-level orchestration in `Replay3DStage.tsx`
+- move renderer/scene creation and deterministic disposal into an owned stage module
+- move map, player, weapon, animation, and viewmodel loading/material preparation into asset modules
+- move player interpolation, model/weapon attachment, labels, grounding, and animation selection into player modules
+- move tactical, chase, POV, and free-camera behavior plus POV viewmodel presentation into camera modules
+- move utility, fire, smoke, gunfire, and short-lived effect rendering into effect modules
+- move picking and shared Three.js resource helpers into focused interaction/resource modules
+
+The split is structural only. It must preserve the current parser/viewer truth boundary, pass the normal viewer tests/build/release checks, and be compared against the same local replay/map before later 3D behavior changes are accepted.
+
 Current 3D overlays:
 - parser-backed player placement from canonical `x/y/z/yaw/pitch/eyeX/eyeY/eyeZ`; when local default-agent assets exist, CT/T players render with the exported CS2 SAS/Phoenix models plus compact review labels, quieter side/selection rings, and parser-selected default weapon meshes, otherwise the viewer falls back to small tactical body markers
 - parser-backed utility trajectory lines and endpoint markers from canonical utility trajectory/phase `x/y/z`

@@ -15,6 +15,7 @@ parser/*.log
 parser-*.log
 parser/.cache/
 testdata/demos/*.dem
+!testdata/demos/ci-owned-bot.dem
 testdata/replays/*.json
 public/fixtures/
 public/maps/*/3d/

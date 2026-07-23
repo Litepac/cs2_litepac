@@ -31,6 +31,13 @@ jobs:
       - name: Run committed replay regression gate
         run: go test ./internal/validate -run '^TestCommittedReplayRegression$' -count=1
 
+      - name: Run owned demo extraction gate
+        run: go test ./internal/demo -run '^TestOwnedDemoExtractionRegression$' -count=1
+
+      - name: Run demoinfocs compatibility guards
+        working-directory: parser/third_party/demoinfocs
+        run: go test ./pkg/demoinfocs -run '^TestDemoRead' -count=1
+
       - name: Run parser tests
         run: go test ./...
 

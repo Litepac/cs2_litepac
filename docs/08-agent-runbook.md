@@ -105,6 +105,16 @@ cd parser
 go run .\cmd\fixtureparse
 ```
 
+### Committed demo extraction regression
+The repository carries one small, anonymous, project-recorded SourceTV demo.
+Its exact provenance and regeneration workflow are documented in
+`testdata/demos/README.md`.
+```powershell
+cd parser
+go test .\internal\demo -run '^TestOwnedDemoExtractionRegression$' -count=1
+go -C .\third_party\demoinfocs test .\pkg\demoinfocs -run '^TestDemoRead' -count=1
+```
+
 ### Optional static fixture staging
 The viewer dev server serves `testdata/replays` directly at `/fixtures`. Use this only when a static preview/build needs local fixture JSON files copied into `public/fixtures`; the output path is explicit so local replay JSON is not accidentally bundled into public builds.
 ```powershell

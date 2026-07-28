@@ -46,7 +46,7 @@ Planning note:
 - Revisit a separate internal AI runtime surface only if direct VSCode/Codex integration becomes valuable enough to justify a true runtime-first sidecar instead of another staged prototype
 
 ## In Progress
-- None.
+- Continue the `1-0170...` Mirage upload diagnosis at the post-transport boundary. Protocol v2 eliminates the quadratic NDJSON accumulation and succeeds against the exact 264 MB replay outside the app, but live browser review still crashes near completion. Measure and isolate canonical validation, React handoff, and IndexedDB persistence memory in order; preserve the transport improvement, add coverage for the newly proven failing boundary, and do not call the upload repaired until the real browser flow survives.
 
 ## Done
 ### Recent Done

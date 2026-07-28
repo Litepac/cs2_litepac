@@ -19,6 +19,7 @@ import {
 import { createEquipmentIconGraphic, type EquipmentSvgIcon } from "./equipmentIconGraphics";
 import { attachReplayHitTarget } from "./replayStage/hitTargets";
 import {
+  resolveSmokeDisplacementStrength,
   resolveSmokeLifecyclePresentation,
   resolveSmokeLifetimeProgress,
   SMOKE_FIELD_SIZE,
@@ -1245,9 +1246,7 @@ function resolveSmokeDisplacementVisual(
   const remainingTicks = activeDisplacement.tick + activeDisplacement.durationTicks - currentTick;
   const rawAgeRatio = Math.max(0, Math.min(1, remainingTicks / Math.max(1, activeDisplacement.durationTicks)));
   const elapsedRatio = 1 - rawAgeRatio;
-  const openRatio = Math.min(1, elapsedRatio / 0.16);
-  const refillRatio = Math.max(0, Math.min(1, (elapsedRatio - 0.36) / 0.64));
-  const ageRatio = Math.pow(openRatio, 0.55) * Math.pow(1 - refillRatio, 1.45);
+  const ageRatio = resolveSmokeDisplacementStrength(elapsedRatio);
 
   return {
     ageRatio,

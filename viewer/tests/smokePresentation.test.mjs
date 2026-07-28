@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  resolveSmokeDisplacementStrength,
   resolveSmokeLifecyclePresentation,
   resolveSmokeLifetimeProgress,
   SMOKE_FIELD_SIZE,
@@ -27,10 +28,21 @@ test("creates a stable continuous smoke raster instead of overlapping primitives
   let visiblePixels = 0;
   let softEdgePixels = 0;
   let brightestChannel = 0;
+  let minX = SMOKE_RASTER_SIZE;
+  let maxX = -1;
+  let minY = SMOKE_RASTER_SIZE;
+  let maxY = -1;
   for (let offset = 0; offset < first.length; offset += 4) {
     const alpha = first[offset + 3];
     if (alpha > 8) {
       visiblePixels += 1;
+      const pixelIndex = offset / 4;
+      const x = pixelIndex % SMOKE_RASTER_SIZE;
+      const y = Math.floor(pixelIndex / SMOKE_RASTER_SIZE);
+      minX = Math.min(minX, x);
+      maxX = Math.max(maxX, x);
+      minY = Math.min(minY, y);
+      maxY = Math.max(maxY, y);
       brightestChannel = Math.max(brightestChannel, first[offset], first[offset + 1], first[offset + 2]);
     }
     if (alpha > 8 && alpha < 180) {
@@ -43,6 +55,8 @@ test("creates a stable continuous smoke raster instead of overlapping primitives
   assert.ok(visiblePixels < pixelCount * 0.7);
   assert.ok(softEdgePixels > pixelCount * 0.04);
   assert.ok(brightestChannel < 225);
+  const silhouetteAspect = (maxX - minX + 1) / (maxY - minY + 1);
+  assert.ok(silhouetteAspect >= 0.92 && silhouetteAspect <= 1.1);
   assert.equal(first[3], 0);
 });
 
@@ -73,10 +87,22 @@ test("opens a partial parser-backed displacement pocket in the raster", () => {
 });
 
 test("keeps smoke visible while making the lifecycle arc secondary", () => {
+  const fieldAspect = SMOKE_FIELD_SIZE.width / SMOKE_FIELD_SIZE.height;
+  assert.ok(fieldAspect >= 1 && fieldAspect <= 1.05);
   assert.ok(SMOKE_FIELD_SIZE.width > SMOKE_LIFETIME_RING.radius * 4);
   assert.ok(SMOKE_FIELD_SIZE.height > SMOKE_LIFETIME_RING.radius * 3.5);
   assert.ok(SMOKE_LIFETIME_RING.width >= 4 && SMOKE_LIFETIME_RING.width < 5);
   assert.ok(SMOKE_LIFETIME_RING.backdropWidth > SMOKE_LIFETIME_RING.width);
+});
+
+test("holds the HE displacement pocket before a late refill", () => {
+  assert.equal(resolveSmokeDisplacementStrength(0), 0);
+  assert.equal(resolveSmokeDisplacementStrength(0.16), 1);
+  assert.equal(resolveSmokeDisplacementStrength(0.5), 1);
+  assert.ok(resolveSmokeDisplacementStrength(0.65) > 0.75);
+  assert.ok(resolveSmokeDisplacementStrength(0.82) > 0.3);
+  assert.ok(resolveSmokeDisplacementStrength(0.95) < 0.2);
+  assert.equal(resolveSmokeDisplacementStrength(1), 0);
 });
 
 test("blooms and fades from parser-owned lifecycle timing", () => {

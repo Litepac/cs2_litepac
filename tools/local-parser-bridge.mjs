@@ -1,9 +1,10 @@
-import { constants as fsConstants } from "node:fs";
+import { constants as fsConstants, createReadStream } from "node:fs";
 import { execFile, spawn } from "node:child_process";
 import { createServer } from "node:http";
-import { access, appendFile, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { access, appendFile, mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { pipeline } from "node:stream/promises";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
@@ -148,6 +149,7 @@ async function parseDemoUpload(request, response) {
     "Content-Type": "application/x-ndjson",
     "Cache-Control": "no-store",
     "X-Accel-Buffering": "no",
+    "X-DemoRead-Replay-Stream": "2",
   });
   response.write(`${JSON.stringify({ type: "progress", roundsParsed: 0 })}\n`);
 
@@ -167,16 +169,13 @@ async function parseDemoUpload(request, response) {
       "-progress-ndjson",
     ], response);
 
-    const replayRaw = (await readFile(replayPath, "utf8")).trim();
-    if (!replayRaw) {
+    const replayInfo = await stat(replayPath);
+    if (replayInfo.size === 0) {
       throw new Error("parser produced an empty replay artifact");
     }
 
-    response.write(`${JSON.stringify({
-      type: "result",
-      replay: JSON.parse(replayRaw),
-    })}\n`);
-    response.end();
+    response.write(`${JSON.stringify({ type: "result" })}\n`);
+    await pipeline(createReadStream(replayPath), response);
   } catch (error) {
     response.write(`${JSON.stringify({
       type: "error",

@@ -21,7 +21,9 @@ import { attachReplayHitTarget } from "./replayStage/hitTargets";
 import {
   getSmokeField,
   resolveSmokeLifecyclePresentation,
+  resolveSmokeLifetimeProgress,
   SMOKE_FIELD_PALETTE,
+  SMOKE_LIFETIME_RING,
 } from "./smokePresentation";
 
 type ScreenPoint = {
@@ -470,7 +472,9 @@ function drawSmokeUtilityVisual(
     utility.utilityId,
     state.remainingSeconds,
     currentTick,
+    throwerSide,
     detonateTick == null ? null : Math.max(0, (currentTick - detonateTick) / Math.max(1, tickRate)),
+    detonateTick == null ? null : Math.max(0.1, (endTick - detonateTick) / Math.max(1, tickRate)),
     resolveSmokeDisplacementVisual(replay, utility, currentTick, radarViewport),
     mapClipMask,
   );
@@ -482,7 +486,9 @@ function drawSmokeVisual(
   utilityId: string,
   remainingSeconds: number | null,
   currentTick: number,
+  throwerSide: "T" | "CT" | null,
   activeAgeSeconds: number | null,
+  activeDurationSeconds: number | null,
   displacement: SmokeDisplacementVisual | null,
   mapClipMask: Container | null,
 ) {
@@ -496,6 +502,7 @@ function drawSmokeVisual(
   }
   const ambient = new Graphics();
   const body = new Graphics();
+  const texture = new Graphics();
   const veil = new Graphics();
   const smokePoint = (dx: number, dy: number, phase: number) => ({
     x: point.x + (dx + Math.sin(currentTick / 109 + phase) * 0.18) * cloudScale,
@@ -529,7 +536,7 @@ function drawSmokeVisual(
   };
 
   for (const lobe of field.body) {
-    drawLobe(ambient, lobe, SMOKE_FIELD_PALETTE.ambient, 0.42, 1.17, 1.16);
+    drawLobe(ambient, lobe, SMOKE_FIELD_PALETTE.ambient, 0.5, 1.17, 1.16);
     drawLobe(body, lobe, SMOKE_FIELD_PALETTE.body, 1, 1, 1.04);
   }
 
@@ -537,9 +544,26 @@ function drawSmokeVisual(
     drawLobe(veil, lobe, SMOKE_FIELD_PALETTE.veil, 1, 1, 0.96);
   }
 
+  for (const lobe of field.texture) {
+    drawLobe(texture, lobe, SMOKE_FIELD_PALETTE.textureShadow, 0.8, 1.18, 1.02);
+    drawLobe(texture, lobe, SMOKE_FIELD_PALETTE.texture, 1, 0.72, 0.94);
+  }
+
   smokeLayer.addChild(ambient);
   smokeLayer.addChild(body);
   smokeLayer.addChild(veil);
+  smokeLayer.addChild(texture);
+
+  const lifetimeProgress = resolveSmokeLifetimeProgress(remainingSeconds, activeDurationSeconds);
+  if (lifetimeProgress != null) {
+    drawProgressRing(layer, point, SMOKE_LIFETIME_RING.radius, lifetimeProgress, utilityTeamAccentColor(throwerSide), {
+      alpha: 0.98,
+      backdropAlpha: 0.86,
+      backdropColor: 0x252b2e,
+      backdropWidth: SMOKE_LIFETIME_RING.backdropWidth,
+      width: SMOKE_LIFETIME_RING.width,
+    });
+  }
 }
 
 function drawFireVisual(
@@ -800,6 +824,7 @@ function drawProgressRing(
     alpha: number;
     backdropAlpha?: number;
     backdropColor?: number;
+    backdropWidth?: number;
     width: number;
   },
 ) {
@@ -808,7 +833,7 @@ function drawProgressRing(
     ring.circle(point.x, point.y, radius);
     ring.stroke({
       color: options.backdropColor ?? color,
-      width: Math.max(1, options.width - 0.9),
+      width: options.backdropWidth ?? Math.max(1, options.width - 0.9),
       alpha: options.backdropAlpha,
     });
   }
@@ -819,7 +844,7 @@ function drawProgressRing(
   const startY = point.y + Math.sin(startAngle) * radius;
   ring.moveTo(startX, startY);
   ring.arc(point.x, point.y, radius, startAngle, endAngle);
-  ring.stroke({ color, width: options.width, alpha: options.alpha });
+  ring.stroke({ color, width: options.width, alpha: options.alpha, cap: "round", join: "round" });
   layer.addChild(ring);
 }
 

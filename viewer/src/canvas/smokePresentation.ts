@@ -9,6 +9,7 @@ export type SmokeFieldLobe = {
 
 export type SmokeField = {
   body: SmokeFieldLobe[];
+  texture: SmokeFieldLobe[];
   veil: SmokeFieldLobe[];
 };
 
@@ -18,9 +19,17 @@ export type SmokeLifecyclePresentation = {
 };
 
 export const SMOKE_FIELD_PALETTE = {
-  ambient: 0x293337,
-  body: 0x89969a,
-  veil: 0xb1bcbf,
+  ambient: 0x4b575c,
+  body: 0xa6b0b3,
+  texture: 0xc7ced0,
+  textureShadow: 0x68767b,
+  veil: 0xd0d6d8,
+} as const;
+
+export const SMOKE_LIFETIME_RING = {
+  backdropWidth: 7.6,
+  radius: 24,
+  width: 5.6,
 } as const;
 
 const SMOKE_FIELD_CACHE_LIMIT = 256;
@@ -58,6 +67,17 @@ export function resolveSmokeLifecyclePresentation(
   };
 }
 
+export function resolveSmokeLifetimeProgress(
+  remainingSeconds: number | null,
+  activeDurationSeconds: number | null,
+) {
+  if (remainingSeconds == null || activeDurationSeconds == null || activeDurationSeconds <= 0) {
+    return null;
+  }
+
+  return Math.max(0, Math.min(1, remainingSeconds / activeDurationSeconds));
+}
+
 function createSmokeField(utilityId: string): SmokeField {
   // Demo truth stops at the detonation center and lifecycle. These bounded,
   // screen-space lobes communicate occlusion without claiming CS2's dynamic
@@ -69,6 +89,7 @@ function createSmokeField(utilityId: string): SmokeField {
   const veil: SmokeFieldLobe[] = [
     { alpha: 0.13, dx: 0, dy: -1, width: 20, height: 22, phase: smokeNoise(seed, 17) * Math.PI * 2 },
   ];
+  const texture: SmokeFieldLobe[] = [];
 
   for (let index = 0; index < 8; index += 1) {
     const angle = (index / 8) * Math.PI * 2 + (smokeNoise(seed, 31 + index) - 0.5) * 0.42;
@@ -96,7 +117,21 @@ function createSmokeField(utilityId: string): SmokeField {
     });
   }
 
-  return { body, veil };
+  const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+  for (let index = 0; index < 16; index += 1) {
+    const radius = Math.sqrt((index + 0.5) / 16);
+    const angle = index * goldenAngle + (smokeNoise(seed, 311 + index) - 0.5) * 0.5;
+    texture.push({
+      alpha: 0.08 + smokeNoise(seed, 337 + index) * 0.055,
+      dx: Math.cos(angle) * radius * 27,
+      dy: Math.sin(angle) * radius * 29,
+      width: 4.5 + smokeNoise(seed, 359 + index) * 3.5,
+      height: 4.2 + smokeNoise(seed, 383 + index) * 3.8,
+      phase: smokeNoise(seed, 409 + index) * Math.PI * 2,
+    });
+  }
+
+  return { body, texture, veil };
 }
 
 function smokeFieldSeed(utilityId: string) {

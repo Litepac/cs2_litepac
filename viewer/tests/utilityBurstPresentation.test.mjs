@@ -40,14 +40,20 @@ test("the detonation tick begins the burst instead of leaving a projectile marke
   assert.equal(state?.burstProgress, 0);
 });
 
-test("detonation cues remain compact and fade without claiming a blast radius", () => {
+test("flash stays prominent while HE remains compact and both cues fade", () => {
   const flashStart = resolveUtilityBurstPresentation("flashbang", 0);
+  const flashMid = resolveUtilityBurstPresentation("flashbang", 0.5);
   const flashEnd = resolveUtilityBurstPresentation("flashbang", 1);
   const heStart = resolveUtilityBurstPresentation("hegrenade", 0);
   const heEnd = resolveUtilityBurstPresentation("hegrenade", 1);
 
   assert.ok(flashStart.outerRadius < flashEnd.outerRadius);
-  assert.ok(flashEnd.outerRadius <= 34);
+  assert.ok(flashStart.outerRadius >= 30);
+  assert.ok(flashMid.outerRadius >= 46);
+  assert.ok(flashMid.glowRadius >= 33);
+  assert.ok(flashMid.fade > 0.5);
+  assert.ok(flashEnd.outerRadius >= 60 && flashEnd.outerRadius <= 64);
+  assert.ok(flashEnd.outerRadius > heEnd.outerRadius * 2.5);
   assert.ok(heStart.outerRadius < heEnd.outerRadius);
   assert.ok(heEnd.outerRadius <= 23);
   assert.equal(flashEnd.fade, 0);

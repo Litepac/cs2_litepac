@@ -44,6 +44,7 @@ import {
   type ThreeStage,
   updateFreeFlyCamera,
 } from "../replay3d/stageRuntime";
+import { resolveUtilityBurstPresentation } from "./utilityBurstPresentation";
 import styles from "./Replay3DStage.module.css";
 
 type Replay3DStageProps = {
@@ -1010,7 +1011,7 @@ function renderUtilities3d({
     }
 
     if (sceneState?.phase === "burst" && (utility.kind === "hegrenade" || utility.kind === "flashbang")) {
-      addUtilityBurst3d(stage.utilityGroup, utility, endpoint);
+      addUtilityBurst3d(stage.utilityGroup, utility, endpoint, sceneState.burstProgress ?? 0);
       continue;
     }
 
@@ -1301,20 +1302,23 @@ function addFireVolume3d(
   }
 }
 
-function addUtilityBurst3d(utilityGroup: Group, utility: UtilityEntity, center: Vector3) {
-  const color = utility.kind === "flashbang" ? 0xfff2b6 : 0xff7768;
+function addUtilityBurst3d(utilityGroup: Group, utility: UtilityEntity, center: Vector3, progress: number) {
+  const burstKind = utility.kind === "flashbang" ? "flashbang" : "hegrenade";
+  const color = burstKind === "flashbang" ? 0xfff2b6 : 0xff7768;
+  const presentation = resolveUtilityBurstPresentation(burstKind, progress);
   const burst = new Mesh(
-    new SphereGeometry(utility.kind === "flashbang" ? 1.45 : 1.1, 16, 10),
+    new SphereGeometry(burstKind === "flashbang" ? 1.45 : 1.1, 16, 10),
     new MeshBasicMaterial({
       color,
       depthTest: false,
       depthWrite: false,
       transparent: true,
-      opacity: utility.kind === "flashbang" ? 0.48 : 0.38,
+      opacity: (burstKind === "flashbang" ? 0.48 : 0.38) * presentation.fade,
     }),
   );
   burst.name = `utility-burst:${utility.utilityId}:${utility.kind}`;
   burst.position.copy(center);
+  burst.scale.setScalar(1 + Math.max(0, Math.min(1, progress)) * 0.45);
   burst.renderOrder = 48;
   utilityGroup.add(burst);
 }

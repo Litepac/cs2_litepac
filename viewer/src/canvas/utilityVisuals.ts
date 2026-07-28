@@ -17,6 +17,7 @@ import {
   type UtilitySceneState,
 } from "../replay/utility";
 import { createEquipmentIconGraphic, type EquipmentSvgIcon } from "./equipmentIconGraphics";
+import { getFireTextureVisual } from "./fireTexture";
 import { attachReplayHitTarget } from "./replayStage/hitTargets";
 import {
   resolveSmokeDisplacementStrength,
@@ -542,7 +543,9 @@ function drawFireVisual(
     const fadeInIntensity = Math.min(1, 0.38 + (burnAgeTicks / 18) * 0.62);
     const fadeOutIntensity = remainingSeconds == null ? 1 : Math.max(0.08, Math.min(1, remainingSeconds / 0.85));
     const footprintIntensity = Math.min(fadeInIntensity, fadeOutIntensity);
-    drawFireFootprintVisual(layer, footprint.points, ringColor, footprintIntensity);
+    if (!drawFireFootprintVisual(layer, footprint.points, ringColor, footprintIntensity)) {
+      drawSingleFireVisual(layer, point, ringColor);
+    }
   } else {
     drawSingleFireVisual(layer, point, ringColor);
   }
@@ -565,30 +568,18 @@ function drawFireFootprintVisual(
   intensity: number,
 ) {
   const clampedIntensity = Math.max(0.05, Math.min(1, intensity));
-  const heat = new Graphics();
-  const core = new Graphics();
-  const ember = new Graphics();
-
-  for (const point of footprintPoints) {
-    heat.circle(point.x, point.y, 13.5);
-    heat.fill({ color: 0xff7d2d, alpha: 0.22 * clampedIntensity });
-    heat.circle(point.x + 1.5, point.y - 1.5, 9.2);
-    heat.fill({ color: 0xffa642, alpha: 0.34 * clampedIntensity });
-
-    core.circle(point.x, point.y, 5.7);
-    core.fill({ color: 0xffcf72, alpha: 0.62 * clampedIntensity });
-    core.circle(point.x + 1.2, point.y - 1.6, 3.1);
-    core.fill({ color: 0xfff0c6, alpha: 0.46 * clampedIntensity });
-
-    ember.circle(point.x - 4.8, point.y + 3.5, 1.1);
-    ember.fill({ color: 0xffe1af, alpha: 0.34 * clampedIntensity });
-    ember.circle(point.x + 4.6, point.y - 3.3, 0.9);
-    ember.fill({ color: 0xffefcf, alpha: 0.28 * clampedIntensity });
+  const visual = getFireTextureVisual(footprintPoints);
+  if (!visual) {
+    return false;
   }
 
-  layer.addChild(heat);
-  layer.addChild(core);
-  layer.addChild(ember);
+  const field = new Sprite(visual.texture);
+  field.position.set(visual.x, visual.y);
+  field.width = visual.width;
+  field.height = visual.height;
+  field.alpha = clampedIntensity;
+  layer.addChild(field);
+  return true;
 }
 
 function drawSingleFireVisual(layer: Container, point: ScreenPoint, ringColor: number) {

@@ -41,7 +41,7 @@ Build a trustworthy CS2 2D replay core with an operator-grade Replay workspace a
   - utility event ribbon entries
   - full-path throw trajectories
   - bounce/detonation phase markers
-- Smoke replay truth includes its trajectory, thrower side, detonation center, active/end ticks, and parser-derived HE displacement window, but not CS2's dynamic collision-aware volume. The 2D viewer therefore uses a clearly visible neutral screen-space cloud plus a team-accented lifecycle arc calculated from the exact active window; it does not claim an exact smoke boundary or line-of-sight result.
+- Smoke replay truth includes its trajectory, thrower side, detonation center, active/end ticks, and parser-derived HE displacement window, but not CS2's dynamic collision-aware volume. The 2D viewer therefore uses one cached, flattened neutral smoke texture with a secondary team-accented lifecycle arc calculated from the exact active window. HE displacement cuts the texture pixels before Pixi composites the sprite; neither the silhouette nor the cutout claims an exact smoke boundary or line-of-sight result.
 - Molotov/incendiary coverage is stronger: the parser samples demoinfocs active inferno fire-cell positions every four ticks. The viewer's color and glow remain presentation, while the changing footprint and lifecycle come from those canonical samples.
 
 ## Known Open Issues

@@ -103,6 +103,7 @@ func Parse(opts Options) (err error) {
 		MapID:            calibration.MapID,
 		DisplayName:      calibration.DisplayName,
 		RadarImageKey:    calibration.RadarImageKey,
+		VerticalSections: calibration.VerticalSections,
 		CoordinateSystem: calibration.CoordinateSystem,
 	}
 	state.replay.Teams = orderedTeams(state.teams)

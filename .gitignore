@@ -29,6 +29,7 @@ tmp-*.log
 .tmp-*.ndjson
 .tmp-*.png
 .tmp-*.txt
+.tmp-*/
 .tmp-bridge-*.log
 .tmp-viewer-*.log
 .tmp-chrome-profile/

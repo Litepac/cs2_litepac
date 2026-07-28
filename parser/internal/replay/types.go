@@ -45,10 +45,19 @@ type Match struct {
 }
 
 type Map struct {
-	MapID            string           `json:"mapId"`
-	DisplayName      string           `json:"displayName"`
-	RadarImageKey    string           `json:"radarImageKey"`
-	CoordinateSystem CoordinateSystem `json:"coordinateSystem"`
+	MapID            string            `json:"mapId"`
+	DisplayName      string            `json:"displayName"`
+	RadarImageKey    string            `json:"radarImageKey"`
+	VerticalSections []VerticalSection `json:"verticalSections,omitempty"`
+	CoordinateSystem CoordinateSystem  `json:"coordinateSystem"`
+}
+
+type VerticalSection struct {
+	SectionID     string  `json:"sectionId"`
+	DisplayName   string  `json:"displayName"`
+	RadarImageKey string  `json:"radarImageKey"`
+	AltitudeMin   float64 `json:"altitudeMin"`
+	AltitudeMax   float64 `json:"altitudeMax"`
 }
 
 type CoordinateSystem struct {

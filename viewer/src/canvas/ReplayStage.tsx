@@ -1,5 +1,8 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
+import { AUTO_MAP_LEVEL, resolveMapLevel } from "../replay/mapLevels";
+import { interpolatePlayerStreamSample } from "../replay/playerStream";
+import { MapLevelControl } from "./MapLevelControl";
 import { applyCameraTransform, resolveViewportDimensions } from "./replayStage/camera";
 import { DEFAULT_STAGE_HEIGHT, DEFAULT_STAGE_WIDTH } from "./replayStage/constants";
 import { attachStageInteractions } from "./replayStage/interaction";
@@ -64,10 +67,23 @@ export function ReplayStage({
   const renderErrorRef = useRef<string | null>(null);
   const [stageRevision, setStageRevision] = useState(0);
   const [renderError, setRenderError] = useState<string | null>(null);
+  const [mapLevelMode, setMapLevelMode] = useState(AUTO_MAP_LEVEL);
   const [viewportSize, setViewportSize] = useState({
     height: DEFAULT_STAGE_HEIGHT,
     width: DEFAULT_STAGE_WIDTH,
   });
+  const altitude = useMemo(
+    () => selectedPlayerAltitude(round, selectedPlayerId, currentTick),
+    [currentTick, round, selectedPlayerId],
+  );
+  const mapLevel = useMemo(
+    () => resolveMapLevel(replay.map, altitude, mapLevelMode),
+    [altitude, mapLevelMode, replay.map],
+  );
+
+  useEffect(() => {
+    setMapLevelMode(AUTO_MAP_LEVEL);
+  }, [replay.map.mapId]);
 
   function syncViewportSizeFromHost(hostElement: HTMLDivElement) {
     const bounds = hostElement.getBoundingClientRect();
@@ -244,7 +260,13 @@ export function ReplayStage({
       }
 
       try {
-        const mapChanged = await ensureStageMap(stage, replayRef.current, viewportSize.width, viewportSize.height);
+        const mapChanged = await ensureStageMap(
+          stage,
+          replayRef.current,
+          mapLevel.radarImageKey,
+          viewportSize.width,
+          viewportSize.height,
+        );
         if (!cancelled) {
           setRenderError(null);
           if (mapChanged) {
@@ -263,7 +285,7 @@ export function ReplayStage({
     return () => {
       cancelled = true;
     };
-  }, [stageRevision, viewportSize, replay.map.radarImageKey]);
+  }, [mapLevel.radarImageKey, stageRevision, viewportSize]);
 
   useEffect(() => {
     const stage = stageRef.current;
@@ -319,6 +341,12 @@ export function ReplayStage({
   return (
     <div className="stage-shell">
       <div className="stage" ref={hostRef} />
+      <MapLevelControl
+        activeSectionId={mapLevel.section?.sectionId ?? null}
+        map={replay.map}
+        onChange={setMapLevelMode}
+        value={mapLevelMode}
+      />
       {renderError ? <div className="stage-error">{renderError}</div> : null}
     </div>
   );
@@ -355,4 +383,17 @@ function watchDevicePixelRatio(onChange: () => void) {
     removeListener?.();
     mediaQuery = null;
   };
+}
+
+function selectedPlayerAltitude(
+  round: ReplayStageProps["round"],
+  playerId: string | null,
+  currentTick: number,
+) {
+  if (!playerId) {
+    return null;
+  }
+
+  const stream = round.playerStreams.find((candidate) => candidate.playerId === playerId);
+  return stream ? interpolatePlayerStreamSample(stream, currentTick)?.z ?? null : null;
 }

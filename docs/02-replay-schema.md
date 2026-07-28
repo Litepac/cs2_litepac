@@ -78,9 +78,16 @@ Static match map identity plus calibration reference:
 
 - map id
 - display name
-- radar image key
-- world-to-radar bounds
-- rotation metadata if needed
+- primary radar image key
+- optional parser-owned vertical radar sections with image keys and altitude bounds
+- world-to-radar coordinate system
+
+Vertical-section bounds come from the installed Valve overview resource and use
+`altitudeMin <= z < altitudeMax`. The viewer may follow a selected player's
+canonical `z` or let the reviewer select a section explicitly; it must not infer
+floors from 2D position. At a shared boundary, the primary/upper section owns
+the exact threshold sample. Current source thresholds are Nuke `-495`, Train
+`-50`, and Vertigo `11700`.
 
 ### `teams`
 

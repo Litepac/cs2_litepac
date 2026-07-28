@@ -8,6 +8,10 @@ import (
 )
 
 func ValidateReplay(data replay.Replay) error {
+	if err := validateMap(data.Map); err != nil {
+		return err
+	}
+
 	lastRoundEnd := -1
 	var previousScoreAfter *replay.Score
 	for roundIndex, round := range data.Rounds {
@@ -461,6 +465,33 @@ func ValidateReplay(data replay.Replay) error {
 		previousScoreAfter = &round.ScoreAfter
 	}
 
+	return nil
+}
+
+func validateMap(replayMap replay.Map) error {
+	seenSectionIDs := make(map[string]struct{}, len(replayMap.VerticalSections))
+	for sectionIndex, section := range replayMap.VerticalSections {
+		if section.SectionID == "" || section.DisplayName == "" || section.RadarImageKey == "" {
+			return fmt.Errorf("map vertical section at index %d is incomplete", sectionIndex)
+		}
+		if _, exists := seenSectionIDs[section.SectionID]; exists {
+			return fmt.Errorf("map repeats vertical section %q", section.SectionID)
+		}
+		seenSectionIDs[section.SectionID] = struct{}{}
+		if !isFinite(section.AltitudeMin) || !isFinite(section.AltitudeMax) || section.AltitudeMin >= section.AltitudeMax {
+			return fmt.Errorf("map vertical section %q has invalid altitude bounds", section.SectionID)
+		}
+		if sectionIndex == 0 {
+			if section.RadarImageKey != replayMap.RadarImageKey {
+				return fmt.Errorf("map primary vertical section does not use the primary radar image")
+			}
+			continue
+		}
+		previous := replayMap.VerticalSections[sectionIndex-1]
+		if previous.AltitudeMin != section.AltitudeMax {
+			return fmt.Errorf("map vertical sections %q and %q do not share a boundary", previous.SectionID, section.SectionID)
+		}
+	}
 	return nil
 }
 

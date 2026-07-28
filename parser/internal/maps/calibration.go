@@ -3,6 +3,7 @@ package maps
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 
@@ -12,10 +13,11 @@ import (
 const calibrationFileName = "calibration.json"
 
 type Calibration struct {
-	MapID            string                  `json:"mapId"`
-	DisplayName      string                  `json:"displayName"`
-	RadarImageKey    string                  `json:"radarImageKey"`
-	CoordinateSystem replay.CoordinateSystem `json:"coordinateSystem"`
+	MapID            string                   `json:"mapId"`
+	DisplayName      string                   `json:"displayName"`
+	RadarImageKey    string                   `json:"radarImageKey"`
+	VerticalSections []replay.VerticalSection `json:"verticalSections,omitempty"`
+	CoordinateSystem replay.CoordinateSystem  `json:"coordinateSystem"`
 }
 
 func Load(assetsRoot, mapID string) (Calibration, error) {
@@ -33,8 +35,30 @@ func Load(assetsRoot, mapID string) (Calibration, error) {
 	if cfg.MapID == "" {
 		cfg.MapID = mapID
 	}
+	if err := validateVerticalSections(path, cfg); err != nil {
+		return Calibration{}, err
+	}
 
 	return cfg, nil
+}
+
+func validateVerticalSections(path string, cfg Calibration) error {
+	seen := make(map[string]struct{}, len(cfg.VerticalSections))
+	for _, section := range cfg.VerticalSections {
+		if section.SectionID == "" || section.DisplayName == "" || section.RadarImageKey == "" {
+			return fmt.Errorf("map calibration %q has an incomplete vertical section", path)
+		}
+		if math.IsNaN(section.AltitudeMin) || math.IsInf(section.AltitudeMin, 0) ||
+			math.IsNaN(section.AltitudeMax) || math.IsInf(section.AltitudeMax, 0) ||
+			section.AltitudeMin >= section.AltitudeMax {
+			return fmt.Errorf("map calibration %q has invalid altitude bounds for section %q", path, section.SectionID)
+		}
+		if _, exists := seen[section.SectionID]; exists {
+			return fmt.Errorf("map calibration %q repeats vertical section %q", path, section.SectionID)
+		}
+		seen[section.SectionID] = struct{}{}
+	}
+	return nil
 }
 
 func ResolveAssetsRoot(explicit string) (string, error) {

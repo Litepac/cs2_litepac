@@ -27,6 +27,13 @@ export type Replay = {
     mapId: string;
     displayName: string;
     radarImageKey: string;
+    verticalSections?: Array<{
+      sectionId: string;
+      displayName: string;
+      radarImageKey: string;
+      altitudeMin: number;
+      altitudeMax: number;
+    }>;
     coordinateSystem: {
       worldXMin: number;
       worldXMax: number;

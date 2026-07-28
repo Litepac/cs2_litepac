@@ -33,7 +33,10 @@ export function createSmokeRasterPixels(variant: number) {
       const fineNoise = valueNoise(nx * 10.5 + phase, ny * 10.5 - phase, seed ^ 0x63d83595);
       const warpedX = nx + (mediumNoise - 0.5) * 0.055;
       const warpedY = ny + (lowNoise - 0.5) * 0.07;
-      const radius = Math.hypot(warpedX / 1.03, warpedY / 0.83);
+      // The current Valve point-cloud source is effectively circular in the
+      // horizontal plane. Geometry still owns its in-game deformation; this
+      // near-circular field is only the neutral replay presentation.
+      const radius = Math.hypot(warpedX / 0.945, warpedY / 0.935);
       const angle = Math.atan2(warpedY, warpedX);
       const boundary =
         0.7 +

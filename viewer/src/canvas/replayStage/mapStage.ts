@@ -95,6 +95,7 @@ export async function createStageState(hostElement: HTMLDivElement) {
 export async function ensureStageMap(
   stage: StageState,
   replay: Replay,
+  radarImageKey: string,
   viewportWidth: number,
   viewportHeight: number,
 ) {
@@ -103,7 +104,7 @@ export async function ensureStageMap(
   }
 
   if (
-    stage.currentMapKey === replay.map.radarImageKey &&
+    stage.currentMapKey === radarImageKey &&
     stage.currentViewportWidth === viewportWidth &&
     stage.currentViewportHeight === viewportHeight &&
     stage.radarViewport != null
@@ -113,9 +114,9 @@ export async function ensureStageMap(
 
   const requestId = stage.mapLoadRequestId + 1;
   stage.mapLoadRequestId = requestId;
-  const radarURL = radarImageURL(replay.map.radarImageKey);
+  const radarURL = radarImageURL(radarImageKey);
   const bombDamageFieldPromise = loadBombDamageField(replay.map.mapId);
-  if (stage.currentMapKey != null && stage.currentMapKey !== replay.map.radarImageKey) {
+  if (stage.currentMapKey != null && stage.currentMapKey !== radarImageKey) {
     clearStageMap(stage);
   }
 
@@ -183,7 +184,7 @@ export async function ensureStageMap(
   stage.mapLayer.addChild(sprite);
   stage.mapLayer.addChild(mapClipMask);
 
-  stage.currentMapKey = replay.map.radarImageKey;
+  stage.currentMapKey = radarImageKey;
   stage.currentViewportWidth = viewportWidth;
   stage.currentViewportHeight = viewportHeight;
   stage.lastAtlasEntryKey = null;

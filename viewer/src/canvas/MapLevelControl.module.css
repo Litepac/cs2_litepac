@@ -1,0 +1,53 @@
+.control {
+  position: absolute;
+  z-index: 3;
+  top: 14px;
+  left: 14px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 4px;
+  border: 1px solid rgb(132 157 168 / 24%);
+  border-radius: 7px;
+  background: rgb(5 12 16 / 82%);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 24%);
+  backdrop-filter: blur(10px);
+}
+
+.label {
+  padding: 0 7px;
+  color: rgb(174 194 201 / 72%);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.button {
+  min-height: 28px;
+  padding: 0 9px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: rgb(205 219 224 / 76%);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.button:hover {
+  background: rgb(132 157 168 / 12%);
+  color: #f3f7f8;
+}
+
+.button:focus-visible {
+  outline: 2px solid #54b9d2;
+  outline-offset: 1px;
+}
+
+.button[data-active="true"] {
+  border-color: rgb(84 185 210 / 40%);
+  background: rgb(84 185 210 / 17%);
+  color: #eafaff;
+}

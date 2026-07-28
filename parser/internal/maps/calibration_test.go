@@ -10,6 +10,20 @@ import (
 
 func TestCompetitiveMapAssetSet(t *testing.T) {
 	assetsRoot := filepath.Join("..", "..", "..", "public", "maps")
+	supported := []string{
+		"de_ancient", "de_anubis", "de_cache", "de_dust2", "de_inferno",
+		"de_mirage", "de_nuke", "de_overpass", "de_train", "de_vertigo",
+	}
+	for _, mapID := range supported {
+		calibration, err := Load(assetsRoot, mapID)
+		if err != nil {
+			t.Fatalf("load %s calibration: %v", mapID, err)
+		}
+		assertRadarAssetExists(t, assetsRoot, calibration.RadarImageKey)
+		for _, section := range calibration.VerticalSections {
+			assertRadarAssetExists(t, assetsRoot, section.RadarImageKey)
+		}
+	}
 
 	cache, err := Load(assetsRoot, "de_cache")
 	if err != nil {
@@ -42,5 +56,27 @@ func TestCompetitiveMapAssetSet(t *testing.T) {
 		if _, err := Load(assetsRoot, mapID); !errors.Is(err, os.ErrNotExist) {
 			t.Fatalf("retired map %s load error = %v, want os.ErrNotExist", mapID, err)
 		}
+	}
+}
+
+func TestNukeVerticalSectionsMatchInstalledOverview(t *testing.T) {
+	assetsRoot := filepath.Join("..", "..", "..", "public", "maps")
+	nuke, err := Load(assetsRoot, "de_nuke")
+	if err != nil {
+		t.Fatalf("load de_nuke calibration: %v", err)
+	}
+	if len(nuke.VerticalSections) != 2 {
+		t.Fatalf("vertical section count = %d, want 2", len(nuke.VerticalSections))
+	}
+	if upper, lower := nuke.VerticalSections[0], nuke.VerticalSections[1]; upper.SectionID != "upper" || upper.AltitudeMin != -495 ||
+		lower.SectionID != "lower" || lower.AltitudeMax != -495 {
+		t.Fatalf("unexpected Nuke vertical sections: %#v", nuke.VerticalSections)
+	}
+}
+
+func assertRadarAssetExists(t *testing.T, assetsRoot, radarImageKey string) {
+	t.Helper()
+	if _, err := os.Stat(filepath.Join(assetsRoot, filepath.FromSlash(radarImageKey))); err != nil {
+		t.Fatalf("radar asset %q: %v", radarImageKey, err)
 	}
 }

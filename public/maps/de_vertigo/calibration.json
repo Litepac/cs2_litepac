@@ -2,6 +2,22 @@
     "mapId":  "de_vertigo",
     "displayName":  "Vertigo",
     "radarImageKey":  "de_vertigo/radar.png",
+    "verticalSections":  [
+                              {
+                                  "sectionId":  "upper",
+                                  "displayName":  "Upper",
+                                  "radarImageKey":  "de_vertigo/radar.png",
+                                  "altitudeMin":  11700,
+                                  "altitudeMax":  20000
+                              },
+                              {
+                                  "sectionId":  "lower",
+                                  "displayName":  "Lower",
+                                  "radarImageKey":  "de_vertigo/radar-lower.png",
+                                  "altitudeMin":  -10000,
+                                  "altitudeMax":  11700
+                              }
+                          ],
     "coordinateSystem":  {
                              "worldXMin":  -3168,
                              "worldXMax":  928,

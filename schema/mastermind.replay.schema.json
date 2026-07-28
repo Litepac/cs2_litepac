@@ -214,6 +214,27 @@
         "radarImageKey": {
           "type": "string"
         },
+        "verticalSections": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "sectionId",
+              "displayName",
+              "radarImageKey",
+              "altitudeMin",
+              "altitudeMax"
+            ],
+            "properties": {
+              "sectionId": { "type": "string", "minLength": 1 },
+              "displayName": { "type": "string", "minLength": 1 },
+              "radarImageKey": { "type": "string", "minLength": 1 },
+              "altitudeMin": { "type": "number" },
+              "altitudeMax": { "type": "number" }
+            }
+          }
+        },
         "coordinateSystem": {
           "type": "object",
           "additionalProperties": false,

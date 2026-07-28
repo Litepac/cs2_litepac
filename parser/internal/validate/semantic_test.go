@@ -47,6 +47,40 @@ func TestValidateReplayRejectsImpossibleYawStates(t *testing.T) {
 	})
 }
 
+func TestValidateReplayRejectsInvalidVerticalSections(t *testing.T) {
+	validSections := []replay.VerticalSection{
+		{SectionID: "upper", DisplayName: "Upper", RadarImageKey: "de_nuke/radar.png", AltitudeMin: -495, AltitudeMax: 10000},
+		{SectionID: "lower", DisplayName: "Lower", RadarImageKey: "de_nuke/radar-lower.png", AltitudeMin: -10000, AltitudeMax: -495},
+	}
+	makeReplay := func() replay.Replay {
+		data := replayWithYawSample(func(stream *replay.PlayerStream) { _ = stream })
+		data.Map.RadarImageKey = "de_nuke/radar.png"
+		data.Map.VerticalSections = append([]replay.VerticalSection(nil), validSections...)
+		return data
+	}
+
+	t.Run("valid contiguous sections", func(t *testing.T) {
+		if err := ValidateReplay(makeReplay()); err != nil {
+			t.Fatalf("expected valid vertical sections, got %v", err)
+		}
+	})
+	t.Run("invalid bounds", func(t *testing.T) {
+		data := makeReplay()
+		data.Map.VerticalSections[1].AltitudeMax = -10001
+		assertValidationErrorContains(t, ValidateReplay(data), "invalid altitude bounds")
+	})
+	t.Run("gap", func(t *testing.T) {
+		data := makeReplay()
+		data.Map.VerticalSections[1].AltitudeMax = -496
+		assertValidationErrorContains(t, ValidateReplay(data), "do not share a boundary")
+	})
+	t.Run("wrong primary image", func(t *testing.T) {
+		data := makeReplay()
+		data.Map.VerticalSections[0].RadarImageKey = "de_nuke/other.png"
+		assertValidationErrorContains(t, ValidateReplay(data), "does not use the primary radar image")
+	})
+}
+
 func TestValidateReplayRejectsImpossibleViewStates(t *testing.T) {
 	t.Run("pitch while dead", func(t *testing.T) {
 		err := ValidateReplay(replayWithYawSample(func(stream *replay.PlayerStream) {

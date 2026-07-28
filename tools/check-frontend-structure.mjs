@@ -247,6 +247,27 @@ async function validatePublicMaps() {
       }
     }
 
+    const verticalSections = calibration?.verticalSections ?? [];
+    const sectionIds = new Set();
+    for (const section of verticalSections) {
+      if (typeof section?.sectionId !== "string" || section.sectionId.trim() === "" || sectionIds.has(section.sectionId)) {
+        fail(normalize(path.relative(repoRoot, calibrationPath)), "verticalSections must have unique non-empty sectionId values.");
+      } else {
+        sectionIds.add(section.sectionId);
+      }
+      if (typeof section?.displayName !== "string" || section.displayName.trim() === "") {
+        fail(normalize(path.relative(repoRoot, calibrationPath)), "verticalSections displayName must be non-empty.");
+      }
+      if (!Number.isFinite(section?.altitudeMin) || !Number.isFinite(section?.altitudeMax) || section.altitudeMin >= section.altitudeMax) {
+        fail(normalize(path.relative(repoRoot, calibrationPath)), `vertical section ${section?.sectionId ?? "<unknown>"} has invalid altitude bounds.`);
+      }
+      if (typeof section?.radarImageKey !== "string" || section.radarImageKey.trim() === "") {
+        fail(normalize(path.relative(repoRoot, calibrationPath)), "verticalSections radarImageKey must be non-empty.");
+      } else if (!(await pathExists(path.join(mapsRoot, section.radarImageKey)))) {
+        fail(normalize(path.relative(repoRoot, calibrationPath)), `vertical radar target does not exist: ${section.radarImageKey}`);
+      }
+    }
+
     const coordinateSystem = calibration?.coordinateSystem;
     for (const key of ["worldXMin", "worldXMax", "worldYMin", "worldYMax", "rotateDegrees"]) {
       if (!Number.isFinite(coordinateSystem?.[key])) {

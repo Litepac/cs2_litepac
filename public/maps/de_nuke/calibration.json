@@ -2,6 +2,22 @@
     "mapId":  "de_nuke",
     "displayName":  "Nuke",
     "radarImageKey":  "de_nuke/radar.png",
+    "verticalSections":  [
+                              {
+                                  "sectionId":  "upper",
+                                  "displayName":  "Upper",
+                                  "radarImageKey":  "de_nuke/radar.png",
+                                  "altitudeMin":  -495,
+                                  "altitudeMax":  10000
+                              },
+                              {
+                                  "sectionId":  "lower",
+                                  "displayName":  "Lower",
+                                  "radarImageKey":  "de_nuke/radar-lower.png",
+                                  "altitudeMin":  -10000,
+                                  "altitudeMax":  -495
+                              }
+                          ],
     "coordinateSystem":  {
                              "worldXMin":  -3453,
                              "worldXMax":  3715,

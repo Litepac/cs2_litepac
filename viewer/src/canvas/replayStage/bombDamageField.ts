@@ -18,6 +18,7 @@ export type BombDamageFieldSite = {
 export type BombDamageField = {
   compatibleSourceDemoSha256: Set<string>;
   mapId: string;
+  presentationVersion: number;
   radarHeight: number;
   radarWidth: number;
   resourceSha256: string;
@@ -28,6 +29,10 @@ type BombDamageManifest = {
   compatibleSourceDemoSha256: string[];
   formatVersion: number;
   mapId: string;
+  presentation: {
+    encoding: string;
+    version: number;
+  };
   radar: {
     height: number;
     width: number;
@@ -81,12 +86,15 @@ async function loadField(mapId: string): Promise<BombDamageField | null> {
     const sites = await Promise.all(
       manifest.sites.map(async (site) => ({
         ...site,
-        texture: await Assets.load<Texture>(`${baseURL}/${encodeURIComponent(site.mask)}`),
+        texture: await Assets.load<Texture>(
+          `${baseURL}/${encodeURIComponent(site.mask)}?presentation=${manifest.presentation.version}`,
+        ),
       })),
     );
     return {
       compatibleSourceDemoSha256: new Set(manifest.compatibleSourceDemoSha256),
       mapId,
+      presentationVersion: manifest.presentation.version,
       radarHeight: manifest.radar.height,
       radarWidth: manifest.radar.width,
       resourceSha256: manifest.resource.sha256,
@@ -99,10 +107,12 @@ async function loadField(mapId: string): Promise<BombDamageField | null> {
 
 function isValidManifest(value: BombDamageManifest, mapId: string) {
   return (
-    value?.formatVersion === 1 &&
+    value?.formatVersion === 2 &&
     Array.isArray(value.compatibleSourceDemoSha256) &&
     value.compatibleSourceDemoSha256.every((sha256) => /^[a-f0-9]{64}$/.test(sha256)) &&
     value.mapId === mapId &&
+    value.presentation?.encoding === "normalized-propagation-cost" &&
+    value.presentation.version === 2 &&
     value.resource?.type === "CS2_BOMB_DAMAGE_DATA" &&
     value.resource.version === 1 &&
     /^[A-F0-9]{64}$/.test(value.resource.sha256) &&

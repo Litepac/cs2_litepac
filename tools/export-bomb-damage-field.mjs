@@ -4,7 +4,8 @@ import { basename, join } from "node:path";
 import { deflateSync } from "node:zlib";
 import { pathToFileURL } from "node:url";
 
-const FORMAT_VERSION = 1;
+const FORMAT_VERSION = 2;
+const PRESENTATION_VERSION = 2;
 const RESOURCE_TYPE = "CS2_BOMB_DAMAGE_DATA";
 
 export function parseBombDamageResource(text) {
@@ -92,7 +93,8 @@ export function renderSiteMask(resource, siteIndex, calibration, width, height) 
       (1 - (sample.y - calibration.worldYMin) / worldHeight) * (height - 1),
     );
     const strength = 1 - cost / Math.max(1, site.propagationRange);
-    const alpha = Math.round(76 + strength * 112);
+    const [red, green, blue] = propagationCueColor(strength);
+    const alpha = Math.round(128 + strength * 110);
 
     for (let y = imageY - halfHeight; y <= imageY + halfHeight; y += 1) {
       if (y < 0 || y >= height) {
@@ -106,15 +108,27 @@ export function renderSiteMask(resource, siteIndex, calibration, width, height) 
         if (alpha <= rgba[offset + 3]) {
           continue;
         }
-        rgba[offset] = 255;
-        rgba[offset + 1] = 255;
-        rgba[offset + 2] = 255;
+        rgba[offset] = red;
+        rgba[offset + 1] = green;
+        rgba[offset + 2] = blue;
         rgba[offset + 3] = alpha;
       }
     }
   }
 
   return rgba;
+}
+
+export function propagationCueColor(strength) {
+  const normalized = Math.max(0, Math.min(1, strength));
+  if (normalized < 0.55) {
+    return interpolateRgb([210, 50, 34], [255, 145, 42], normalized / 0.55);
+  }
+  return interpolateRgb([255, 145, 42], [255, 231, 151], (normalized - 0.55) / 0.45);
+}
+
+function interpolateRgb(from, to, progress) {
+  return from.map((value, index) => Math.round(value + (to[index] - value) * progress));
 }
 
 export function encodeRgbaPng(width, height, rgba) {
@@ -184,6 +198,10 @@ async function main() {
     radar: {
       height,
       width,
+    },
+    presentation: {
+      encoding: "normalized-propagation-cost",
+      version: PRESENTATION_VERSION,
     },
     resource: {
       file: basename(args.compiled),

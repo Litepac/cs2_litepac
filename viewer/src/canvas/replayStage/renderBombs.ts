@@ -13,10 +13,13 @@ import {
   resolveBombDamageSite,
   type BombDamageField,
 } from "./bombDamageField";
+import {
+  BOMB_FIELD_CUE_SECONDS,
+  resolveBombFieldCueAlpha,
+} from "./bombDamageCuePresentation";
 
 const BOMB_ICON_SIZE = 32;
 const BOMB_ICON = { svg: c4IconSvg, width: BOMB_ICON_SIZE, height: BOMB_ICON_SIZE };
-const FIELD_CUE_SECONDS = 1.35;
 
 export function renderBombOverlays(
   layer: Container,
@@ -348,7 +351,7 @@ function drawMapBombDamageCue(
     field.radarWidth !== radarViewport.imageWidth ||
     field.radarHeight !== radarViewport.imageHeight ||
     eventAgeSeconds < 0 ||
-    eventAgeSeconds > FIELD_CUE_SECONDS
+    eventAgeSeconds > BOMB_FIELD_CUE_SECONDS
   ) {
     return;
   }
@@ -358,18 +361,15 @@ function drawMapBombDamageCue(
     return;
   }
 
-  // The mask extent and wall-following shape come from the exact compiled map
-  // resource identified by the field manifest. Opacity is only a short event
-  // emphasis; it does not claim exact damage, arrival time, or player outcome.
-  const attack = clamp(eventAgeSeconds / 0.16, 0, 1);
-  const decay = 1 - clamp((eventAgeSeconds - 0.2) / (FIELD_CUE_SECONDS - 0.2), 0, 1);
+  // Extent, wall-following shape, and the warm gradient come from normalized
+  // propagation cost in the exact compiled map resource. Timing and opacity are
+  // presentation only; they do not claim damage, arrival time, or outcome.
   const sprite = new Sprite(site.texture);
   sprite.x = radarViewport.offsetX;
   sprite.y = radarViewport.offsetY;
   sprite.width = radarViewport.imageWidth * radarViewport.scale;
   sprite.height = radarViewport.imageHeight * radarViewport.scale;
-  sprite.alpha = attack * decay * 0.42;
-  sprite.tint = 0xff9c42;
+  sprite.alpha = resolveBombFieldCueAlpha(eventAgeSeconds);
   sprite.blendMode = "add";
   layer.addChild(sprite);
 }

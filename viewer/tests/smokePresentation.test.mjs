@@ -2,53 +2,80 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
-  getSmokeField,
   resolveSmokeLifecyclePresentation,
   resolveSmokeLifetimeProgress,
-  SMOKE_FIELD_PALETTE,
+  SMOKE_FIELD_SIZE,
   SMOKE_LIFETIME_RING,
 } from "../src/canvas/smokePresentation.ts";
+import {
+  applySmokeRasterCutout,
+  createSmokeRasterPixels,
+  SMOKE_RASTER_SIZE,
+  SMOKE_RASTER_VARIANTS,
+  smokeRasterVariant,
+} from "../src/canvas/smokeRaster.ts";
 
-test("keeps the symbolic smoke field stable and bounded", () => {
-  const first = getSmokeField("smoke-round-14-3");
-  const repeated = getSmokeField("smoke-round-14-3");
-  const other = getSmokeField("smoke-round-14-4");
+test("creates a stable continuous smoke raster instead of overlapping primitives", () => {
+  const first = createSmokeRasterPixels(3);
+  const repeated = createSmokeRasterPixels(3);
+  const other = createSmokeRasterPixels(4);
 
-  assert.equal(first, repeated);
-  assert.equal(first.body.length, 9);
-  assert.equal(first.texture.length, 16);
-  assert.equal(first.veil.length, 4);
-  assert.notDeepEqual(first.body, other.body);
+  assert.deepEqual(first, repeated);
+  assert.notDeepEqual(first, other);
+  assert.equal(first.length, SMOKE_RASTER_SIZE * SMOKE_RASTER_SIZE * 4);
 
-  for (const lobe of [...first.body, ...first.veil, ...first.texture]) {
-    assert.ok(Number.isFinite(lobe.dx));
-    assert.ok(Number.isFinite(lobe.dy));
-    assert.ok(lobe.alpha > 0 && lobe.alpha <= 0.34);
+  let visiblePixels = 0;
+  let softEdgePixels = 0;
+  let brightestChannel = 0;
+  for (let offset = 0; offset < first.length; offset += 4) {
+    const alpha = first[offset + 3];
+    if (alpha > 8) {
+      visiblePixels += 1;
+      brightestChannel = Math.max(brightestChannel, first[offset], first[offset + 1], first[offset + 2]);
+    }
+    if (alpha > 8 && alpha < 180) {
+      softEdgePixels += 1;
+    }
   }
 
-  for (const lobe of [...first.body, ...first.veil]) {
-    assert.ok(lobe.width >= 16 && lobe.width <= 24);
-    assert.ok(lobe.height >= 16 && lobe.height <= 26);
-  }
-
-  for (const lobe of first.texture) {
-    assert.ok(lobe.width >= 4.5 && lobe.width <= 8);
-    assert.ok(lobe.height >= 4.2 && lobe.height <= 8);
-  }
+  const pixelCount = SMOKE_RASTER_SIZE * SMOKE_RASTER_SIZE;
+  assert.ok(visiblePixels > pixelCount * 0.28);
+  assert.ok(visiblePixels < pixelCount * 0.7);
+  assert.ok(softEdgePixels > pixelCount * 0.04);
+  assert.ok(brightestChannel < 225);
+  assert.equal(first[3], 0);
 });
 
-test("keeps the smoke body readable without a white core", () => {
-  const field = getSmokeField("smoke-contrast-proof");
-  const red = (SMOKE_FIELD_PALETTE.body >> 16) & 0xff;
-  const green = (SMOKE_FIELD_PALETTE.body >> 8) & 0xff;
-  const blue = SMOKE_FIELD_PALETTE.body & 0xff;
+test("keeps raster variants bounded and stable per utility", () => {
+  const first = smokeRasterVariant("smoke-round-14-3");
+  const repeated = smokeRasterVariant("smoke-round-14-3");
+  const variants = new Set(Array.from({ length: 40 }, (_, index) => smokeRasterVariant(`smoke-${index}`)));
 
-  assert.ok(red >= 0x80 && green >= 0x80 && blue >= 0x80);
-  assert.ok(red < 0xd0 && green < 0xd0 && blue < 0xd0);
-  assert.ok(field.body[0].alpha >= 0.32);
-  assert.ok(field.body.slice(1).every((lobe) => lobe.alpha >= 0.22));
-  assert.ok(SMOKE_LIFETIME_RING.radius >= 22);
-  assert.ok(SMOKE_LIFETIME_RING.width >= 5);
+  assert.equal(first, repeated);
+  assert.ok(first >= 0 && first < SMOKE_RASTER_VARIANTS);
+  assert.ok(variants.size > 4);
+});
+
+test("opens a partial parser-backed displacement pocket in the raster", () => {
+  const base = createSmokeRasterPixels(2);
+  const displaced = applySmokeRasterCutout(base, {
+    x: 0,
+    y: 0,
+    radiusX: 0.45,
+    radiusY: 0.45,
+    strength: 1,
+  });
+  const centerOffset = ((SMOKE_RASTER_SIZE / 2) * SMOKE_RASTER_SIZE + SMOKE_RASTER_SIZE / 2) * 4 + 3;
+
+  assert.ok(base[centerOffset] > 180);
+  assert.ok(displaced[centerOffset] < base[centerOffset] * 0.2);
+  assert.equal(displaced[3], base[3]);
+});
+
+test("keeps smoke visible while making the lifecycle arc secondary", () => {
+  assert.ok(SMOKE_FIELD_SIZE.width > SMOKE_LIFETIME_RING.radius * 4);
+  assert.ok(SMOKE_FIELD_SIZE.height > SMOKE_LIFETIME_RING.radius * 3.5);
+  assert.ok(SMOKE_LIFETIME_RING.width >= 4 && SMOKE_LIFETIME_RING.width < 5);
   assert.ok(SMOKE_LIFETIME_RING.backdropWidth > SMOKE_LIFETIME_RING.width);
 });
 

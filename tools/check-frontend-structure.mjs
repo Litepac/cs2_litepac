@@ -57,6 +57,14 @@ const bannedTextPatterns = [
     pattern: /BOMB_EXPLOSION_[A-Z0-9_]*(?:RADIUS|DISTANCE|REACH)_WORLD/g,
     message: "Do not reintroduce guessed circular C4 damage radii; current damage truth is map-compiled and occlusion-aware.",
   },
+  {
+    pattern: /getSmokeField\s*\(/g,
+    message: "Do not rebuild Live smoke from overlapping semi-transparent primitives; use the flattened smoke texture boundary.",
+  },
+  {
+    pattern: /drawSmokeLobe\s*\(/g,
+    message: "Do not rebuild Live smoke from overlapping semi-transparent primitives; use the flattened smoke texture boundary.",
+  },
 ];
 
 const retiredClassPatterns = [

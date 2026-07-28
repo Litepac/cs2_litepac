@@ -1,4 +1,4 @@
-import { Circle, Container, Graphics, Text } from "pixi.js";
+import { Circle, Container, Graphics, Sprite, Text } from "pixi.js";
 
 import type { RadarViewport } from "../mapGeometry/transform";
 import { worldToScreen } from "../mapGeometry/transform";
@@ -19,12 +19,12 @@ import {
 import { createEquipmentIconGraphic, type EquipmentSvgIcon } from "./equipmentIconGraphics";
 import { attachReplayHitTarget } from "./replayStage/hitTargets";
 import {
-  getSmokeField,
   resolveSmokeLifecyclePresentation,
   resolveSmokeLifetimeProgress,
-  SMOKE_FIELD_PALETTE,
+  SMOKE_FIELD_SIZE,
   SMOKE_LIFETIME_RING,
 } from "./smokePresentation";
+import { getSmokeTexture } from "./smokeTexture";
 
 type ScreenPoint = {
   x: number;
@@ -471,7 +471,6 @@ function drawSmokeUtilityVisual(
     activePoint,
     utility.utilityId,
     state.remainingSeconds,
-    currentTick,
     throwerSide,
     detonateTick == null ? null : Math.max(0, (currentTick - detonateTick) / Math.max(1, tickRate)),
     detonateTick == null ? null : Math.max(0.1, (endTick - detonateTick) / Math.max(1, tickRate)),
@@ -485,7 +484,6 @@ function drawSmokeVisual(
   point: ScreenPoint,
   utilityId: string,
   remainingSeconds: number | null,
-  currentTick: number,
   throwerSide: "T" | "CT" | null,
   activeAgeSeconds: number | null,
   activeDurationSeconds: number | null,
@@ -493,66 +491,29 @@ function drawSmokeVisual(
   mapClipMask: Container | null,
 ) {
   const presentation = resolveSmokeLifecyclePresentation(activeAgeSeconds, remainingSeconds);
-  const cloudScale = presentation.scale * (0.998 + Math.sin(currentTick / 73) * 0.004);
-  const field = getSmokeField(utilityId);
+  const displayWidth = SMOKE_FIELD_SIZE.width * presentation.scale;
+  const displayHeight = SMOKE_FIELD_SIZE.height * presentation.scale;
   const smokeLayer = mapClipMask ? new Container() : layer;
   if (mapClipMask) {
     smokeLayer.mask = mapClipMask;
     layer.addChild(smokeLayer);
   }
-  const ambient = new Graphics();
-  const body = new Graphics();
-  const texture = new Graphics();
-  const veil = new Graphics();
-  const smokePoint = (dx: number, dy: number, phase: number) => ({
-    x: point.x + (dx + Math.sin(currentTick / 109 + phase) * 0.18) * cloudScale,
-    y: point.y + (dy + Math.cos(currentTick / 127 + phase) * 0.16) * cloudScale,
-  });
-  const drawLobe = (
-    graphics: Graphics,
-    lobe: { alpha: number; dx: number; dy: number; height: number; phase: number; width: number },
-    color: number,
-    alphaScale: number,
-    sizeScale: number,
-    falloffScale: number,
-  ) => {
-    const position = smokePoint(lobe.dx, lobe.dy, lobe.phase);
-    const radiusX = lobe.width * cloudScale * sizeScale;
-    const radiusY = lobe.height * cloudScale * sizeScale;
-    const alpha = displacedSmokePuffAlpha(
-      position.x,
-      position.y,
-      radiusX,
-      radiusY,
-      lobe.alpha * presentation.opacity * alphaScale,
-      displacement,
-      falloffScale,
-    );
-    if (alpha <= 0.01) {
-      return;
-    }
-    graphics.ellipse(position.x, position.y, radiusX, radiusY);
-    graphics.fill({ color, alpha });
-  };
-
-  for (const lobe of field.body) {
-    drawLobe(ambient, lobe, SMOKE_FIELD_PALETTE.ambient, 0.5, 1.17, 1.16);
-    drawLobe(body, lobe, SMOKE_FIELD_PALETTE.body, 1, 1, 1.04);
-  }
-
-  for (const lobe of field.veil) {
-    drawLobe(veil, lobe, SMOKE_FIELD_PALETTE.veil, 1, 1, 0.96);
-  }
-
-  for (const lobe of field.texture) {
-    drawLobe(texture, lobe, SMOKE_FIELD_PALETTE.textureShadow, 0.8, 1.18, 1.02);
-    drawLobe(texture, lobe, SMOKE_FIELD_PALETTE.texture, 1, 0.72, 0.94);
-  }
-
-  smokeLayer.addChild(ambient);
-  smokeLayer.addChild(body);
-  smokeLayer.addChild(veil);
-  smokeLayer.addChild(texture);
+  const cutout = displacement
+    ? {
+        x: ((displacement.center.x - point.x) * 2) / Math.max(1, displayWidth),
+        y: ((displacement.center.y - point.y) * 2) / Math.max(1, displayHeight),
+        radiusX: (displacement.radius * 2) / Math.max(1, displayWidth),
+        radiusY: (displacement.radius * 2) / Math.max(1, displayHeight),
+        strength: displacement.ageRatio,
+      }
+    : null;
+  const smoke = new Sprite(getSmokeTexture(utilityId, cutout));
+  smoke.anchor.set(0.5);
+  smoke.position.set(point.x, point.y);
+  smoke.width = displayWidth;
+  smoke.height = displayHeight;
+  smoke.alpha = presentation.opacity;
+  smokeLayer.addChild(smoke);
 
   const lifetimeProgress = resolveSmokeLifetimeProgress(remainingSeconds, activeDurationSeconds);
   if (lifetimeProgress != null) {
@@ -865,39 +826,6 @@ function drawBurstParticle(
   graphics.fill({ color, alpha });
 }
 
-function displacedSmokePuffAlpha(
-  x: number,
-  y: number,
-  radiusX: number,
-  radiusY: number,
-  baseAlpha: number,
-  displacement: SmokeDisplacementVisual | null,
-  falloffScale: number,
-) {
-  if (!displacement) {
-    return baseAlpha;
-  }
-
-  const dx = x - displacement.center.x;
-  const dy = y - displacement.center.y;
-  const distance = Math.hypot(dx, dy);
-  const puffReach = Math.min(radiusX, radiusY) * 0.72;
-  const clearStrength = Math.max(0, Math.min(0.96, displacement.ageRatio));
-  const hardClearRadius = displacement.radius * 0.68 + puffReach * 0.68;
-  const falloffRadius = displacement.radius * falloffScale + puffReach;
-
-  if (distance >= falloffRadius) {
-    return baseAlpha;
-  }
-
-  if (distance <= hardClearRadius) {
-    return Math.max(baseAlpha * 0.04, baseAlpha * (1 - clearStrength * 0.94));
-  }
-
-  const openness = 1 - (distance - hardClearRadius) / Math.max(1, falloffRadius - hardClearRadius);
-  const reduction = Math.min(0.8, 1.04 * clearStrength * Math.pow(openness, 0.98));
-  return Math.max(baseAlpha * 0.16, baseAlpha * (1 - reduction));
-}
 
 function trajectoryTrailPoints(
   replay: Replay,

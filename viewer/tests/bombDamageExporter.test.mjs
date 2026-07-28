@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   encodeRgbaPng,
   parseBombDamageResource,
+  propagationCueColor,
   renderSiteMask,
 } from "../../tools/export-bomb-damage-field.mjs";
 
@@ -43,6 +44,8 @@ test("parses site-major propagation costs and renders only in-range samples", ()
   );
   assert.ok(alphaAt(mask, 100, 0, 99) > 0);
   assert.equal(alphaAt(mask, 100, 89, 10), 0);
+  assert.deepEqual(rgbAt(mask, 100, 0, 99), propagationCueColor(1 - 10 / 15));
+  assert.ok(alphaAt(mask, 100, 0, 99) >= 128);
 
   const png = encodeRgbaPng(100, 100, mask);
   assert.deepEqual(Array.from(png.subarray(0, 8)), [137, 80, 78, 71, 13, 10, 26, 10]);
@@ -62,4 +65,9 @@ function toHex(buffer) {
 
 function alphaAt(buffer, width, x, y) {
   return buffer[(y * width + x) * 4 + 3];
+}
+
+function rgbAt(buffer, width, x, y) {
+  const offset = (y * width + x) * 4;
+  return Array.from(buffer.subarray(offset, offset + 3));
 }

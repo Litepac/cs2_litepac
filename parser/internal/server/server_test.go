@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bytes"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -10,6 +11,20 @@ import (
 	"testing"
 	"time"
 )
+
+func TestReplayResultStreamsMarkerBeforeRawArtifact(t *testing.T) {
+	const replayRaw = `{"format":"mastermind.replay","rounds":[]}`
+	var output bytes.Buffer
+	if err := writeReplayResult(&output, strings.NewReader(replayRaw)); err != nil {
+		t.Fatalf("write replay result: %v", err)
+	}
+	if got, want := output.String(), "{\"type\":\"result\"}\n"+replayRaw; got != want {
+		t.Fatalf("streamed result = %q, want %q", got, want)
+	}
+	if strings.Contains(output.String(), `"replay":`) {
+		t.Fatal("stream must not wrap the raw replay in a second giant JSON envelope")
+	}
+}
 
 func TestUploadParseErrorRemovesDemoinfocsStackTrace(t *testing.T) {
 	message := uploadParseError(

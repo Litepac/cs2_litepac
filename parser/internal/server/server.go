@@ -316,6 +316,7 @@ func parseDemoUpload(w http.ResponseWriter, r *http.Request, opts Options) error
 	w.Header().Set("Content-Type", "application/x-ndjson")
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("X-Accel-Buffering", "no")
+	w.Header().Set("X-DemoRead-Replay-Stream", "2")
 
 	streamEvent := func(payload any) error {
 		if err := writeJSONLine(w, payload); err != nil {
@@ -374,36 +375,30 @@ func parseDemoUpload(w http.ResponseWriter, r *http.Request, opts Options) error
 	}
 	defer replayInput.Close()
 
-	replayRaw, err := io.ReadAll(replayInput)
-	if err != nil {
+	replayInfo, err := replayInput.Stat()
+	if err != nil || replayInfo.Size() == 0 {
 		_ = streamEvent(map[string]any{
 			"type":  "error",
-			"error": fmt.Sprintf("read generated replay: %v", err),
+			"error": "generated replay is empty",
 		})
 		return nil
 	}
 
-	if !json.Valid(replayRaw) {
-		_ = streamEvent(map[string]any{
-			"type":  "error",
-			"error": "generated replay is not valid JSON",
-		})
-		return nil
-	}
-
-	replayRaw = []byte(strings.TrimSpace(string(replayRaw)))
-
-	if _, err := w.Write([]byte(`{"type":"result","replay":`)); err != nil {
-		return fmt.Errorf("stream replay envelope prefix: %w", err)
-	}
-	if _, err := w.Write(replayRaw); err != nil {
-		return fmt.Errorf("stream generated replay body: %w", err)
-	}
-	if _, err := w.Write([]byte("}\n")); err != nil {
-		return fmt.Errorf("stream replay envelope suffix: %w", err)
+	if err := writeReplayResult(w, replayInput); err != nil {
+		return err
 	}
 	flusher.Flush()
 
+	return nil
+}
+
+func writeReplayResult(output io.Writer, replayInput io.Reader) error {
+	if err := writeJSONLine(output, map[string]any{"type": "result"}); err != nil {
+		return fmt.Errorf("stream replay marker: %w", err)
+	}
+	if _, err := io.Copy(output, replayInput); err != nil {
+		return fmt.Errorf("stream generated replay body: %w", err)
+	}
 	return nil
 }
 

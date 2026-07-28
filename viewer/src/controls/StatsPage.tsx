@@ -1,12 +1,12 @@
 import { useMemo, useState } from "react";
 
 import { deriveMatchStats } from "../replay/matchStats";
-import type { MatchLibraryEntry } from "../replay/matchLibrary";
+import type { LoadedMatchLibraryEntry } from "../replay/matchLibrary";
 import type { MatchRoundBreakdown, MatchStatsPlayerRow, MatchStatsSideFilter, MatchStatsTeamTable } from "../replay/statsTypes";
 import styles from "./StatsPage.module.css";
 
 type Props = {
-  entry: MatchLibraryEntry;
+  entry: LoadedMatchLibraryEntry;
   onBackToMatches: () => void;
   onOpenReplay: (id: string) => void;
 };

@@ -1,8 +1,8 @@
 .control {
   position: absolute;
-  z-index: 3;
+  z-index: 12;
   top: 14px;
-  left: 14px;
+  left: calc(var(--dr-roster-edge, 8px) + var(--dr-roster-w, 0px) + clamp(8px, 0.62dvw, 14px));
   display: flex;
   align-items: center;
   gap: 3px;
@@ -12,6 +12,13 @@
   background: rgb(5 12 16 / 82%);
   box-shadow: 0 8px 24px rgb(0 0 0 / 24%);
   backdrop-filter: blur(10px);
+  max-width: calc(100% - var(--dr-roster-w, 0px) - var(--dr-roster-edge, 8px) - 28px);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.control::-webkit-scrollbar {
+  display: none;
 }
 
 .label {
@@ -24,6 +31,7 @@
 }
 
 .button {
+  flex: 0 0 auto;
   min-height: 28px;
   padding: 0 9px;
   border: 1px solid transparent;
@@ -50,4 +58,27 @@
   border-color: rgb(84 185 210 / 40%);
   background: rgb(84 185 210 / 17%);
   color: #eafaff;
+}
+
+@media (max-width: 1180px) {
+  .control {
+    top: 8px;
+    left: 8px;
+    max-width: calc(100% - 16px);
+  }
+}
+
+@media (max-width: 520px) {
+  .control {
+    right: 8px;
+  }
+
+  .label {
+    display: none;
+  }
+
+  .button {
+    min-height: 32px;
+    padding-inline: 8px;
+  }
 }

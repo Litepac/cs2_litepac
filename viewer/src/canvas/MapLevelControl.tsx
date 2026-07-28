@@ -14,9 +14,10 @@ export function MapLevelControl({ activeSectionId, map, onChange, value }: MapLe
   if (sections.length < 2) {
     return null;
   }
+  const activeSectionName = sections.find((section) => section.sectionId === activeSectionId)?.displayName;
 
   return (
-    <div className={styles.control} aria-label={`${map.displayName} radar layer`}>
+    <div className={styles.control} aria-label={`${map.displayName} radar layer`} role="group">
       <span className={styles.label}>Radar</span>
       <button
         className={styles.button}
@@ -25,7 +26,7 @@ export function MapLevelControl({ activeSectionId, map, onChange, value }: MapLe
         title="Follow the selected player's parser-backed height"
         type="button"
       >
-        Auto{value === AUTO_MAP_LEVEL && activeSectionId ? ` · ${activeSectionId}` : ""}
+        Auto{value === AUTO_MAP_LEVEL && activeSectionName ? ` \u00b7 ${activeSectionName}` : ""}
       </button>
       {sections.map((section) => (
         <button

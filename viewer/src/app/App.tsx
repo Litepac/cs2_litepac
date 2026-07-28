@@ -38,6 +38,7 @@ export function App() {
     closeReplay,
     demoIngestState,
     deleteReplay,
+    ensureReplayLoaded,
     error,
     libraryHydrated,
     libraryEntries,
@@ -219,13 +220,16 @@ export function App() {
     setShellPage("matches");
   }
 
-  function handleOpenMatch(id: string) {
-    openReplay(id);
+  async function handleOpenMatch(id: string) {
+    await openReplay(id);
     setShellPage("matches");
   }
 
-  function handleOpenStats(id: string) {
-    const entry = libraryEntries.find((candidate) => candidate.id === id);
+  async function handleOpenStats(id: string) {
+    const entry = await ensureReplayLoaded(id);
+    if (entry == null) {
+      return;
+    }
     trackUsageEvent("stats_opened", {
       mapName: entry?.summary.mapName ?? null,
       matchId: id,

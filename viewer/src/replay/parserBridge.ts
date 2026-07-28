@@ -1,7 +1,9 @@
+import { readParseStream, sanitizeParserErrorMessage } from "./replayStream";
+import type { DemoParseStage } from "./replayStream";
 import { validateReplay } from "./schema";
 import type { Replay } from "./types";
 
-export type DemoParseStage = "upload" | "parser" | "validate";
+export type { DemoParseStage } from "./replayStream";
 export type ParserBridgeHealth = {
   available: boolean;
   bridge?: string;
@@ -9,10 +11,6 @@ export type ParserBridgeHealth = {
   mode?: string;
   service?: string;
 };
-type StreamEvent =
-  | { type: "progress"; roundsParsed?: number; roundsTotal?: number }
-  | { type: "result"; replay: unknown }
-  | { type: "error"; error?: string };
 
 const parserApiBaseUrl =
   (import.meta.env.VITE_PARSER_API_BASE_URL as string | undefined)?.trim() || "";
@@ -107,7 +105,7 @@ export async function submitFeedback(message: string, context?: FeedbackContext)
 export async function parseDemoFile(
   file: File,
   options?: { onProgress?: (progress: { roundsParsed: number; roundsTotal?: number }) => void; onStage?: (stage: DemoParseStage) => void },
-): Promise<Replay> {
+): Promise<{ replay: Replay; replayArtifact: Blob | null }> {
   const form = new FormData();
   form.append("demo", file, file.name);
   const abortController = new AbortController();
@@ -128,14 +126,20 @@ export async function parseDemoFile(
     }
 
     options?.onStage?.("parser");
-    const parsed = await readParseStream(response, options);
+    let replayArtifact: Blob | null = null;
+    const parsed = await readParseStream(response, {
+      ...options,
+      onArtifact: (artifact) => {
+        replayArtifact = artifact;
+      },
+    });
     options?.onStage?.("validate");
     const result = validateReplay(parsed);
     if (!result.ok) {
       throw new Error(formatReplayErrors(result.errors));
     }
 
-    return result.replay;
+    return { replay: result.replay, replayArtifact };
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
       throw new Error(`Demo parsing timed out after ${Math.round(demoParseTimeoutMs / 60000)} minutes.`);
@@ -145,113 +149,6 @@ export async function parseDemoFile(
   } finally {
     window.clearTimeout(timeoutId);
   }
-}
-
-async function readParseStream(
-  response: Response,
-  options?: { onProgress?: (progress: { roundsParsed: number; roundsTotal?: number }) => void; onStage?: (stage: DemoParseStage) => void },
-) {
-  if (response.body == null) {
-    return (await response.json()) as unknown;
-  }
-
-  const contentType = response.headers.get("content-type") ?? "";
-  if (contentType.includes("application/json") && !contentType.includes("ndjson")) {
-    return (await response.json()) as unknown;
-  }
-
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-  let finalReplay: unknown = null;
-
-  while (true) {
-    const { done, value } = await reader.read();
-    buffer += decoder.decode(value, { stream: !done });
-
-    let newlineIndex = buffer.indexOf("\n");
-    while (newlineIndex >= 0) {
-      const line = buffer.slice(0, newlineIndex).trim();
-      buffer = buffer.slice(newlineIndex + 1);
-      if (line.length > 0) {
-        finalReplay = consumeStreamLine(line, finalReplay, options);
-      }
-      newlineIndex = buffer.indexOf("\n");
-    }
-
-    if (done) {
-      break;
-    }
-  }
-
-  const trailing = buffer.trim();
-  if (trailing.length > 0) {
-    finalReplay = consumeStreamLine(trailing, finalReplay, options);
-  }
-
-  if (finalReplay == null) {
-    throw new Error("Parser bridge did not return a replay artifact.");
-  }
-
-  return finalReplay;
-}
-
-function consumeStreamLine(
-  line: string,
-  currentReplay: unknown,
-  options?: { onProgress?: (progress: { roundsParsed: number; roundsTotal?: number }) => void; onStage?: (stage: DemoParseStage) => void },
-) {
-  const parsed = JSON.parse(line) as StreamEvent | Record<string, unknown>;
-
-  if (isReplayPayload(parsed)) {
-    emitReplayRoundProgress(parsed, options);
-    return parsed;
-  }
-
-  const event = parsed as StreamEvent;
-  if (event.type === "progress" && typeof event.roundsParsed === "number") {
-    options?.onStage?.("parser");
-    options?.onProgress?.({
-      roundsParsed: event.roundsParsed,
-      roundsTotal: typeof event.roundsTotal === "number" ? event.roundsTotal : undefined,
-    });
-    return currentReplay;
-  }
-
-  if (event.type === "result") {
-    emitReplayRoundProgress(event.replay, options);
-    return event.replay;
-  }
-
-  if (event.type === "error") {
-    throw new Error(sanitizeParserErrorMessage(event.error || "Demo parse failed."));
-  }
-
-  return currentReplay;
-}
-
-function emitReplayRoundProgress(
-  replay: unknown,
-  options?: { onProgress?: (progress: { roundsParsed: number; roundsTotal?: number }) => void },
-) {
-  if (replay == null || typeof replay !== "object") {
-    return;
-  }
-
-  const rounds = (replay as { rounds?: unknown }).rounds;
-  if (!Array.isArray(rounds)) {
-    return;
-  }
-
-  options?.onProgress?.({ roundsParsed: rounds.length, roundsTotal: rounds.length });
-}
-
-function isReplayPayload(value: unknown): value is Record<string, unknown> {
-  if (value == null || typeof value !== "object") {
-    return false;
-  }
-
-  return "format" in value && "rounds" in value;
 }
 
 async function parseParserError(response: Response) {
@@ -273,41 +170,4 @@ function formatReplayErrors(errors: string[]) {
   }
 
   return ["Replay validation failed:", ...errors].join("\n");
-}
-
-function sanitizeParserErrorMessage(message: string) {
-  const trimmed = message.trim();
-  if (!trimmed) {
-    return "Demo processing failed.";
-  }
-
-  const cleaned = stripGoStackTrace(trimmed);
-  const normalized = cleaned.toLowerCase();
-  if (
-    normalized.includes("unable to find existing entity") ||
-    (normalized.includes("entity data") && normalized.includes("cannot safely read"))
-  ) {
-    return "This demo uses entity data the current review parser cannot safely read yet.";
-  }
-
-  if (normalized.includes("parse demo crashed") || normalized.includes("crashed")) {
-    return "The local review parser hit an unsupported demo state.";
-  }
-
-  return cleaned;
-}
-
-function stripGoStackTrace(message: string) {
-  const lowerMessage = message.toLowerCase();
-  const markers = [" stacktrace:", "\nstacktrace:", "\ngoroutine ", " goroutine "];
-  let endIndex = -1;
-
-  for (const marker of markers) {
-    const index = lowerMessage.indexOf(marker);
-    if (index >= 0 && (endIndex < 0 || index < endIndex)) {
-      endIndex = index;
-    }
-  }
-
-  return (endIndex >= 0 ? message.slice(0, endIndex) : message).trim();
 }

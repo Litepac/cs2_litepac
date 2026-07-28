@@ -18,12 +18,12 @@ export function resolveUtilityBurstPresentation(
 
   if (kind === "flashbang") {
     return {
-      coreRadius: mix(7, 11, normalized),
+      coreRadius: mix(8, 14, normalized),
       fade,
-      glowRadius: mix(15, 25, normalized),
-      outerRadius: mix(23, 34, normalized),
-      rayInnerRadius: mix(10, 15, normalized),
-      rayOuterRadius: mix(22, 32, normalized),
+      glowRadius: mix(22, 46, normalized),
+      outerRadius: mix(32, 62, normalized),
+      rayInnerRadius: mix(13, 21, normalized),
+      rayOuterRadius: mix(30, 58, normalized),
     };
   }
 

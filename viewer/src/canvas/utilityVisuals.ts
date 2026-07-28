@@ -18,7 +18,11 @@ import {
 } from "../replay/utility";
 import { createEquipmentIconGraphic, type EquipmentSvgIcon } from "./equipmentIconGraphics";
 import { attachReplayHitTarget } from "./replayStage/hitTargets";
-import { getSmokeField, resolveSmokeLifecyclePresentation } from "./smokePresentation";
+import {
+  getSmokeField,
+  resolveSmokeLifecyclePresentation,
+  SMOKE_FIELD_PALETTE,
+} from "./smokePresentation";
 
 type ScreenPoint = {
   x: number;
@@ -525,12 +529,12 @@ function drawSmokeVisual(
   };
 
   for (const lobe of field.body) {
-    drawLobe(ambient, lobe, 0x13191c, 0.38, 1.17, 1.16);
-    drawLobe(body, lobe, 0x536166, 1, 1, 1.04);
+    drawLobe(ambient, lobe, SMOKE_FIELD_PALETTE.ambient, 0.42, 1.17, 1.16);
+    drawLobe(body, lobe, SMOKE_FIELD_PALETTE.body, 1, 1, 1.04);
   }
 
   for (const lobe of field.veil) {
-    drawLobe(veil, lobe, 0x839095, 1, 1, 0.96);
+    drawLobe(veil, lobe, SMOKE_FIELD_PALETTE.veil, 1, 1, 0.96);
   }
 
   smokeLayer.addChild(ambient);

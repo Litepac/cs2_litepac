@@ -17,6 +17,12 @@ export type SmokeLifecyclePresentation = {
   scale: number;
 };
 
+export const SMOKE_FIELD_PALETTE = {
+  ambient: 0x293337,
+  body: 0x89969a,
+  veil: 0xb1bcbf,
+} as const;
+
 const SMOKE_FIELD_CACHE_LIMIT = 256;
 const smokeFieldCache = new Map<string, SmokeField>();
 
@@ -58,17 +64,17 @@ function createSmokeField(utilityId: string): SmokeField {
   // collision-aware smoke boundary.
   const seed = smokeFieldSeed(utilityId);
   const body: SmokeFieldLobe[] = [
-    { alpha: 0.22, dx: 0, dy: 0, width: 24, height: 26, phase: smokeNoise(seed, 11) * Math.PI * 2 },
+    { alpha: 0.34, dx: 0, dy: 0, width: 24, height: 26, phase: smokeNoise(seed, 11) * Math.PI * 2 },
   ];
   const veil: SmokeFieldLobe[] = [
-    { alpha: 0.075, dx: 0, dy: -1, width: 20, height: 22, phase: smokeNoise(seed, 17) * Math.PI * 2 },
+    { alpha: 0.13, dx: 0, dy: -1, width: 20, height: 22, phase: smokeNoise(seed, 17) * Math.PI * 2 },
   ];
 
   for (let index = 0; index < 8; index += 1) {
     const angle = (index / 8) * Math.PI * 2 + (smokeNoise(seed, 31 + index) - 0.5) * 0.42;
     const distance = 16 + smokeNoise(seed, 53 + index) * 5;
     body.push({
-      alpha: 0.13 + smokeNoise(seed, 71 + index) * 0.05,
+      alpha: 0.22 + smokeNoise(seed, 71 + index) * 0.06,
       dx: Math.cos(angle) * distance,
       dy: Math.sin(angle) * distance * 1.08,
       width: 16 + smokeNoise(seed, 97 + index) * 5,
@@ -81,7 +87,7 @@ function createSmokeField(utilityId: string): SmokeField {
     const angle = (index / 3) * Math.PI * 2 + smokeNoise(seed, 173 + index) * 1.1;
     const distance = 7 + smokeNoise(seed, 191 + index) * 6;
     veil.push({
-      alpha: 0.04 + smokeNoise(seed, 211 + index) * 0.025,
+      alpha: 0.075 + smokeNoise(seed, 211 + index) * 0.035,
       dx: Math.cos(angle) * distance,
       dy: Math.sin(angle) * distance,
       width: 16 + smokeNoise(seed, 233 + index) * 5,

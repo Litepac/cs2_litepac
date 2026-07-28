@@ -1,16 +1,18 @@
-import { createMatchLibraryEntry, type MatchLibraryEntry, type MatchLibrarySource } from "./matchLibrary";
+import {
+  createMatchLibraryEntry,
+  type MatchLibraryEntry,
+} from "./matchLibrary";
+import {
+  createStoredMatchRecord,
+  type LegacyStoredMatchRecord,
+  type StoredMatchRecord,
+} from "./matchStorageRecord";
+import { validateReplay } from "./schema";
 import type { Replay } from "./types";
 
 const DATABASE_NAME = "mastermind-local-matches";
-const DATABASE_VERSION = 1;
+const DATABASE_VERSION = 2;
 const STORE_NAME = "matches";
-
-type StoredMatchRecord = {
-  id: string;
-  addedAt: string;
-  replay: Replay;
-  source: MatchLibrarySource;
-};
 
 export async function listStoredMatches(): Promise<MatchLibraryEntry[]> {
   const database = await openMatchDatabase();
@@ -25,6 +27,18 @@ export async function listStoredMatches(): Promise<MatchLibraryEntry[]> {
     await transactionComplete(transaction);
     return records
       .map((record) => {
+        if ("replayArtifact" in record) {
+          return {
+            id: record.id,
+            addedAt: record.addedAt,
+            fingerprint: record.fingerprint,
+            mapId: record.mapId,
+            replay: null,
+            source: record.source,
+            summary: record.summary,
+          } satisfies MatchLibraryEntry;
+        }
+
         const hydrated = createMatchLibraryEntry(record.replay, record.source, record.addedAt);
         return { ...hydrated, id: record.id };
       })
@@ -34,7 +48,36 @@ export async function listStoredMatches(): Promise<MatchLibraryEntry[]> {
   }
 }
 
-export async function saveStoredMatch(entry: MatchLibraryEntry): Promise<void> {
+export async function loadStoredMatch(id: string): Promise<Replay | null> {
+  const database = await openMatchDatabase();
+  if (database == null) {
+    return null;
+  }
+
+  try {
+    const transaction = database.transaction(STORE_NAME, "readonly");
+    const store = transaction.objectStore(STORE_NAME);
+    const record = await requestToPromise<StoredMatchRecord | undefined>(store.get(id));
+    await transactionComplete(transaction);
+    if (record == null) {
+      return null;
+    }
+    if ("replay" in record) {
+      return record.replay;
+    }
+
+    const replay = JSON.parse(await record.replayArtifact.text()) as unknown;
+    const result = validateReplay(replay);
+    if (!result.ok) {
+      throw new Error(`Stored replay validation failed: ${result.errors.join("; ")}`);
+    }
+    return result.replay;
+  } finally {
+    database.close();
+  }
+}
+
+export async function saveStoredMatch(entry: MatchLibraryEntry, replayArtifact: Blob | null): Promise<void> {
   const database = await openMatchDatabase();
   if (database == null) {
     return;
@@ -43,12 +86,18 @@ export async function saveStoredMatch(entry: MatchLibraryEntry): Promise<void> {
   try {
     const transaction = database.transaction(STORE_NAME, "readwrite");
     const store = transaction.objectStore(STORE_NAME);
-    store.put({
-      id: entry.id,
-      addedAt: entry.addedAt,
-      replay: entry.replay,
-      source: entry.source,
-    } satisfies StoredMatchRecord);
+    if (replayArtifact != null) {
+      store.put(createStoredMatchRecord(entry, replayArtifact));
+    } else if (entry.replay != null) {
+      store.put({
+        id: entry.id,
+        addedAt: entry.addedAt,
+        replay: entry.replay,
+        source: entry.source,
+      } satisfies LegacyStoredMatchRecord);
+    } else {
+      throw new Error("Replay artifact is unavailable for local storage.");
+    }
     await transactionComplete(transaction);
   } finally {
     database.close();

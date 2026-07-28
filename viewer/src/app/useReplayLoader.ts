@@ -9,7 +9,7 @@ import {
   type MatchLibraryEntry,
   type MatchLibrarySource,
 } from "../replay/matchLibrary";
-import { deleteStoredMatch, listStoredMatches, saveStoredMatch } from "../replay/matchStore";
+import { deleteStoredMatch, listStoredMatches, loadStoredMatch, saveStoredMatch } from "../replay/matchStore";
 import { getParserBridgeHealth, parseDemoFile, trackUsageEvent, type ParserBridgeHealth } from "../replay/parserBridge";
 import type { Replay } from "../replay/types";
 
@@ -123,7 +123,7 @@ export function useReplayLoader(enabled = true) {
         roundsTotal: null,
         step: "upload",
       });
-      const loaded = await parseDemoFile(file, {
+      const parsedDemo = await parseDemoFile(file, {
         onProgress: ({ roundsParsed, roundsTotal }) => {
           setDemoIngestState((previous) =>
             previous == null
@@ -146,6 +146,7 @@ export function useReplayLoader(enabled = true) {
           }));
         },
       });
+      const loaded = parsedDemo.replay;
       setDemoIngestState({
         fileName: file.name,
         mapName: loaded.map.displayName,
@@ -173,7 +174,11 @@ export function useReplayLoader(enabled = true) {
         roundsTotal: loaded.rounds.length,
         step: "save",
       });
-      await ingestReplay(loaded, "demo", { openViewer: false, persist: true });
+      await ingestReplay(loaded, "demo", {
+        openViewer: false,
+        persist: true,
+        replayArtifact: parsedDemo.replayArtifact,
+      });
       trackUsageEvent("demo_upload_succeeded", {
         fileName: file.name,
         fileSizeBytes: file.size,
@@ -216,8 +221,11 @@ export function useReplayLoader(enabled = true) {
     }
   }
 
-  function openReplay(id: string) {
-    const entry = libraryEntries.find((candidate) => candidate.id === id);
+  async function openReplay(id: string) {
+    const entry = await ensureReplayLoaded(id);
+    if (entry == null) {
+      return;
+    }
     trackUsageEvent("replay_opened", {
       matchId: id,
       mapName: entry?.summary.mapName ?? null,
@@ -229,6 +237,37 @@ export function useReplayLoader(enabled = true) {
     setRoundIndex(0);
     setSelectedPlayerId(null);
     setError(null);
+  }
+
+  async function ensureReplayLoaded(id: string) {
+    const entry = libraryEntries.find((candidate) => candidate.id === id);
+    if (entry == null || entry.replay != null) {
+      return entry ?? null;
+    }
+
+    try {
+      setLoadingSource("replay");
+      const storedReplay = await loadStoredMatch(id);
+      if (storedReplay == null) {
+        throw new Error("The stored replay artifact is unavailable.");
+      }
+
+      const hydratedEntry = { ...entry, replay: storedReplay };
+      setLibraryEntries((previous) =>
+        previous.map((candidate) => {
+          if (candidate.id === id) {
+            return hydratedEntry;
+          }
+          return candidate.source === "fixture" ? candidate : { ...candidate, replay: null };
+        }),
+      );
+      return hydratedEntry;
+    } catch (loadError) {
+      setError(normalizeLoaderIssue("storage", loadError));
+      return null;
+    } finally {
+      setLoadingSource(null);
+    }
   }
 
   function closeReplay() {
@@ -261,11 +300,13 @@ export function useReplayLoader(enabled = true) {
     }
   }
 
-  async function ingestReplay(loaded: Replay, source: MatchLibrarySource, options: { openViewer: boolean; persist: boolean }) {
+  async function ingestReplay(
+    loaded: Replay,
+    source: MatchLibrarySource,
+    options: { openViewer: boolean; persist: boolean; replayArtifact?: Blob | null },
+  ) {
     const fingerprint = createMatchLibraryFingerprint(loaded, source);
-    const duplicates = libraryEntries.filter(
-      (candidate) => createMatchLibraryFingerprint(candidate.replay, candidate.source) === fingerprint,
-    );
+    const duplicates = libraryEntries.filter((candidate) => candidate.fingerprint === fingerprint);
     const existing = duplicates[0] ?? null;
     const entry = createMatchLibraryEntry(loaded, source);
     const persistedEntry =
@@ -277,14 +318,12 @@ export function useReplayLoader(enabled = true) {
           };
 
     setLibraryEntries((previous) => {
-      const next = previous.filter(
-        (candidate) => createMatchLibraryFingerprint(candidate.replay, candidate.source) !== fingerprint,
-      );
+      const next = previous.filter((candidate) => candidate.fingerprint !== fingerprint);
       return [persistedEntry, ...next];
     });
 
     if (options.persist) {
-      await saveStoredMatch(persistedEntry);
+      await saveStoredMatch(persistedEntry, options.replayArtifact ?? null);
       for (const duplicate of duplicates.slice(1)) {
         await deleteStoredMatch(duplicate.id);
       }
@@ -305,6 +344,7 @@ export function useReplayLoader(enabled = true) {
     activeReplayId,
     demoIngestState,
     deleteReplay,
+    ensureReplayLoaded,
     error,
     closeReplay,
     libraryHydrated,

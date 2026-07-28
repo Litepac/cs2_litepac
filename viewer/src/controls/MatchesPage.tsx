@@ -46,7 +46,7 @@ export function MatchesPage({
 
   const maps = useMemo(
     () =>
-      Array.from(new Set(matches.map((entry) => `${entry.replay.map.mapId}|||${entry.summary.mapName}`))).map((item) => {
+      Array.from(new Set(matches.map((entry) => `${entry.mapId}|||${entry.summary.mapName}`))).map((item) => {
         const [value, label] = item.split("|||");
         return { value, label };
       }),
@@ -57,12 +57,12 @@ export function MatchesPage({
     const normalizedQuery = query.trim().toLowerCase();
 
     return matches.filter((entry) => {
-      const matchesMap = mapFilter === "all" || entry.replay.map.mapId === mapFilter;
+      const matchesMap = mapFilter === "all" || entry.mapId === mapFilter;
       const matchesQuery =
         normalizedQuery.length === 0 ||
         [
           entry.summary.mapName,
-          entry.replay.map.mapId,
+          entry.mapId,
           entry.summary.teamAName,
           entry.summary.teamBName,
           entry.summary.teamAPlayersLabel,
@@ -258,7 +258,7 @@ export function MatchesPage({
                 onKeyDown={(event) => handleRowKeyDown(event, () => onOpenMatch(entry.id), loadingSource != null)}
               >
                 <div className={styles["matches-redline-row-map"]}>
-                  <span>{entry.replay.map.mapId}</span>
+                  <span>{entry.mapId}</span>
                   <strong>{entry.summary.mapName}</strong>
                   <small>{entry.summary.sourceLabel}</small>
                 </div>

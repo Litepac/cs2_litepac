@@ -6,10 +6,14 @@ export type MatchLibrarySource = "demo" | "fixture" | "replay";
 export type MatchLibraryEntry = {
   id: string;
   addedAt: string;
-  replay: Replay;
+  fingerprint: string;
+  mapId: string;
+  replay: Replay | null;
   source: MatchLibrarySource;
   summary: MatchSummary;
 };
+
+export type LoadedMatchLibraryEntry = MatchLibraryEntry & { replay: Replay };
 
 export type MatchSummary = {
   mapName: string;
@@ -31,16 +35,26 @@ export type MatchSummary = {
   sourceLabel: string;
 };
 
-export function createMatchLibraryEntry(replay: Replay, source: MatchLibrarySource, addedAt = new Date().toISOString()): MatchLibraryEntry {
+export function createMatchLibraryEntry(
+  replay: Replay,
+  source: MatchLibrarySource,
+  addedAt = new Date().toISOString(),
+): LoadedMatchLibraryEntry {
   const entryId = createMatchLibraryEntryId(replay, source, addedAt);
 
   return {
     id: entryId,
     addedAt,
+    fingerprint: createMatchLibraryFingerprint(replay, source),
+    mapId: replay.map.mapId,
     replay,
     source,
     summary: deriveMatchSummary(replay, source, addedAt),
   };
+}
+
+export function hasLoadedReplay(entry: MatchLibraryEntry): entry is LoadedMatchLibraryEntry {
+  return entry.replay != null;
 }
 
 export function createMatchLibraryFingerprint(replay: Replay, source: MatchLibrarySource) {

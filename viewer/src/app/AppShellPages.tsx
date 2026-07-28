@@ -7,7 +7,7 @@ import { StatsPage, StatsPageUnavailable } from "../controls/StatsPage";
 import type { LoaderIssue } from "./useReplayLoader";
 import type { FixtureIndex } from "../replay/fixtures";
 import type { DemoIngestState } from "../replay/ingestState";
-import type { MatchLibraryEntry } from "../replay/matchLibrary";
+import { hasLoadedReplay, type MatchLibraryEntry } from "../replay/matchLibrary";
 import type { ParserBridgeHealth } from "../replay/parserBridge";
 
 type FeedbackContext = Record<string, unknown>;
@@ -139,7 +139,7 @@ export function StatsShellPage({
         parserBridgeAvailable={parserBridgeAvailable}
         shellPage="stats"
       />
-      {statsEntry ? (
+      {statsEntry && hasLoadedReplay(statsEntry) ? (
         <StatsPage
           entry={statsEntry}
           onBackToMatches={onBackToMatches}

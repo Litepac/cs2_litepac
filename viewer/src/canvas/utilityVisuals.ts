@@ -19,6 +19,7 @@ import {
 import { createEquipmentIconGraphic, type EquipmentSvgIcon } from "./equipmentIconGraphics";
 import { getFireTextureVisual } from "./fireTexture";
 import { attachReplayHitTarget } from "./replayStage/hitTargets";
+import { resolveUtilityBurstPresentation } from "./utilityBurstPresentation";
 import {
   resolveSmokeDisplacementStrength,
   resolveSmokeLifecyclePresentation,
@@ -178,12 +179,12 @@ export function drawUtilityVisual(
 
   if (renderPhase === "burst") {
     if (utility.kind === "flashbang") {
-      drawFlashBurstVisual(overlayLayer, point, state?.burstAgeTicks ?? 0);
+      drawFlashBurstVisual(overlayLayer, point, state?.burstProgress ?? 0);
       return;
     }
 
     if (utility.kind === "hegrenade") {
-      drawHEBurstVisual(overlayLayer, point, state?.burstAgeTicks ?? 0);
+      drawHEBurstVisual(overlayLayer, point, state?.burstProgress ?? 0);
       return;
     }
   }
@@ -436,7 +437,7 @@ function drawSmokeUtilityVisual(
   const projectile = detonateTick == null || currentTick < detonateTick;
   const state: UtilitySceneState = {
     activeStartTick: detonateTick,
-    burstAgeTicks: null,
+    burstProgress: null,
     endTick,
     phase: projectile ? "projectile" : "active",
     remainingSeconds:
@@ -613,38 +614,81 @@ function drawDecoyVisual(layer: Container, point: ScreenPoint, remainingSeconds:
   });
 }
 
-function drawFlashBurstVisual(layer: Container, point: ScreenPoint, burstAgeTicks: number) {
-  const ageRatio = Math.max(0, 1 - burstAgeTicks / 14);
+function drawFlashBurstVisual(layer: Container, point: ScreenPoint, progress: number) {
+  const presentation = resolveUtilityBurstPresentation("flashbang", progress);
   const burst = new Graphics();
-  burst.circle(point.x, point.y, 16 + burstAgeTicks * 3.1);
-  burst.fill({ color: 0xfffffd, alpha: 0.68 * ageRatio });
-  burst.circle(point.x, point.y, 26 + burstAgeTicks * 5.2);
-  burst.fill({ color: 0xfffae5, alpha: 0.28 * ageRatio });
-  burst.circle(point.x, point.y, 44 + burstAgeTicks * 6.9);
-  burst.fill({ color: 0xfff5cf, alpha: 0.14 * ageRatio });
-  burst.circle(point.x, point.y, 68 + burstAgeTicks * 8.3);
-  burst.fill({ color: 0xfff8e7, alpha: 0.072 * ageRatio });
-  burst.circle(point.x, point.y, 20 + burstAgeTicks * 4.1);
-  burst.stroke({ color: 0xffe89b, width: 3.4, alpha: 0.56 * ageRatio });
-  burst.circle(point.x, point.y, 11 + burstAgeTicks * 1.5);
-  burst.stroke({ color: 0xffffff, width: 1.9, alpha: 0.62 * ageRatio });
+  drawBurstRays(burst, point, presentation.rayInnerRadius, presentation.rayOuterRadius, 8);
+  burst.stroke({ color: 0xffedb0, width: 1.5, alpha: 0.5 * presentation.fade, cap: "round" });
+  burst.circle(point.x, point.y, presentation.glowRadius);
+  burst.fill({ color: 0xfff0c8, alpha: 0.22 * presentation.fade });
+  burst.circle(point.x, point.y, presentation.coreRadius);
+  burst.fill({ color: 0xfffffc, alpha: 0.7 * presentation.fade });
+  burst.circle(point.x, point.y, presentation.outerRadius);
+  burst.stroke({ color: 0xfff4d8, width: 1.3, alpha: 0.34 * presentation.fade });
   layer.addChild(burst);
 }
 
-function drawHEBurstVisual(layer: Container, point: ScreenPoint, burstAgeTicks: number) {
-  const alpha = 1 - burstAgeTicks / 10;
+function drawHEBurstVisual(layer: Container, point: ScreenPoint, progress: number) {
+  const presentation = resolveUtilityBurstPresentation("hegrenade", progress);
   const burst = new Graphics();
-  burst.circle(point.x, point.y, 7 + burstAgeTicks * 1.25);
-  burst.stroke({ color: 0xff8a8a, width: 2.5, alpha: 0.58 * alpha });
-  burst.circle(point.x, point.y, 3 + burstAgeTicks * 0.7);
-  burst.fill({ color: 0xff6b6b, alpha: 0.26 * alpha });
-  burst.circle(point.x, point.y, 13 + burstAgeTicks * 1.35);
-  burst.stroke({ color: 0xffb0b0, width: 1.5, alpha: 0.2 * alpha });
-  drawBurstParticle(burst, point.x - 11, point.y - 5, 2.1, 0xffb0b0, alpha * 0.4);
-  drawBurstParticle(burst, point.x + 9, point.y + 7, 1.8, 0xff8a8a, alpha * 0.34);
-  drawBurstParticle(burst, point.x - 4, point.y + 11, 1.6, 0xffd0d0, alpha * 0.3);
-  drawBurstParticle(burst, point.x + 12, point.y - 3, 1.5, 0xffb0b0, alpha * 0.28);
+  burst.circle(point.x, point.y, presentation.glowRadius);
+  burst.fill({ color: 0xff806d, alpha: 0.2 * presentation.fade });
+  burst.circle(point.x, point.y, presentation.coreRadius);
+  burst.fill({ color: 0xffd0bd, alpha: 0.56 * presentation.fade });
+  burst.circle(point.x, point.y, presentation.outerRadius);
+  burst.stroke({ color: 0xff9a84, width: 1.6, alpha: 0.4 * presentation.fade });
+  const particleSpread = 9 + progress * 7;
+  drawBurstParticle(
+    burst,
+    point.x - particleSpread,
+    point.y - 4,
+    1.9,
+    0xffb09b,
+    presentation.fade * 0.42,
+  );
+  drawBurstParticle(
+    burst,
+    point.x + particleSpread * 0.8,
+    point.y + 6,
+    1.6,
+    0xff806d,
+    presentation.fade * 0.36,
+  );
+  drawBurstParticle(
+    burst,
+    point.x - 3,
+    point.y + particleSpread * 0.82,
+    1.45,
+    0xffd0bd,
+    presentation.fade * 0.32,
+  );
+  drawBurstParticle(
+    burst,
+    point.x + particleSpread,
+    point.y - 3,
+    1.35,
+    0xff9a84,
+    presentation.fade * 0.3,
+  );
   layer.addChild(burst);
+}
+
+function drawBurstRays(
+  graphics: Graphics,
+  point: ScreenPoint,
+  innerRadius: number,
+  outerRadius: number,
+  count: number,
+) {
+  for (let index = 0; index < count; index += 1) {
+    const angle = -Math.PI / 2 + (index / count) * Math.PI * 2;
+    const alternate = index % 2 === 0 ? 1 : 0.76;
+    graphics.moveTo(point.x + Math.cos(angle) * innerRadius, point.y + Math.sin(angle) * innerRadius);
+    graphics.lineTo(
+      point.x + Math.cos(angle) * outerRadius * alternate,
+      point.y + Math.sin(angle) * outerRadius * alternate,
+    );
+  }
 }
 
 function drawProjectileVisual(

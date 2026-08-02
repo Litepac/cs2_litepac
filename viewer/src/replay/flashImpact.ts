@@ -3,6 +3,7 @@ import type { Round } from "./types";
 export const FLASH_IMPACT_LINK_SECONDS = 0.8;
 export const FLASH_IMPACT_ENVELOPE_EXPANSION_SECONDS = 0.25;
 export const FLASH_IMPACT_ENVELOPE_MINIMUM_RADIUS = 112;
+export const FLASH_IMPACT_ENVELOPE_VICTIM_PADDING = 18;
 
 export type RecentFlashImpact = {
   ageSeconds: number;
@@ -54,7 +55,9 @@ export function resolveFlashImpactEnvelopePresentation(
 ) {
   const targetRadius = Math.max(
     FLASH_IMPACT_ENVELOPE_MINIMUM_RADIUS,
-    Number.isFinite(farthestVictimDistance) ? farthestVictimDistance : 0,
+    Number.isFinite(farthestVictimDistance)
+      ? farthestVictimDistance + FLASH_IMPACT_ENVELOPE_VICTIM_PADDING
+      : 0,
   );
   const expansionProgress = clamp(ageSeconds / FLASH_IMPACT_ENVELOPE_EXPANSION_SECONDS, 0, 1);
 

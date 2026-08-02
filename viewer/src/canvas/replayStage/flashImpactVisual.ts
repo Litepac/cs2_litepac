@@ -104,28 +104,33 @@ function drawFlashImpactEnvelope(graphics: Graphics, envelope: FlashImpactEnvelo
     envelope.fade,
   );
 
+  drawFlashImpactField(graphics, envelope.origin, presentation.radius, presentation.fade);
   graphics.circle(envelope.origin.x, envelope.origin.y, presentation.radius);
   graphics.stroke({
-    color: 0xffe9a8,
-    width: 10,
-    alpha: 0.035 * presentation.fade,
+    color: 0xffe7a8,
+    width: 14,
+    alpha: 0.075 * presentation.fade,
   });
-  drawDashedFlashEnvelope(graphics, envelope.origin, presentation.radius);
+  graphics.circle(envelope.origin.x, envelope.origin.y, presentation.radius);
   graphics.stroke({
-    color: 0xffe39a,
-    width: 1.5,
-    alpha: 0.34 * presentation.fade,
+    color: 0xffedb5,
+    width: 2.4,
+    alpha: 0.58 * presentation.fade,
     cap: "round",
   });
 }
 
-function drawDashedFlashEnvelope(graphics: Graphics, origin: Point, radius: number) {
-  const segmentCount = Math.max(28, Math.round(radius / 3.5));
-  for (let index = 0; index < segmentCount; index += 2) {
-    const startAngle = (index / segmentCount) * Math.PI * 2;
-    const endAngle = (Math.min(index + 1.2, segmentCount) / segmentCount) * Math.PI * 2;
-    graphics.moveTo(origin.x + Math.cos(startAngle) * radius, origin.y + Math.sin(startAngle) * radius);
-    graphics.lineTo(origin.x + Math.cos(endAngle) * radius, origin.y + Math.sin(endAngle) * radius);
+function drawFlashImpactField(graphics: Graphics, origin: Point, radius: number, fade: number) {
+  const bands = [
+    { alpha: 0.045, color: 0xffe5a0, scale: 1 },
+    { alpha: 0.03, color: 0xffe9ae, scale: 0.78 },
+    { alpha: 0.035, color: 0xffefc2, scale: 0.56 },
+    { alpha: 0.04, color: 0xfff6dc, scale: 0.34 },
+  ];
+
+  for (const band of bands) {
+    graphics.circle(origin.x, origin.y, radius * band.scale);
+    graphics.fill({ color: band.color, alpha: band.alpha * fade });
   }
 }
 

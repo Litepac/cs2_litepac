@@ -61,8 +61,8 @@ test("fits the observed envelope to the farthest parser-confirmed victim", () =>
   );
 
   assert.equal(opening.radius, 28);
-  assert.equal(expanded.targetRadius, 236);
-  assert.equal(expanded.radius, 236);
+  assert.equal(expanded.targetRadius, 254);
+  assert.equal(expanded.radius, 254);
 });
 
 test("retains the symbolic minimum for close victims and clamps fade", () => {

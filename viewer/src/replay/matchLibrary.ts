@@ -3,9 +3,20 @@ import type { Replay } from "./types";
 
 export type MatchLibrarySource = "demo" | "fixture" | "replay";
 
+export type MatchCompetitionTier = "major" | "premier" | "pro";
+
+export type MatchCompetition = {
+  eventName: string;
+  playedAt: string;
+  referenceUrl: string | null;
+  stage: string | null;
+  tier: MatchCompetitionTier;
+};
+
 export type MatchLibraryEntry = {
   id: string;
   addedAt: string;
+  competition: MatchCompetition | null;
   fingerprint: string;
   mapId: string;
   replay: Replay | null;
@@ -39,12 +50,14 @@ export function createMatchLibraryEntry(
   replay: Replay,
   source: MatchLibrarySource,
   addedAt = new Date().toISOString(),
+  competition: MatchCompetition | null = null,
 ): LoadedMatchLibraryEntry {
   const entryId = createMatchLibraryEntryId(replay, source, addedAt);
 
   return {
     id: entryId,
     addedAt,
+    competition,
     fingerprint: createMatchLibraryFingerprint(replay, source),
     mapId: replay.map.mapId,
     replay,

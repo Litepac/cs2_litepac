@@ -2,12 +2,13 @@ import type { ChangeEvent, RefObject } from "react";
 
 import { HomePage } from "../controls/HomePage";
 import { MatchesPage } from "../controls/MatchesPage";
+import { ProMatchesPage } from "../controls/ProMatchesPage";
 import { ShellTopNav } from "../controls/ShellTopNav";
 import { StatsPage, StatsPageUnavailable } from "../controls/StatsPage";
 import type { LoaderIssue } from "./useReplayLoader";
 import type { FixtureIndex } from "../replay/fixtures";
 import type { DemoIngestState } from "../replay/ingestState";
-import { hasLoadedReplay, type MatchLibraryEntry } from "../replay/matchLibrary";
+import { hasLoadedReplay, type MatchCompetition, type MatchLibraryEntry } from "../replay/matchLibrary";
 import type { ParserBridgeHealth } from "../replay/parserBridge";
 
 type FeedbackContext = Record<string, unknown>;
@@ -16,6 +17,7 @@ type HomeShellPageProps = {
   feedbackContext: FeedbackContext;
   onOpenHome: () => void;
   onOpenMatches: () => void;
+  onOpenProMatches: () => void;
 };
 
 type MatchesShellPageProps = {
@@ -35,7 +37,24 @@ type MatchesShellPageProps = {
   onOpenHome: () => void;
   onOpenMatch: (id: string) => void;
   onOpenMatches: () => void;
+  onOpenProMatches: () => void;
   onOpenStats: (id: string) => void;
+};
+
+type ProMatchesShellPageProps = {
+  feedbackContext: FeedbackContext;
+  libraryEntries: MatchLibraryEntry[];
+  libraryHydrated: boolean;
+  loadingSource: "demo" | "fixture" | "replay" | null;
+  matchesUploadInputRef: RefObject<HTMLInputElement | null>;
+  parserBridgeAvailable: boolean;
+  onDemoFileChange: (event: ChangeEvent<HTMLInputElement>) => void | Promise<void>;
+  onOpenHome: () => void;
+  onOpenMatch: (id: string) => void;
+  onOpenMatches: () => void;
+  onOpenProMatches: () => void;
+  onOpenStats: (id: string) => void;
+  onUpdateCompetition: (id: string, competition: MatchCompetition | null) => Promise<void>;
 };
 
 type StatsShellPageProps = {
@@ -43,13 +62,15 @@ type StatsShellPageProps = {
   libraryEntries: MatchLibraryEntry[];
   onOpenHome: () => void;
   onOpenMatches: () => void;
+  onOpenProMatches: () => void;
   onOpenReplay: (id: string) => void;
   onBackToMatches: () => void;
   parserBridgeAvailable: boolean;
+  statsParent: "matches" | "proMatches";
   statsEntry: MatchLibraryEntry | null;
 };
 
-export function HomeShellPage({ feedbackContext, onOpenHome, onOpenMatches }: HomeShellPageProps) {
+export function HomeShellPage({ feedbackContext, onOpenHome, onOpenMatches, onOpenProMatches }: HomeShellPageProps) {
   return (
     <section className="home-surface home-surface-landing">
       <ShellTopNav
@@ -59,6 +80,7 @@ export function HomeShellPage({ feedbackContext, onOpenHome, onOpenMatches }: Ho
         onAction={onOpenMatches}
         onOpenHome={onOpenHome}
         onOpenMatches={onOpenMatches}
+        onOpenProMatches={onOpenProMatches}
         parserBridgeAvailable={false}
         shellPage="home"
       />
@@ -84,6 +106,7 @@ export function MatchesShellPage({
   onOpenHome,
   onOpenMatch,
   onOpenMatches,
+  onOpenProMatches,
   onOpenStats,
 }: MatchesShellPageProps) {
   return (
@@ -96,6 +119,7 @@ export function MatchesShellPage({
         onAction={() => matchesUploadInputRef.current?.click()}
         onOpenHome={onOpenHome}
         onOpenMatches={onOpenMatches}
+        onOpenProMatches={onOpenProMatches}
         parserBridgeAvailable={parserBridgeAvailable}
         shellPage="matches"
       />
@@ -119,14 +143,60 @@ export function MatchesShellPage({
   );
 }
 
+export function ProMatchesShellPage({
+  feedbackContext,
+  libraryEntries,
+  libraryHydrated,
+  loadingSource,
+  matchesUploadInputRef,
+  parserBridgeAvailable,
+  onDemoFileChange,
+  onOpenHome,
+  onOpenMatch,
+  onOpenMatches,
+  onOpenProMatches,
+  onOpenStats,
+  onUpdateCompetition,
+}: ProMatchesShellPageProps) {
+  return (
+    <section className="matches-surface home-surface-landing">
+      <ShellTopNav
+        actionDisabled={loadingSource != null || !parserBridgeAvailable}
+        actionLabel={parserBridgeAvailable ? "Upload Pro Demo" : "Upload Paused"}
+        feedbackContext={feedbackContext}
+        localMatchCount={libraryEntries.length}
+        onAction={() => matchesUploadInputRef.current?.click()}
+        onOpenHome={onOpenHome}
+        onOpenMatches={onOpenMatches}
+        onOpenProMatches={onOpenProMatches}
+        parserBridgeAvailable={parserBridgeAvailable}
+        shellPage="proMatches"
+      />
+      <ProMatchesPage
+        libraryHydrated={libraryHydrated}
+        loadingSource={loadingSource}
+        matches={libraryEntries}
+        parserBridgeAvailable={parserBridgeAvailable}
+        uploadInputRef={matchesUploadInputRef}
+        onDemoFileChange={onDemoFileChange}
+        onOpenMatch={onOpenMatch}
+        onOpenStats={onOpenStats}
+        onUpdateCompetition={onUpdateCompetition}
+      />
+    </section>
+  );
+}
+
 export function StatsShellPage({
   feedbackContext,
   libraryEntries,
   onBackToMatches,
   onOpenHome,
   onOpenMatches,
+  onOpenProMatches,
   onOpenReplay,
   parserBridgeAvailable,
+  statsParent,
   statsEntry,
 }: StatsShellPageProps) {
   return (
@@ -136,8 +206,10 @@ export function StatsShellPage({
         localMatchCount={libraryEntries.length}
         onOpenHome={onOpenHome}
         onOpenMatches={onOpenMatches}
+        onOpenProMatches={onOpenProMatches}
         parserBridgeAvailable={parserBridgeAvailable}
         shellPage="stats"
+        statsParent={statsParent}
       />
       {statsEntry && hasLoadedReplay(statsEntry) ? (
         <StatsPage

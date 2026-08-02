@@ -59,3 +59,22 @@ test("keeps compatibility with the legacy wrapped result event", async () => {
 
   assert.deepEqual(await readParseStream(response), replay);
 });
+
+test("keeps a multi-megabyte replay artifact chunked until the final parse", async () => {
+  const payload = "x".repeat(4 * 1024 * 1024);
+  const replayText = JSON.stringify({ format: "mastermind.replay", notes: payload, rounds: [] });
+  const fragments = ['{"type":"result"}\n'];
+  for (let offset = 0; offset < replayText.length; offset += 64 * 1024) {
+    fragments.push(replayText.slice(offset, offset + 64 * 1024));
+  }
+
+  let replayArtifact = null;
+  const replay = await readParseStream(fragmentedResponse(fragments), {
+    onArtifact(artifact) {
+      replayArtifact = artifact;
+    },
+  });
+
+  assert.equal(replay.notes.length, payload.length);
+  assert.equal(replayArtifact.size, new TextEncoder().encode(replayText).byteLength);
+});

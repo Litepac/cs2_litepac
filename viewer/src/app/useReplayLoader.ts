@@ -18,6 +18,7 @@ import {
   saveStoredMatchCompetition,
 } from "../replay/matchStore";
 import { getParserBridgeHealth, parseDemoFile, trackUsageEvent, type ParserBridgeHealth } from "../replay/parserBridge";
+import { importProMatchDemo, type ProMatchCatalogEntry } from "../replay/proMatchProvider";
 import type { Replay } from "../replay/types";
 
 export type LoaderIssue = {
@@ -35,6 +36,7 @@ export function useReplayLoader(enabled = true) {
   const [loadingSource, setLoadingSource] = useState<"demo" | "fixture" | "replay" | null>(null);
   const [parserBridgeAvailable, setParserBridgeAvailable] = useState(false);
   const [parserBridgeHealth, setParserBridgeHealth] = useState<ParserBridgeHealth>({ available: false });
+  const [proImportingRowId, setProImportingRowId] = useState<string | null>(null);
   const [roundIndex, setRoundIndex] = useState(0);
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [activeReplayId, setActiveReplayId] = useState<string | null>(null);
@@ -228,6 +230,52 @@ export function useReplayLoader(enabled = true) {
     }
   }
 
+  async function importProMatch(entry: ProMatchCatalogEntry) {
+    trackUsageEvent("pro_demo_import_started", {
+      demoBytes: entry.demoBytes,
+      eventName: entry.event,
+      mapName: entry.mapName,
+      providerRowId: entry.rowId,
+    });
+
+    try {
+      setError(null);
+      setLoadingSource("demo");
+      setProImportingRowId(entry.rowId);
+      const parsedDemo = await importProMatchDemo(entry);
+      const playedAt = entry.matchDate.slice(0, 10);
+      await ingestReplay(parsedDemo.replay, "demo", {
+        competition: {
+          eventName: entry.event,
+          playedAt,
+          referenceUrl: entry.matchUrl || null,
+          stage: null,
+          tier: "pro",
+        },
+        openViewer: false,
+        persist: true,
+        replayArtifact: parsedDemo.replayArtifact,
+      });
+      trackUsageEvent("pro_demo_import_succeeded", {
+        eventName: entry.event,
+        mapName: parsedDemo.replay.map.displayName,
+        providerRowId: entry.rowId,
+        sourceSha256: parsedDemo.replay.sourceDemo.sha256,
+      });
+    } catch (loadError) {
+      const issue = normalizeLoaderIssue("demo", loadError, parserBridgeAvailable);
+      setError(issue);
+      trackUsageEvent("pro_demo_import_failed", {
+        error: issue.message,
+        providerRowId: entry.rowId,
+      });
+      throw loadError;
+    } finally {
+      setLoadingSource(null);
+      setProImportingRowId(null);
+    }
+  }
+
   async function openReplay(id: string) {
     const entry = await ensureReplayLoaded(id);
     if (entry == null) {
@@ -331,7 +379,12 @@ export function useReplayLoader(enabled = true) {
   async function ingestReplay(
     loaded: Replay,
     source: MatchLibrarySource,
-    options: { openViewer: boolean; persist: boolean; replayArtifact?: Blob | null },
+    options: {
+      competition?: MatchCompetition | null;
+      openViewer: boolean;
+      persist: boolean;
+      replayArtifact?: Blob | null;
+    },
   ) {
     const fingerprint = createMatchLibraryFingerprint(loaded, source);
     const duplicates = libraryEntries.filter((candidate) => candidate.fingerprint === fingerprint);
@@ -340,7 +393,7 @@ export function useReplayLoader(enabled = true) {
       loaded,
       source,
       existing?.addedAt ?? new Date().toISOString(),
-      existing?.competition ?? null,
+      existing?.competition ?? options.competition ?? null,
     );
     const persistedEntry =
       existing == null
@@ -383,11 +436,13 @@ export function useReplayLoader(enabled = true) {
     libraryHydrated,
     libraryEntries,
     loadingSource,
+    importProMatch,
     onDemoFileChange,
     onFixtureLoad,
     openReplay,
     parserBridgeAvailable,
     parserBridgeHealth,
+    proImportingRowId,
     replay,
     roundIndex,
     selectedPlayerId,

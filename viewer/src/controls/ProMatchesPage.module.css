@@ -110,7 +110,8 @@
 .sourceBoundary p { margin: 0; color: #85837e; font-size: 12px; line-height: 1.55; }
 
 .classifier,
-.library {
+.library,
+.provider {
   margin-top: 46px;
 }
 
@@ -199,6 +200,44 @@
 .formError { font-size: 11px; }
 .formHint { color: #6f706c; }
 .formError { color: #f08077; }
+
+.attribution {
+  color: #8e8b84;
+  font-size: 10px;
+  text-decoration: none;
+}
+.attribution:hover { color: #fff; }
+.providerNotice {
+  max-width: 920px;
+  margin: 14px 0;
+  color: #7f7d77;
+  font-size: 11px;
+  line-height: 1.6;
+}
+.providerNotice code { margin: 0 3px; color: #aaa79f; }
+.providerList { border-top: 1px solid rgba(255, 255, 255, 0.1); }
+.providerRow {
+  display: grid;
+  grid-template-columns: minmax(250px, 0.9fr) minmax(330px, 1.35fr) 100px auto;
+  gap: 24px;
+  align-items: center;
+  min-height: 92px;
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+}
+.providerRow:hover { background: rgba(255, 255, 255, 0.018); }
+.providerMeta { min-width: 0; }
+.providerMeta strong,
+.providerMeta small { display: block; }
+.providerMeta strong { color: #d8d4cb; font-size: 12px; }
+.providerMeta small { margin-top: 4px; color: #6f6d67; font-size: 9px; }
+.providerFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding-top: 14px;
+}
 
 .majorShortcut,
 .clearButton,
@@ -293,6 +332,8 @@ a:focus-visible { outline: 2px solid #f2786e; outline-offset: 2px; }
   .searchField { grid-column: 1 / -1; }
   .clearButton { justify-self: start; }
   .matchRow { grid-template-columns: 1fr 1.2fr; }
+  .providerRow { grid-template-columns: 1fr 1.2fr auto; }
+  .providerRow .rowActions { grid-column: 1 / -1; }
   .rowActions { grid-column: 1 / -1; justify-content: flex-end; }
 }
 
@@ -313,8 +354,11 @@ a:focus-visible { outline: 2px solid #f2786e; outline-offset: 2px; }
   .classifierFooter { align-items: stretch; flex-direction: column; }
   .classifierFooter button { width: 100%; }
   .matchRow { grid-template-columns: 1fr; gap: 16px; padding: 20px 0; }
+  .providerRow { grid-template-columns: 1fr; gap: 16px; padding: 20px 0; }
   .teamsCell { grid-template-columns: 1fr; gap: 5px; }
   .teamsCell small { order: -1; }
   .teamsCell strong:last-child { flex-direction: row; text-align: left; }
   .rowActions { grid-column: auto; flex-wrap: wrap; justify-content: flex-start; }
+  .providerFooter { align-items: stretch; flex-direction: column; }
+  .providerFooter button { align-self: flex-start; }
 }

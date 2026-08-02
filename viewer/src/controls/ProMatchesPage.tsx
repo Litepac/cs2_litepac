@@ -19,6 +19,11 @@ import {
   normalizeCompetitionReferenceUrl,
   type ProMatchSort,
 } from "../replay/proMatches";
+import {
+  loadProMatchCatalog,
+  type ProMatchCatalogEntry,
+  type ProMatchCatalogPage,
+} from "../replay/proMatchProvider";
 import styles from "./ProMatchesPage.module.css";
 
 type Props = {
@@ -26,8 +31,10 @@ type Props = {
   loadingSource: "demo" | "fixture" | "replay" | null;
   matches: MatchLibraryEntry[];
   parserBridgeAvailable: boolean;
+  proImportingRowId: string | null;
   uploadInputRef?: RefObject<HTMLInputElement | null>;
   onDemoFileChange: (event: ChangeEvent<HTMLInputElement>) => void | Promise<void>;
+  onImportProviderMatch: (entry: ProMatchCatalogEntry) => Promise<void>;
   onOpenMatch: (id: string) => void;
   onOpenStats: (id: string) => void;
   onUpdateCompetition: (id: string, competition: MatchCompetition | null) => Promise<void>;
@@ -54,8 +61,10 @@ export function ProMatchesPage({
   loadingSource,
   matches,
   parserBridgeAvailable,
+  proImportingRowId,
   uploadInputRef,
   onDemoFileChange,
+  onImportProviderMatch,
   onOpenMatch,
   onOpenStats,
   onUpdateCompetition,
@@ -70,6 +79,10 @@ export function ProMatchesPage({
   const [eventFilter, setEventFilter] = useState("all");
   const [tierFilter, setTierFilter] = useState<"all" | MatchCompetitionTier>("all");
   const [sort, setSort] = useState<ProMatchSort>("newest");
+  const [providerCatalog, setProviderCatalog] = useState<ProMatchCatalogPage | null>(null);
+  const [providerError, setProviderError] = useState<string | null>(null);
+  const [providerLoading, setProviderLoading] = useState(true);
+  const [providerImportError, setProviderImportError] = useState<string | null>(null);
 
   useEffect(() => {
     if (selectedMatchId && classifiableMatches.some((entry) => entry.id === selectedMatchId)) {
@@ -79,6 +92,29 @@ export function ProMatchesPage({
     setSelectedMatchId(next?.id ?? "");
     setDraft(draftForEntry(next));
   }, [classifiableMatches, selectedMatchId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setProviderLoading(true);
+    loadProMatchCatalog()
+      .then((catalog) => {
+        if (!cancelled) {
+          setProviderCatalog(catalog);
+          setProviderError(null);
+        }
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setProviderError(error instanceof Error ? error.message : "The pro demo catalogue is unavailable.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setProviderLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const events = useMemo(
     () => Array.from(new Set(proMatches.map((entry) => entry.competition?.eventName).filter(Boolean))).sort(),
@@ -155,6 +191,33 @@ export function ProMatchesPage({
     setSort("newest");
   }
 
+  async function loadMoreProviderMatches() {
+    if (!providerCatalog || providerLoading || providerCatalog.nextOffset >= providerCatalog.total) return;
+    try {
+      setProviderLoading(true);
+      setProviderError(null);
+      const next = await loadProMatchCatalog(providerCatalog.nextOffset);
+      setProviderCatalog((current) => current == null ? next : {
+        ...next,
+        entries: dedupeProviderEntries([...current.entries, ...next.entries]),
+        offset: 0,
+      });
+    } catch (error) {
+      setProviderError(error instanceof Error ? error.message : "More pro demos could not be loaded.");
+    } finally {
+      setProviderLoading(false);
+    }
+  }
+
+  async function importProviderMatch(entry: ProMatchCatalogEntry) {
+    try {
+      setProviderImportError(null);
+      await onImportProviderMatch(entry);
+    } catch (error) {
+      setProviderImportError(error instanceof Error ? error.message : "The selected pro demo could not be imported.");
+    }
+  }
+
   return (
     <section className={styles.page}>
       <header className={styles.hero}>
@@ -199,9 +262,88 @@ export function ProMatchesPage({
           <strong>Replay facts come from the demo</strong>
         </div>
         <p>
-          Map, teams, score, players, and rounds are parser-derived. Event details are entered by you. Reference links are stored
-          only as outbound links and are never scraped.
+          Map, teams, score, players, and rounds are parser-derived. Event context is either entered by you or imported with
+          explicit dataset attribution. HLTV reference links remain outbound links and are never scraped by DemoRead.
         </p>
+      </section>
+
+      <section className={styles.provider} aria-labelledby="provider-catalog-heading">
+        <div className={styles.libraryHead}>
+          <div>
+            <span className={styles.kicker}>Free provider catalogue</span>
+            <h2 id="provider-catalog-heading">
+              {providerCatalog ? `${providerCatalog.total.toLocaleString()} maps available` : "Available pro demos"}
+            </h2>
+          </div>
+          {providerCatalog ? (
+            <a className={styles.attribution} href={providerCatalog.attributionUrl} target="_blank" rel="noreferrer">
+              {providerCatalog.source} · {providerCatalog.license}
+            </a>
+          ) : null}
+        </div>
+
+        <p className={styles.providerNotice}>
+          Catalogue metadata is provider-supplied. Selecting Import downloads only that map, then DemoRead parses the original
+          <code>.dem</code> before adding it locally. The provider's analysis JSON is never used as replay truth.
+        </p>
+
+        {providerLoading && !providerCatalog ? (
+          <EmptyState title="Loading the pro demo catalogue" copy="Fetching lightweight metadata only. No demos are downloaded yet." />
+        ) : providerError && !providerCatalog ? (
+          <EmptyState title="Pro demo catalogue unavailable" copy={providerError} />
+        ) : providerCatalog && providerCatalog.entries.length > 0 ? (
+          <>
+            <div className={styles.providerList}>
+              {providerCatalog.entries.map((entry) => {
+                const importing = proImportingRowId === entry.rowId;
+                return (
+                  <article key={entry.rowId} className={styles.providerRow}>
+                    <div className={styles.eventCell}>
+                      <span className={styles.tier}>{entry.format || "pro"}</span>
+                      <strong>{entry.event}</strong>
+                      <small>{formatProviderDate(entry.matchDate)} · patch {entry.patchVersion || "unknown"}</small>
+                    </div>
+                    <div className={styles.teamsCell}>
+                      <strong>{entry.team1}<span>{entry.score1}</span></strong>
+                      <small>Map {entry.mapIndex} · {displayMapName(entry.mapName)}</small>
+                      <strong>{entry.team2}<span>{entry.score2}</span></strong>
+                    </div>
+                    <div className={styles.providerMeta}>
+                      <strong>{formatBytes(entry.demoBytes)}</strong>
+                      <small>{entry.roundsPlayed > 0 ? `${entry.roundsPlayed} rounds` : "Demo available"}</small>
+                    </div>
+                    <div className={styles.rowActions}>
+                      {entry.matchUrl ? <a href={entry.matchUrl} target="_blank" rel="noreferrer">Source</a> : null}
+                      <button
+                        type="button"
+                        className={styles.openButton}
+                        disabled={!parserBridgeAvailable || loadingSource != null}
+                        onClick={() => void importProviderMatch(entry)}
+                      >
+                        {importing ? "Downloading & parsing…" : "Import & parse"}
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+            <div className={styles.providerFooter}>
+              <span role="status" className={providerImportError || providerError ? styles.formError : styles.formHint}>
+                {providerImportError ?? providerError ?? `${providerCatalog.entries.length} of ${providerCatalog.total.toLocaleString()} maps loaded. Downloads may be several hundred MB.`}
+              </span>
+              <button
+                type="button"
+                className={styles.majorShortcut}
+                disabled={providerLoading || providerCatalog.nextOffset >= providerCatalog.total}
+                onClick={() => void loadMoreProviderMatches()}
+              >
+                {providerLoading ? "Loading…" : "Load more"}
+              </button>
+            </div>
+          </>
+        ) : (
+          <EmptyState title="No provider demos available" copy="The provider returned no safe importable demo rows." />
+        )}
       </section>
 
       <form className={styles.classifier} onSubmit={saveCompetition}>
@@ -396,4 +538,32 @@ function formatPlayedDate(value: string) {
   const date = new Date(`${value}T00:00:00`);
   if (Number.isNaN(date.getTime())) return value;
   return new Intl.DateTimeFormat(undefined, { day: "2-digit", month: "short", year: "numeric" }).format(date);
+}
+
+function formatProviderDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Date unavailable";
+  return new Intl.DateTimeFormat(undefined, { day: "2-digit", month: "short", year: "numeric" }).format(date);
+}
+
+function formatBytes(value: number) {
+  if (!Number.isFinite(value) || value <= 0) return "Size unavailable";
+  const units = ["B", "KB", "MB", "GB"];
+  const index = Math.min(units.length - 1, Math.floor(Math.log(value) / Math.log(1024)));
+  const scaled = value / (1024 ** index);
+  return `${scaled >= 100 || index === 0 ? scaled.toFixed(0) : scaled.toFixed(1)} ${units[index]}`;
+}
+
+function displayMapName(value: string) {
+  const trimmed = value.replace(/^de_/, "").trim();
+  return trimmed ? trimmed[0].toUpperCase() + trimmed.slice(1) : "Unknown map";
+}
+
+function dedupeProviderEntries(entries: ProMatchCatalogEntry[]) {
+  const seen = new Set<string>();
+  return entries.filter((entry) => {
+    if (seen.has(entry.rowId)) return false;
+    seen.add(entry.rowId);
+    return true;
+  });
 }

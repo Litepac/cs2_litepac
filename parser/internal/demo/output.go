@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math"
 	"os"
 	"path/filepath"
@@ -40,13 +41,17 @@ func optionalString(v string) *string {
 }
 
 func fileSHA256(path string) (string, error) {
-	raw, err := os.ReadFile(path)
+	file, err := os.Open(path)
 	if err != nil {
-		return "", fmt.Errorf("read demo for hashing: %w", err)
+		return "", fmt.Errorf("open demo for hashing: %w", err)
 	}
+	defer file.Close()
 
-	sum := sha256.Sum256(raw)
-	return hex.EncodeToString(sum[:]), nil
+	hash := sha256.New()
+	if _, err := io.Copy(hash, file); err != nil {
+		return "", fmt.Errorf("hash demo: %w", err)
+	}
+	return hex.EncodeToString(hash.Sum(nil)), nil
 }
 
 func bombTimeSeconds(gs demoinfocs.GameState) *float64 {

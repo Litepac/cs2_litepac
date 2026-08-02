@@ -10,6 +10,7 @@ import type { FixtureIndex } from "../replay/fixtures";
 import type { DemoIngestState } from "../replay/ingestState";
 import { hasLoadedReplay, type MatchCompetition, type MatchLibraryEntry } from "../replay/matchLibrary";
 import type { ParserBridgeHealth } from "../replay/parserBridge";
+import type { ProMatchCatalogEntry } from "../replay/proMatchProvider";
 
 type FeedbackContext = Record<string, unknown>;
 
@@ -48,7 +49,9 @@ type ProMatchesShellPageProps = {
   loadingSource: "demo" | "fixture" | "replay" | null;
   matchesUploadInputRef: RefObject<HTMLInputElement | null>;
   parserBridgeAvailable: boolean;
+  proImportingRowId: string | null;
   onDemoFileChange: (event: ChangeEvent<HTMLInputElement>) => void | Promise<void>;
+  onImportProviderMatch: (entry: ProMatchCatalogEntry) => Promise<void>;
   onOpenHome: () => void;
   onOpenMatch: (id: string) => void;
   onOpenMatches: () => void;
@@ -150,7 +153,9 @@ export function ProMatchesShellPage({
   loadingSource,
   matchesUploadInputRef,
   parserBridgeAvailable,
+  proImportingRowId,
   onDemoFileChange,
+  onImportProviderMatch,
   onOpenHome,
   onOpenMatch,
   onOpenMatches,
@@ -177,8 +182,10 @@ export function ProMatchesShellPage({
         loadingSource={loadingSource}
         matches={libraryEntries}
         parserBridgeAvailable={parserBridgeAvailable}
+        proImportingRowId={proImportingRowId}
         uploadInputRef={matchesUploadInputRef}
         onDemoFileChange={onDemoFileChange}
+        onImportProviderMatch={onImportProviderMatch}
         onOpenMatch={onOpenMatch}
         onOpenStats={onOpenStats}
         onUpdateCompetition={onUpdateCompetition}

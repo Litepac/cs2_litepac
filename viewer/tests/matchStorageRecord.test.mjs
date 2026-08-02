@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { createStoredMatchRecord } from "../src/replay/matchStorageRecord.ts";
+import {
+  createStoredMatchCompetitionRecord,
+  createStoredMatchRecord,
+} from "../src/replay/matchStorageRecord.ts";
 
 test("persists the raw artifact without cloning the replay graph", async () => {
   const replayArtifact = new Blob(['{"format":"mastermind.replay","rounds":[]}'], {
@@ -24,4 +27,19 @@ test("persists the raw artifact without cloning the replay graph", async () => {
   assert.equal(await clonedRecord.replayArtifact.text(), await replayArtifact.text());
   assert.equal(clonedRecord.fingerprint, entry.fingerprint);
   assert.equal(clonedRecord.mapId, entry.mapId);
+});
+
+test("stores curated competition metadata separately from the replay artifact", () => {
+  const competition = {
+    eventName: "IEM Cologne Major 2026",
+    playedAt: "2026-06-21",
+    referenceUrl: "https://www.hltv.org/matches/example",
+    stage: "Grand final",
+    tier: "major",
+  };
+
+  assert.deepEqual(createStoredMatchCompetitionRecord("demo:sha:added", competition), {
+    competition,
+    matchId: "demo:sha:added",
+  });
 });

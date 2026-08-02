@@ -8,6 +8,7 @@ Planning note:
 
 ## Planned
 ### Next Up
+- Add an authorized pro-match feed adapter only after a provider grants suitable API/demo access. HLTV's January 2025 terms prohibit scraping/data mining and building a similar or competitive product, so DemoRead must not automate HLTV ingestion. The first Pro Matches slice uses parser-derived replay truth plus explicitly user-curated event metadata; HLTV may be stored only as an optional outbound reference URL.
 - Collect and validate one fresh post-July C4 demo for each remaining unsupported map (`de_anubis`, `de_overpass`, `de_train`, and `de_vertigo`) before adding its SHA to the matching current bomb-field allowlist. Ancient, Cache, Dust II, Inferno, Mirage, and Nuke are already bound; all ten current A/B resources are extracted locally. Prefer a demo with an actual explosion so the spatial cue can be exercised; the current Dust II demo has plants but no explosion.
 - Reverse-engineer the remaining per-site 16-bit member, exact propagation-cost-to-arrival conversion, and damage formula in `baked_bomb_damage.vdata_c` against multiple map builds and controlled outcomes before animating arrival or presenting damage. Preserve the compiled resource SHA-256 as the version boundary; keep extracted/derived Valve data local and do not label unknown members without proof.
 - Replace process-local friend-tunnel safeguards with authentication/invite gating, durable quotas, and proxy-grade distributed controls before any public-domain deployment.
@@ -46,7 +47,7 @@ Planning note:
 - Revisit a separate internal AI runtime surface only if direct VSCode/Codex integration becomes valuable enough to justify a true runtime-first sidecar instead of another staged prototype
 
 ## In Progress
-- Add fixture-backed parser-to-viewer ingest coverage across the current post-update map set, prioritizing the large raw-artifact reader, persisted replay hydration, map selection, and Nuke automatic/manual floor behavior. Keep the four remaining exact-map C4 bindings (`de_anubis`, `de_overpass`, `de_train`, and `de_vertigo`) queued until fresh post-July demos exist; the current Downloads inventory contains no newer candidates beyond the already validated July set.
+- Build the first authorized Pro Matches library slice on the existing canonical ingest boundary: strengthen raw-artifact/persisted-metadata regressions, store user-curated competition metadata separately from the large replay artifact, and add a responsive page with event, tier, newest/oldest, and latest-major filtering. Team, score, map, and replay remain parser-derived; event name, tier, stage, played date, and optional source link stay explicitly user-curated. Do not scrape or mine HLTV.
 
 ## Done
 ### Recent Done

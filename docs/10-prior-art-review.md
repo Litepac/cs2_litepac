@@ -52,6 +52,19 @@ Current CS2 review products converge on a few tool families rather than a large 
 - Timing tools are a strong fit for this product if kept parser-backed: first contact, first utility, execute/contact timing, rotate timing, bomb plant/defuse timing, and repeated player position at a shared round clock.
 - Heatmaps should remain secondary unless user feedback proves a clear job. If kept, the tool needs a sharply defined question such as "where did this player spend time?" or "where did deaths happen?", not broad movement coloring.
 
+## Pro Match Source Boundary
+HLTV is a useful editorial reference for how professional Counter-Strike is grouped by event, stage, date, teams, map, and result. Its current Terms of Service, effective January 27, 2025, explicitly prohibit data mining/web scraping and constructing a similar or competitive product: https://www.hltv.org/terms
+
+DemoRead therefore must not crawl HLTV event, result, match, or demo pages. The product may store a user-supplied HLTV match URL as an outbound reference, but it must not fetch or derive metadata from that URL. The first Pro Matches workflow should use:
+
+- canonical parser output for map, teams, players, score, and replay truth;
+- explicitly user-curated event name, tier, stage, played date, and optional source URL;
+- a separate small metadata record so classifying a match never rewrites the large replay artifact;
+- event/tier/date filtering that works independently of the eventual authorized provider;
+- a future provider adapter only after an organizer or licensed API grants suitable match and demo access.
+
+This keeps the page useful for manually downloaded major/event demos now without tying the product or storage model to an unauthorized scraper.
+
 ## RoundIQ 3D Reference Boundary
 RoundIQ publicly positions its replayer around 2D, 3D, and POV viewing modes, including volumetric smokes and grenade lineup review: https://roundiq.gg/
 

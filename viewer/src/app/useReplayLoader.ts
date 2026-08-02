@@ -6,10 +6,17 @@ import type { DemoIngestState } from "../replay/ingestState";
 import {
   createMatchLibraryEntry,
   createMatchLibraryFingerprint,
+  type MatchCompetition,
   type MatchLibraryEntry,
   type MatchLibrarySource,
 } from "../replay/matchLibrary";
-import { deleteStoredMatch, listStoredMatches, loadStoredMatch, saveStoredMatch } from "../replay/matchStore";
+import {
+  deleteStoredMatch,
+  listStoredMatches,
+  loadStoredMatch,
+  saveStoredMatch,
+  saveStoredMatchCompetition,
+} from "../replay/matchStore";
 import { getParserBridgeHealth, parseDemoFile, trackUsageEvent, type ParserBridgeHealth } from "../replay/parserBridge";
 import type { Replay } from "../replay/types";
 
@@ -300,6 +307,27 @@ export function useReplayLoader(enabled = true) {
     }
   }
 
+  async function updateMatchCompetition(id: string, competition: MatchCompetition | null) {
+    const previousEntries = libraryEntries;
+    setLibraryEntries((previous) =>
+      previous.map((entry) => (entry.id === id ? { ...entry, competition } : entry)),
+    );
+
+    try {
+      await saveStoredMatchCompetition(id, competition);
+      setError(null);
+      trackUsageEvent(competition ? "pro_match_classified" : "pro_match_unclassified", {
+        eventName: competition?.eventName ?? null,
+        matchId: id,
+        tier: competition?.tier ?? null,
+      });
+    } catch (storageError) {
+      setLibraryEntries(previousEntries);
+      setError(normalizeLoaderIssue("storage", storageError));
+      throw storageError;
+    }
+  }
+
   async function ingestReplay(
     loaded: Replay,
     source: MatchLibrarySource,
@@ -308,7 +336,12 @@ export function useReplayLoader(enabled = true) {
     const fingerprint = createMatchLibraryFingerprint(loaded, source);
     const duplicates = libraryEntries.filter((candidate) => candidate.fingerprint === fingerprint);
     const existing = duplicates[0] ?? null;
-    const entry = createMatchLibraryEntry(loaded, source);
+    const entry = createMatchLibraryEntry(
+      loaded,
+      source,
+      existing?.addedAt ?? new Date().toISOString(),
+      existing?.competition ?? null,
+    );
     const persistedEntry =
       existing == null
         ? entry
@@ -360,6 +393,7 @@ export function useReplayLoader(enabled = true) {
     selectedPlayerId,
     setRoundIndex,
     setSelectedPlayerId,
+    updateMatchCompetition,
   };
 }
 

@@ -2,21 +2,11 @@ import { Container, Graphics } from "pixi.js";
 
 import type { RadarViewport } from "../../mapGeometry/transform";
 import { worldToScreen } from "../../mapGeometry/transform";
-import {
-  buildRecentFlashImpacts,
-  resolveFlashImpactEnvelopePresentation,
-} from "../../replay/flashImpact";
+import { buildRecentFlashImpacts } from "../../replay/flashImpact";
 import { interpolatePlayerStreamSample } from "../../replay/playerStream";
 import type { Replay, Round } from "../../replay/types";
 
 type Point = { x: number; y: number };
-
-type FlashImpactEnvelope = {
-  ageSeconds: number;
-  fade: number;
-  farthestVictimDistance: number;
-  origin: Point;
-};
 
 export function drawRecentFlashImpactLinks(
   layer: Container,
@@ -32,8 +22,6 @@ export function drawRecentFlashImpactLinks(
 
   const utilityById = new Map(round.utilityEntities.map((utility) => [utility.utilityId, utility]));
   const streamByPlayerId = new Map(round.playerStreams.map((stream) => [stream.playerId, stream]));
-  const envelopesByUtilityId = new Map<string, FlashImpactEnvelope>();
-  const envelopes = new Graphics();
   const links = new Graphics();
   let linkCount = 0;
 
@@ -61,76 +49,15 @@ export function drawRecentFlashImpactLinks(
 
     const origin = worldToScreen(replay, radarViewport, detonation.x, detonation.y);
     const target = worldToScreen(replay, radarViewport, playerSample.x, playerSample.y);
-    const victimDistance = Math.hypot(target.x - origin.x, target.y - origin.y);
-    const envelope = envelopesByUtilityId.get(impact.utilityId);
-    if (envelope) {
-      envelope.farthestVictimDistance = Math.max(envelope.farthestVictimDistance, victimDistance);
-      envelope.fade = Math.max(envelope.fade, impact.fade);
-    } else {
-      envelopesByUtilityId.set(impact.utilityId, {
-        ageSeconds: impact.ageSeconds,
-        fade: impact.fade,
-        farthestVictimDistance: victimDistance,
-        origin,
-      });
-    }
-
     if (drawFlashImpactConnection(links, origin, target, impact.severity, impact.fade)) {
       linkCount += 1;
     }
-  }
-
-  for (const envelope of envelopesByUtilityId.values()) {
-    drawFlashImpactEnvelope(envelopes, envelope);
-  }
-
-  if (envelopesByUtilityId.size > 0) {
-    layer.addChild(envelopes);
-  } else {
-    envelopes.destroy();
   }
 
   if (linkCount > 0) {
     layer.addChild(links);
   } else {
     links.destroy();
-  }
-}
-
-function drawFlashImpactEnvelope(graphics: Graphics, envelope: FlashImpactEnvelope) {
-  const presentation = resolveFlashImpactEnvelopePresentation(
-    envelope.farthestVictimDistance,
-    envelope.ageSeconds,
-    envelope.fade,
-  );
-
-  drawFlashImpactField(graphics, envelope.origin, presentation.radius, presentation.fade);
-  graphics.circle(envelope.origin.x, envelope.origin.y, presentation.radius);
-  graphics.stroke({
-    color: 0xffe7a8,
-    width: 14,
-    alpha: 0.075 * presentation.fade,
-  });
-  graphics.circle(envelope.origin.x, envelope.origin.y, presentation.radius);
-  graphics.stroke({
-    color: 0xffedb5,
-    width: 2.4,
-    alpha: 0.58 * presentation.fade,
-    cap: "round",
-  });
-}
-
-function drawFlashImpactField(graphics: Graphics, origin: Point, radius: number, fade: number) {
-  const bands = [
-    { alpha: 0.045, color: 0xffe5a0, scale: 1 },
-    { alpha: 0.03, color: 0xffe9ae, scale: 0.78 },
-    { alpha: 0.035, color: 0xffefc2, scale: 0.56 },
-    { alpha: 0.04, color: 0xfff6dc, scale: 0.34 },
-  ];
-
-  for (const band of bands) {
-    graphics.circle(origin.x, origin.y, radius * band.scale);
-    graphics.fill({ color: band.color, alpha: band.alpha * fade });
   }
 }
 

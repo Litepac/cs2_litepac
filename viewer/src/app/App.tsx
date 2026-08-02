@@ -11,7 +11,7 @@ import {
   type UtilityAtlasEntry,
 } from "../replay/replayAnalysis";
 import { trackUsageEvent, trackUsageEventOnce } from "../replay/parserBridge";
-import { HomeShellPage, MatchesShellPage, StatsShellPage } from "./AppShellPages";
+import { HomeShellPage, MatchesShellPage, ProMatchesShellPage, StatsShellPage } from "./AppShellPages";
 import {
   resolvePositionPlayerSelection,
   resolvePositionPlayerTeamFilter,
@@ -33,7 +33,8 @@ const ReplayMapFirstPage = lazy(() =>
 export function App() {
   const fixtures = useFixtureCatalog();
   const matchesUploadInputRef = useRef<HTMLInputElement | null>(null);
-  const [shellPage, setShellPage] = useState<"home" | "matches" | "stats">("home");
+  const [shellPage, setShellPage] = useState<"home" | "matches" | "proMatches" | "stats">("home");
+  const [statsParent, setStatsParent] = useState<"matches" | "proMatches">("matches");
   const {
     closeReplay,
     demoIngestState,
@@ -53,6 +54,7 @@ export function App() {
     selectedPlayerId,
     setRoundIndex,
     setSelectedPlayerId,
+    updateMatchCompetition,
   } = useReplayLoader(shellPage !== "home");
   const [statsMatchId, setStatsMatchId] = useState<string | null>(null);
   const {
@@ -215,9 +217,12 @@ export function App() {
     setPendingDeathJump(null);
   }, [pendingDeathJump, playback, replay, round, roundIndex]);
 
-  async function handleDemoFileChange(event: Parameters<typeof onDemoFileChange>[0]) {
+  async function handleDemoFileChange(
+    event: Parameters<typeof onDemoFileChange>[0],
+    returnPage: "matches" | "proMatches" = "matches",
+  ) {
     await onDemoFileChange(event);
-    setShellPage("matches");
+    setShellPage(returnPage);
   }
 
   async function handleOpenMatch(id: string) {
@@ -225,7 +230,7 @@ export function App() {
     setShellPage("matches");
   }
 
-  async function handleOpenStats(id: string) {
+  async function handleOpenStats(id: string, parent: "matches" | "proMatches" = "matches") {
     const entry = await ensureReplayLoaded(id);
     if (entry == null) {
       return;
@@ -238,6 +243,7 @@ export function App() {
       teamBName: entry?.summary.teamBName ?? null,
     });
     setStatsMatchId(id);
+    setStatsParent(parent);
     setShellPage("stats");
   }
 
@@ -553,6 +559,7 @@ export function App() {
             feedbackContext={feedbackContext}
             onOpenHome={() => setShellPage("home")}
             onOpenMatches={() => setShellPage("matches")}
+            onOpenProMatches={() => setShellPage("proMatches")}
           />
         ) : shellPage === "matches" ? (
           <MatchesShellPage
@@ -572,20 +579,39 @@ export function App() {
             onOpenHome={() => setShellPage("home")}
             onOpenMatch={handleOpenMatch}
             onOpenMatches={() => setShellPage("matches")}
+            onOpenProMatches={() => setShellPage("proMatches")}
             onOpenStats={handleOpenStats}
+          />
+        ) : shellPage === "proMatches" ? (
+          <ProMatchesShellPage
+            feedbackContext={feedbackContext}
+            libraryEntries={libraryEntries}
+            libraryHydrated={libraryHydrated}
+            loadingSource={loadingSource}
+            matchesUploadInputRef={matchesUploadInputRef}
+            parserBridgeAvailable={parserBridgeAvailable}
+            onDemoFileChange={(event) => handleDemoFileChange(event, "proMatches")}
+            onOpenHome={() => setShellPage("home")}
+            onOpenMatch={handleOpenMatch}
+            onOpenMatches={() => setShellPage("matches")}
+            onOpenProMatches={() => setShellPage("proMatches")}
+            onOpenStats={(id) => handleOpenStats(id, "proMatches")}
+            onUpdateCompetition={updateMatchCompetition}
           />
         ) : (
           <StatsShellPage
             feedbackContext={feedbackContext}
             libraryEntries={libraryEntries}
-            onBackToMatches={() => setShellPage("matches")}
+            onBackToMatches={() => setShellPage(statsParent)}
             onOpenHome={() => setShellPage("home")}
             onOpenMatches={() => setShellPage("matches")}
+            onOpenProMatches={() => setShellPage("proMatches")}
             onOpenReplay={(id) => {
               openReplay(id);
               setShellPage("stats");
             }}
             parserBridgeAvailable={parserBridgeAvailable}
+            statsParent={statsParent}
             statsEntry={statsEntry}
           />
         )

@@ -5,11 +5,13 @@ type Props = {
   feedbackContext?: Record<string, unknown>;
   localMatchCount: number;
   parserBridgeAvailable: boolean;
-  shellPage: "home" | "matches" | "stats";
+  shellPage: "home" | "matches" | "proMatches" | "stats";
+  statsParent?: "matches" | "proMatches";
   onAction?: () => void;
   actionDisabled?: boolean;
   onOpenHome: () => void;
   onOpenMatches: () => void;
+  onOpenProMatches: () => void;
 };
 
 const DEMOREAD_LOGO_SRC = "/brand/demoread-logo.png";
@@ -20,14 +22,17 @@ export function ShellTopNav({
   localMatchCount,
   parserBridgeAvailable,
   shellPage,
+  statsParent = "matches",
   onAction,
   actionDisabled = false,
   onOpenHome,
   onOpenMatches,
+  onOpenProMatches,
 }: Props) {
   const fallbackActionLabel = localMatchCount > 0 ? "Open Matches" : "Start Local Review";
   const homeActive = shellPage === "home";
-  const matchesActive = shellPage === "matches" || shellPage === "stats";
+  const matchesActive = shellPage === "matches" || (shellPage === "stats" && statsParent === "matches");
+  const proMatchesActive = shellPage === "proMatches" || (shellPage === "stats" && statsParent === "proMatches");
   const showStaticHomeStatus = shellPage === "home";
 
   return (
@@ -48,6 +53,12 @@ export function ShellTopNav({
           onClick={onOpenMatches}
         >
           Matches
+        </button>
+        <button
+          className={`home-top-nav-link ${proMatchesActive ? "home-top-nav-link-active" : ""}`}
+          onClick={onOpenProMatches}
+        >
+          Pro Matches
         </button>
       </nav>
 

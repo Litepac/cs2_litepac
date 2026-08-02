@@ -13,6 +13,7 @@ Build a trustworthy CS2 2D replay core with an operator-grade Replay workspace a
 ## Working State
 - Real `.dem` files are parsed locally into canonical replay artifacts through the parser API
 - Home is a branded entry surface, Matches is the local library, Replay is the operator workspace, and Stats is a match-analysis destination
+- Pro Matches can classify local demos manually or browse the attributed `blanchon/cs2_dataset_demo` catalogue. Provider rows remain lightweight availability/context records; one selected map is downloaded through the bounded Go adapter and must pass the canonical DemoRead parser before it enters the local replay library. Direct HLTV scraping and provider analysis JSON remain outside the replay-truth boundary.
 - Replay round switching, playback, player selection, and the live roster are working from parser-backed player streams
 - Utility Atlas, Heatmap, Position Paths, and Position Player exist as parser-backed replay-analysis modes
 - Position Paths is broadly useful, Heatmap is supporting context, and Position Player is the active quality gap

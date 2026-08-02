@@ -55,15 +55,26 @@ Current CS2 review products converge on a few tool families rather than a large 
 ## Pro Match Source Boundary
 HLTV is a useful editorial reference for how professional Counter-Strike is grouped by event, stage, date, teams, map, and result. Its current Terms of Service, effective January 27, 2025, explicitly prohibit data mining/web scraping and constructing a similar or competitive product: https://www.hltv.org/terms
 
-DemoRead therefore must not crawl HLTV event, result, match, or demo pages. The product may store a user-supplied HLTV match URL as an outbound reference, but it must not fetch or derive metadata from that URL. The first Pro Matches workflow should use:
+DemoRead therefore must not crawl HLTV event, result, match, or demo pages. The product may store a provider-supplied or user-supplied HLTV match URL as an outbound reference, but it must not fetch or derive metadata from that URL.
+
+The public `blanchon/cs2_dataset_demo` Hugging Face dataset now provides a separate, attributed adapter boundary. Its dataset card labels the catalogue CC BY 4.0, exposes 1,988 map rows through Hugging Face's documented Dataset Viewer API, and mirrors selected `.dem` files under stable dataset paths. The dataset card also states that downstream users remain responsible for original tournament terms. DemoRead may therefore use the catalogue as an optional free provider with these constraints:
+
+- fetch only normalized catalogue fields needed to identify an available map, its event context, source link, and exact download size;
+- retain the dataset name, licence label, and attribution URL in the product surface;
+- download only a map the user explicitly selects, never the full 935 GB archive;
+- validate provider paths and bound download size in the Go service rather than accepting arbitrary remote URLs;
+- parse the selected `.dem` through DemoRead's canonical parser; never consume the provider's analysis JSON as replay truth;
+- treat the provider catalogue as availability/context, while map, teams, players, score, rounds, and playback remain parser-owned after import.
+
+The Pro Matches workflow can therefore use:
 
 - canonical parser output for map, teams, players, score, and replay truth;
-- explicitly user-curated event name, tier, stage, played date, and optional source URL;
+- explicitly user-curated event context or attributed provider event/date/source metadata;
 - a separate small metadata record so classifying a match never rewrites the large replay artifact;
 - event/tier/date filtering that works independently of the eventual authorized provider;
-- a future provider adapter only after an organizer or licensed API grants suitable match and demo access.
+- additional automated sources only after an organizer or licensed API grants suitable match and demo access.
 
-This keeps the page useful for manually downloaded major/event demos now without tying the product or storage model to an unauthorized scraper.
+This keeps the page useful for manually downloaded demos and selective attributed provider imports without tying the product or storage model to an unauthorized scraper.
 
 ## RoundIQ 3D Reference Boundary
 RoundIQ publicly positions its replayer around 2D, 3D, and POV viewing modes, including volumetric smokes and grenade lineup review: https://roundiq.gg/

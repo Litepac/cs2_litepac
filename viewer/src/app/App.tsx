@@ -41,6 +41,7 @@ export function App() {
     deleteReplay,
     ensureReplayLoaded,
     error,
+    importProMatch,
     libraryHydrated,
     libraryEntries,
     loadingSource,
@@ -49,6 +50,7 @@ export function App() {
     openReplay,
     parserBridgeAvailable,
     parserBridgeHealth,
+    proImportingRowId,
     replay,
     roundIndex,
     selectedPlayerId,
@@ -590,12 +592,14 @@ export function App() {
             loadingSource={loadingSource}
             matchesUploadInputRef={matchesUploadInputRef}
             parserBridgeAvailable={parserBridgeAvailable}
+            proImportingRowId={proImportingRowId}
             onDemoFileChange={(event) => handleDemoFileChange(event, "proMatches")}
             onOpenHome={() => setShellPage("home")}
             onOpenMatch={handleOpenMatch}
             onOpenMatches={() => setShellPage("matches")}
             onOpenProMatches={() => setShellPage("proMatches")}
             onOpenStats={(id) => handleOpenStats(id, "proMatches")}
+            onImportProviderMatch={importProMatch}
             onUpdateCompetition={updateMatchCompetition}
           />
         ) : (

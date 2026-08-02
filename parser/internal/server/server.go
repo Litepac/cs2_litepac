@@ -34,13 +34,17 @@ const (
 )
 
 type Options struct {
-	ListenAddr          string
-	SchemaPath          string
-	AssetsRoot          string
-	TempDir             string
-	MaxUploadBytes      int64
-	MaxConcurrentParses int
-	AllowedOrigin       string
+	ListenAddr           string
+	SchemaPath           string
+	AssetsRoot           string
+	TempDir              string
+	MaxUploadBytes       int64
+	MaxProviderDemoBytes int64
+	MaxConcurrentParses  int
+	AllowedOrigin        string
+	HTTPClient           *http.Client
+	ProCatalogURL        string
+	ProDemoBaseURL       string
 }
 
 type requestLimiter struct {
@@ -203,6 +207,52 @@ func newHandlerWithState(opts Options, state *serverState) http.Handler {
 			return
 		}
 	})
+	mux.HandleFunc("/api/pro-matches/catalog", func(w http.ResponseWriter, r *http.Request) {
+		if !allowCORS(w, r, opts) {
+			writeJSONError(w, http.StatusForbidden, "origin not allowed")
+			return
+		}
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		if r.Method != http.MethodGet {
+			writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
+			return
+		}
+		if err := serveProCatalog(w, r, opts); err != nil {
+			writeJSONError(w, requestErrorStatus(err), err.Error())
+		}
+	})
+	mux.HandleFunc("/api/pro-matches/import", func(w http.ResponseWriter, r *http.Request) {
+		if !allowCORS(w, r, opts) {
+			writeJSONError(w, http.StatusForbidden, "origin not allowed")
+			return
+		}
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		if r.Method != http.MethodPost {
+			writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
+			return
+		}
+
+		select {
+		case state.parseSlots <- struct{}{}:
+			defer func() { <-state.parseSlots }()
+		default:
+			writeRateLimitError(w, time.Minute, "another demo is already being parsed")
+			return
+		}
+		if allowed, retryAfter := state.parseStarts.allow(clientKey(r), time.Now()); !allowed {
+			writeRateLimitError(w, retryAfter, "demo parse limit reached")
+			return
+		}
+		if err := importProviderDemo(w, r, opts); err != nil {
+			writeJSONError(w, requestErrorStatus(err), err.Error())
+		}
+	})
 	mux.HandleFunc("/api/usage-events", func(w http.ResponseWriter, r *http.Request) {
 		if !allowCORS(w, r, opts) {
 			writeJSONError(w, http.StatusForbidden, "origin not allowed")
@@ -300,7 +350,11 @@ func parseDemoUpload(w http.ResponseWriter, r *http.Request, opts Options) error
 		return fmt.Errorf("finalize temp demo file: %w", err)
 	}
 
-	replayFile, err := os.CreateTemp(tempDir, "mastermind-replay-*.json")
+	return parseDemoPath(w, opts, baseName, demoPath)
+}
+
+func parseDemoPath(w http.ResponseWriter, opts Options, baseName string, demoPath string) error {
+	replayFile, err := os.CreateTemp(strings.TrimSpace(opts.TempDir), "mastermind-replay-*.json")
 	if err != nil {
 		return fmt.Errorf("create temp replay file: %w", err)
 	}

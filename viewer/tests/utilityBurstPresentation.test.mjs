@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { resolveUtilityBurstPresentation } from "../src/canvas/utilityBurstPresentation.ts";
+import {
+  resolveResponsiveFlashBurstRadius,
+  resolveUtilityBurstPresentation,
+} from "../src/canvas/utilityBurstPresentation.ts";
 import { utilityBurstProgress, utilitySceneStateAtTick } from "../src/replay/utility.ts";
 
 function burstUtility(kind, detonateTick = 1_000) {
@@ -72,4 +75,14 @@ test("flash pop expands quickly and holds through the readable middle", () => {
   assert.ok(middle.shockRadius >= 106);
   assert.ok(middle.fade > 0.7);
   assert.ok(late.fade < 0.2);
+});
+
+test("flash pop scales with the radar while staying bounded", () => {
+  assert.equal(resolveResponsiveFlashBurstRadius(948, 644), 309.12);
+  assert.equal(resolveResponsiveFlashBurstRadius(360, 640), 220);
+  assert.equal(resolveResponsiveFlashBurstRadius(2_560, 1_440), 380);
+
+  const presentation = resolveUtilityBurstPresentation("flashbang", 1, 309.12);
+  assert.equal(presentation.shockRadius, 309.12);
+  assert.ok(presentation.outerRadius > 287 && presentation.outerRadius < 288);
 });

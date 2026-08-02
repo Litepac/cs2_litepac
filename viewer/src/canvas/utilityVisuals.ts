@@ -19,7 +19,10 @@ import {
 import { createEquipmentIconGraphic, type EquipmentSvgIcon } from "./equipmentIconGraphics";
 import { getFireTextureVisual } from "./fireTexture";
 import { attachReplayHitTarget } from "./replayStage/hitTargets";
-import { resolveUtilityBurstPresentation } from "./utilityBurstPresentation";
+import {
+  resolveResponsiveFlashBurstRadius,
+  resolveUtilityBurstPresentation,
+} from "./utilityBurstPresentation";
 import {
   resolveSmokeDisplacementStrength,
   resolveSmokeLifecyclePresentation,
@@ -179,7 +182,12 @@ export function drawUtilityVisual(
 
   if (renderPhase === "burst") {
     if (utility.kind === "flashbang") {
-      drawFlashBurstVisual(overlayLayer, point, state?.burstProgress ?? 0);
+      drawFlashBurstVisual(
+        overlayLayer,
+        point,
+        state?.burstProgress ?? 0,
+        resolveResponsiveFlashBurstRadius(radarViewport.viewportWidth, radarViewport.viewportHeight),
+      );
       return;
     }
 
@@ -614,8 +622,8 @@ function drawDecoyVisual(layer: Container, point: ScreenPoint, remainingSeconds:
   });
 }
 
-function drawFlashBurstVisual(layer: Container, point: ScreenPoint, progress: number) {
-  const presentation = resolveUtilityBurstPresentation("flashbang", progress);
+function drawFlashBurstVisual(layer: Container, point: ScreenPoint, progress: number, maximumRadius: number) {
+  const presentation = resolveUtilityBurstPresentation("flashbang", progress, maximumRadius);
   const burst = new Graphics();
   burst.circle(point.x, point.y, presentation.outerRadius);
   burst.fill({ color: 0xffedb0, alpha: 0.1 * presentation.fade });

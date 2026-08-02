@@ -13,6 +13,7 @@ export type UtilityBurstPresentation = {
 export function resolveUtilityBurstPresentation(
   kind: UtilityBurstKind,
   progress: number,
+  maximumFlashRadius = 112,
 ): UtilityBurstPresentation {
   const normalized = clamp(progress, 0, 1);
 
@@ -22,11 +23,11 @@ export function resolveUtilityBurstPresentation(
     return {
       coreRadius: mix(12, 22, expansion),
       fade: 1 - smoothstep(0.38, 1, normalized),
-      glowRadius: mix(34, 78, expansion),
-      outerRadius: mix(50, 104, expansion),
+      glowRadius: mix(34, maximumFlashRadius * 0.72, expansion),
+      outerRadius: mix(50, maximumFlashRadius * 0.93, expansion),
       rayInnerRadius: mix(18, 32, expansion),
-      rayOuterRadius: mix(46, 96, expansion),
-      shockRadius: mix(28, 112, expansion),
+      rayOuterRadius: mix(46, maximumFlashRadius * 0.92, expansion),
+      shockRadius: mix(28, maximumFlashRadius, expansion),
     };
   }
 
@@ -40,6 +41,14 @@ export function resolveUtilityBurstPresentation(
     rayOuterRadius: mix(14, 21, normalized),
     shockRadius: mix(15, 23, normalized),
   };
+}
+
+export function resolveResponsiveFlashBurstRadius(viewportWidth: number, viewportHeight: number) {
+  const shortestDimension = Math.min(
+    Number.isFinite(viewportWidth) ? viewportWidth : 0,
+    Number.isFinite(viewportHeight) ? viewportHeight : 0,
+  );
+  return clamp(shortestDimension * 0.48, 220, 380);
 }
 
 function easeOutCubic(value: number) {

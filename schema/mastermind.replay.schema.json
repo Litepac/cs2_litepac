@@ -431,6 +431,9 @@
         "attackerPlayerId": {
           "$ref": "#/$defs/nullableString"
         },
+        "utilityId": {
+          "$ref": "#/$defs/nullableString"
+        },
         "durationTicks": {
           "type": "integer",
           "minimum": 1

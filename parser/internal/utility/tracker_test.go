@@ -22,6 +22,28 @@ func TestNextUtilityIDIsDeterministicWithinRound(t *testing.T) {
 	}
 }
 
+func TestUtilityIDForProjectileUsesExactProjectileIdentity(t *testing.T) {
+	entity := new(stfake.Entity)
+	entity.On("ID").Return(77)
+	entity.On("Position").Return(r3.Vector{X: 10, Y: 20, Z: 30})
+
+	projectile := common.NewGrenadeProjectile()
+	projectile.Entity = entity
+	projectile.WeaponInstance = common.NewEquipment(common.EqFlash)
+
+	tracker := NewTracker()
+	tracker.TrackThrow(100, projectile, replay.String("player-1"))
+
+	utilityID := tracker.UtilityIDForProjectile(projectile)
+	if utilityID == nil || *utilityID != "utility-1" {
+		t.Fatalf("expected exact projectile to resolve utility-1, got %v", utilityID)
+	}
+
+	if got := tracker.UtilityIDForProjectile(common.NewGrenadeProjectile()); got != nil {
+		t.Fatalf("expected unknown projectile identity to remain unbound, got %v", got)
+	}
+}
+
 func TestSyncInfernosExpiresMissingInfernoFromActiveSet(t *testing.T) {
 	tracker := &Tracker{
 		byID: map[string]*replay.UtilityEntity{

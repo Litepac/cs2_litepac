@@ -14,6 +14,7 @@ import hegrenadeIconSvg from "../../icons/cs2-equipment/panorama/images/icons/eq
 import molotovIconSvg from "../../icons/cs2-equipment/panorama/images/icons/equipment/molotov.svg?raw";
 import smokegrenadeIconSvg from "../../icons/cs2-equipment/panorama/images/icons/equipment/smokegrenade.svg?raw";
 import { RECENT_UTILITY_THROW_MODE_SECONDS } from "./constants";
+import { drawRecentFlashImpactLinks } from "./flashImpactVisual";
 import type { BlindEffectState } from "./types";
 import { clamp } from "./camera";
 
@@ -48,6 +49,8 @@ export function renderPlayers(
   const blindEffects = buildActiveBlindEffects(round, currentTick, replay.match.tickRate);
   const contextModeActive = livePlayerContextMode && selectedPlayerId != null;
   const livePlayers: LivePlayerEntry[] = [];
+
+  drawRecentFlashImpactLinks(playerLayer, replay, round, currentTick, radarViewport);
 
   for (const stream of round.playerStreams) {
     const sample = interpolatePlayerStreamSample(stream, currentTick);

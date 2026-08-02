@@ -155,6 +155,7 @@ export type BlindEvent = {
   tick: number;
   playerId: string;
   attackerPlayerId: string | null;
+  utilityId?: string | null;
   durationTicks: number;
   endTick: number;
 };

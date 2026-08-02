@@ -101,6 +101,17 @@ func (t *Tracker) TrackSample(tick int, projectile *common.GrenadeProjectile) {
 	t.appendTrajectorySample(entry, tick, projectile.Position())
 }
 
+// UtilityIDForProjectile returns the canonical utility identity for the exact
+// projectile instance. UniqueID is used instead of the reusable entity ID.
+func (t *Tracker) UtilityIDForProjectile(projectile *common.GrenadeProjectile) *string {
+	entry := t.byProjectile(projectile)
+	if entry == nil {
+		return nil
+	}
+
+	return replay.String(entry.UtilityID)
+}
+
 func (t *Tracker) TrackDetonateByEntity(entityID, tick int, pos r3.Vector) {
 	entry := t.byEntityID(entityID)
 	if entry == nil {

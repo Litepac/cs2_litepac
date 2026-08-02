@@ -86,6 +86,7 @@ func (s *parseState) registerCombatHandlers() {
 			Tick:             tick,
 			PlayerID:         playerID,
 			AttackerPlayerID: nilIfEmpty(attackerID),
+			UtilityID:        s.currentRound.UtilityTracker().UtilityIDForProjectile(e.Projectile),
 			DurationTicks:    durationTicks,
 			EndTick:          tick + durationTicks,
 		})

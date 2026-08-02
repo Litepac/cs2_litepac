@@ -617,16 +617,20 @@ function drawDecoyVisual(layer: Container, point: ScreenPoint, remainingSeconds:
 function drawFlashBurstVisual(layer: Container, point: ScreenPoint, progress: number) {
   const presentation = resolveUtilityBurstPresentation("flashbang", progress);
   const burst = new Graphics();
-  drawBurstRays(burst, point, presentation.rayInnerRadius, presentation.rayOuterRadius, 8);
-  burst.stroke({ color: 0xffedb0, width: 1.5, alpha: 0.46 * presentation.fade, cap: "round" });
   burst.circle(point.x, point.y, presentation.outerRadius);
-  burst.fill({ color: 0xfff0c8, alpha: 0.055 * presentation.fade });
+  burst.fill({ color: 0xffedb0, alpha: 0.1 * presentation.fade });
   burst.circle(point.x, point.y, presentation.glowRadius);
-  burst.fill({ color: 0xfff0c8, alpha: 0.2 * presentation.fade });
-  burst.circle(point.x, point.y, presentation.coreRadius);
-  burst.fill({ color: 0xfffffc, alpha: 0.7 * presentation.fade });
+  burst.fill({ color: 0xfff4d2, alpha: 0.24 * presentation.fade });
+  drawBurstRays(burst, point, presentation.rayInnerRadius, presentation.rayOuterRadius, 12);
+  burst.stroke({ color: 0xffed9d, width: 2.1, alpha: 0.64 * presentation.fade, cap: "round" });
+  burst.circle(point.x, point.y, presentation.shockRadius);
+  burst.stroke({ color: 0xfff7df, width: 2.4, alpha: 0.52 * presentation.fade });
   burst.circle(point.x, point.y, presentation.outerRadius);
-  burst.stroke({ color: 0xfff4d8, width: 1.2, alpha: 0.16 * presentation.fade });
+  burst.stroke({ color: 0xffdfa0, width: 1.35, alpha: 0.3 * presentation.fade });
+  burst.circle(point.x, point.y, presentation.coreRadius);
+  burst.fill({ color: 0xfffffc, alpha: 0.86 * presentation.fade });
+  burst.circle(point.x, point.y, presentation.coreRadius + 4);
+  burst.stroke({ color: 0xffffff, width: 1.4, alpha: 0.72 * presentation.fade });
   layer.addChild(burst);
 }
 

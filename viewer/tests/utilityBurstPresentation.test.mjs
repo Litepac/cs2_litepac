@@ -48,14 +48,28 @@ test("flash stays prominent while HE remains compact and both cues fade", () => 
   const heEnd = resolveUtilityBurstPresentation("hegrenade", 1);
 
   assert.ok(flashStart.outerRadius < flashEnd.outerRadius);
-  assert.ok(flashStart.outerRadius >= 30);
-  assert.ok(flashMid.outerRadius >= 46);
-  assert.ok(flashMid.glowRadius >= 33);
-  assert.ok(flashMid.fade > 0.5);
-  assert.ok(flashEnd.outerRadius >= 60 && flashEnd.outerRadius <= 64);
-  assert.ok(flashEnd.outerRadius > heEnd.outerRadius * 2.5);
+  assert.ok(flashStart.outerRadius >= 50);
+  assert.ok(flashMid.outerRadius >= 96);
+  assert.ok(flashMid.glowRadius >= 70);
+  assert.ok(flashMid.shockRadius >= 100);
+  assert.ok(flashMid.fade > 0.85);
+  assert.ok(flashEnd.outerRadius >= 102 && flashEnd.outerRadius <= 106);
+  assert.ok(flashEnd.shockRadius >= 110 && flashEnd.shockRadius <= 114);
+  assert.ok(flashEnd.outerRadius > heEnd.outerRadius * 4);
   assert.ok(heStart.outerRadius < heEnd.outerRadius);
   assert.ok(heEnd.outerRadius <= 23);
   assert.equal(flashEnd.fade, 0);
   assert.equal(heEnd.fade, 0);
+});
+
+test("flash pop expands quickly and holds through the readable middle", () => {
+  const opening = resolveUtilityBurstPresentation("flashbang", 0.15);
+  const middle = resolveUtilityBurstPresentation("flashbang", 0.6);
+  const late = resolveUtilityBurstPresentation("flashbang", 0.85);
+
+  assert.ok(opening.shockRadius >= 60);
+  assert.ok(opening.fade > 0.99);
+  assert.ok(middle.shockRadius >= 106);
+  assert.ok(middle.fade > 0.7);
+  assert.ok(late.fade < 0.2);
 });

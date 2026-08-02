@@ -78,11 +78,11 @@ test("flash pop expands quickly and holds through the readable middle", () => {
 });
 
 test("flash pop scales with the radar while staying bounded", () => {
-  assert.equal(resolveResponsiveFlashBurstRadius(948, 644), 309.12);
+  assert.equal(resolveResponsiveFlashBurstRadius(948, 644), 257.6);
   assert.equal(resolveResponsiveFlashBurstRadius(360, 640), 220);
-  assert.equal(resolveResponsiveFlashBurstRadius(2_560, 1_440), 380);
+  assert.equal(resolveResponsiveFlashBurstRadius(2_560, 1_440), 320);
 
-  const presentation = resolveUtilityBurstPresentation("flashbang", 1, 309.12);
-  assert.equal(presentation.shockRadius, 309.12);
-  assert.ok(presentation.outerRadius > 287 && presentation.outerRadius < 288);
+  const presentation = resolveUtilityBurstPresentation("flashbang", 1, 257.6);
+  assert.equal(presentation.shockRadius, 257.6);
+  assert.ok(presentation.outerRadius > 239 && presentation.outerRadius < 240);
 });

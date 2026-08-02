@@ -48,7 +48,7 @@ export function resolveResponsiveFlashBurstRadius(viewportWidth: number, viewpor
     Number.isFinite(viewportWidth) ? viewportWidth : 0,
     Number.isFinite(viewportHeight) ? viewportHeight : 0,
   );
-  return clamp(shortestDimension * 0.48, 220, 380);
+  return clamp(shortestDimension * 0.4, 220, 320);
 }
 
 function easeOutCubic(value: number) {

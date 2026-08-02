@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { buildRecentFlashImpacts, FLASH_IMPACT_LINK_SECONDS } from "../src/replay/flashImpact.ts";
+import {
+  buildRecentFlashImpacts,
+  FLASH_IMPACT_ENVELOPE_EXPANSION_SECONDS,
+  FLASH_IMPACT_LINK_SECONDS,
+  resolveFlashImpactEnvelopePresentation,
+} from "../src/replay/flashImpact.ts";
 
 function roundWithBlindEvents(blindEvents) {
   return { blindEvents };
@@ -15,6 +20,7 @@ test("links only parser-bound flash victims", () => {
 
   assert.deepEqual(buildRecentFlashImpacts(round, 1_000, 64), [
     {
+      ageSeconds: 0,
       fade: 1,
       playerId: "player-a",
       severity: 256 / (64 * 5.2),
@@ -44,4 +50,25 @@ test("encodes actual blind duration as impact severity", () => {
 
   assert.ok(impacts[0].severity < 0.1);
   assert.equal(impacts[1].severity, 1);
+});
+
+test("fits the observed envelope to the farthest parser-confirmed victim", () => {
+  const opening = resolveFlashImpactEnvelopePresentation(236, 0, 1);
+  const expanded = resolveFlashImpactEnvelopePresentation(
+    236,
+    FLASH_IMPACT_ENVELOPE_EXPANSION_SECONDS,
+    1,
+  );
+
+  assert.equal(opening.radius, 28);
+  assert.equal(expanded.targetRadius, 236);
+  assert.equal(expanded.radius, 236);
+});
+
+test("retains the symbolic minimum for close victims and clamps fade", () => {
+  const presentation = resolveFlashImpactEnvelopePresentation(42, 1, 2);
+
+  assert.equal(presentation.targetRadius, 112);
+  assert.equal(presentation.radius, 112);
+  assert.equal(presentation.fade, 1);
 });

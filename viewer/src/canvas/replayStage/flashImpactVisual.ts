@@ -2,11 +2,21 @@ import { Container, Graphics } from "pixi.js";
 
 import type { RadarViewport } from "../../mapGeometry/transform";
 import { worldToScreen } from "../../mapGeometry/transform";
-import { buildRecentFlashImpacts } from "../../replay/flashImpact";
+import {
+  buildRecentFlashImpacts,
+  resolveFlashImpactEnvelopePresentation,
+} from "../../replay/flashImpact";
 import { interpolatePlayerStreamSample } from "../../replay/playerStream";
 import type { Replay, Round } from "../../replay/types";
 
 type Point = { x: number; y: number };
+
+type FlashImpactEnvelope = {
+  ageSeconds: number;
+  fade: number;
+  farthestVictimDistance: number;
+  origin: Point;
+};
 
 export function drawRecentFlashImpactLinks(
   layer: Container,
@@ -22,6 +32,8 @@ export function drawRecentFlashImpactLinks(
 
   const utilityById = new Map(round.utilityEntities.map((utility) => [utility.utilityId, utility]));
   const streamByPlayerId = new Map(round.playerStreams.map((stream) => [stream.playerId, stream]));
+  const envelopesByUtilityId = new Map<string, FlashImpactEnvelope>();
+  const envelopes = new Graphics();
   const links = new Graphics();
   let linkCount = 0;
 
@@ -49,15 +61,71 @@ export function drawRecentFlashImpactLinks(
 
     const origin = worldToScreen(replay, radarViewport, detonation.x, detonation.y);
     const target = worldToScreen(replay, radarViewport, playerSample.x, playerSample.y);
+    const victimDistance = Math.hypot(target.x - origin.x, target.y - origin.y);
+    const envelope = envelopesByUtilityId.get(impact.utilityId);
+    if (envelope) {
+      envelope.farthestVictimDistance = Math.max(envelope.farthestVictimDistance, victimDistance);
+      envelope.fade = Math.max(envelope.fade, impact.fade);
+    } else {
+      envelopesByUtilityId.set(impact.utilityId, {
+        ageSeconds: impact.ageSeconds,
+        fade: impact.fade,
+        farthestVictimDistance: victimDistance,
+        origin,
+      });
+    }
+
     if (drawFlashImpactConnection(links, origin, target, impact.severity, impact.fade)) {
       linkCount += 1;
     }
+  }
+
+  for (const envelope of envelopesByUtilityId.values()) {
+    drawFlashImpactEnvelope(envelopes, envelope);
+  }
+
+  if (envelopesByUtilityId.size > 0) {
+    layer.addChild(envelopes);
+  } else {
+    envelopes.destroy();
   }
 
   if (linkCount > 0) {
     layer.addChild(links);
   } else {
     links.destroy();
+  }
+}
+
+function drawFlashImpactEnvelope(graphics: Graphics, envelope: FlashImpactEnvelope) {
+  const presentation = resolveFlashImpactEnvelopePresentation(
+    envelope.farthestVictimDistance,
+    envelope.ageSeconds,
+    envelope.fade,
+  );
+
+  graphics.circle(envelope.origin.x, envelope.origin.y, presentation.radius);
+  graphics.stroke({
+    color: 0xffe9a8,
+    width: 10,
+    alpha: 0.035 * presentation.fade,
+  });
+  drawDashedFlashEnvelope(graphics, envelope.origin, presentation.radius);
+  graphics.stroke({
+    color: 0xffe39a,
+    width: 1.5,
+    alpha: 0.34 * presentation.fade,
+    cap: "round",
+  });
+}
+
+function drawDashedFlashEnvelope(graphics: Graphics, origin: Point, radius: number) {
+  const segmentCount = Math.max(28, Math.round(radius / 3.5));
+  for (let index = 0; index < segmentCount; index += 2) {
+    const startAngle = (index / segmentCount) * Math.PI * 2;
+    const endAngle = (Math.min(index + 1.2, segmentCount) / segmentCount) * Math.PI * 2;
+    graphics.moveTo(origin.x + Math.cos(startAngle) * radius, origin.y + Math.sin(startAngle) * radius);
+    graphics.lineTo(origin.x + Math.cos(endAngle) * radius, origin.y + Math.sin(endAngle) * radius);
   }
 }
 

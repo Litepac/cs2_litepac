@@ -179,6 +179,7 @@ type BlindEvent struct {
 	Tick             int     `json:"tick"`
 	PlayerID         string  `json:"playerId"`
 	AttackerPlayerID *string `json:"attackerPlayerId"`
+	UtilityID        *string `json:"utilityId,omitempty"`
 	DurationTicks    int     `json:"durationTicks"`
 	EndTick          int     `json:"endTick"`
 }

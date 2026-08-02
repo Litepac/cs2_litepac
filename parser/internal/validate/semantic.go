@@ -76,6 +76,14 @@ func ValidateReplay(data replay.Replay) error {
 			}
 		}
 
+		utilityByID := make(map[string]replay.UtilityEntity, len(round.UtilityEntities))
+		for _, utility := range round.UtilityEntities {
+			if _, exists := utilityByID[utility.UtilityID]; exists {
+				return fmt.Errorf("round %d has duplicate utility id %s", round.RoundNumber, utility.UtilityID)
+			}
+			utilityByID[utility.UtilityID] = utility
+		}
+
 		for _, blind := range round.BlindEvents {
 			if blind.Tick < round.StartTick || blind.Tick > effectiveEndTick {
 				return fmt.Errorf("round %d blind event at tick %d is outside round bounds", round.RoundNumber, blind.Tick)
@@ -87,6 +95,19 @@ func ValidateReplay(data replay.Replay) error {
 
 			if blind.EndTick <= blind.Tick {
 				return fmt.Errorf("round %d blind event at tick %d ends before it starts", round.RoundNumber, blind.Tick)
+			}
+
+			if blind.UtilityID != nil {
+				utility, exists := utilityByID[*blind.UtilityID]
+				if !exists {
+					return fmt.Errorf("round %d blind event at tick %d references unknown utility %s", round.RoundNumber, blind.Tick, *blind.UtilityID)
+				}
+				if utility.Kind != "flashbang" {
+					return fmt.Errorf("round %d blind event at tick %d references non-flash utility %s", round.RoundNumber, blind.Tick, *blind.UtilityID)
+				}
+				if utility.DetonateTick == nil || *utility.DetonateTick != blind.Tick {
+					return fmt.Errorf("round %d blind event at tick %d does not match utility %s detonation", round.RoundNumber, blind.Tick, *blind.UtilityID)
+				}
 			}
 		}
 

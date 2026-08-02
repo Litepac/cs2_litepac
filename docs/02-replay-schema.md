@@ -202,10 +202,11 @@ Blinding from flashbangs is stored as a discrete player event stream:
 - tick
 - flashed player id
 - attacker id if known
+- exact source utility id when the projectile can be bound
 - duration in ticks
 - end tick
 
-This lets the viewer render blinded-player indicators from canonical replay truth without inventing per-player screen-space whiteness from flash detonation blooms alone.
+The source utility id is derived from demoinfocs' exact projectile instance and the parser's stable per-round utility identity, not from nearest-distance matching. This lets the viewer connect a detonation to the players it actually blinded and render duration-weighted indicators without inventing a circular effect radius. Older artifacts may omit the optional source id and remain valid, but cannot show exact flash-to-victim connections.
 
 ### Hurt
 

@@ -333,6 +333,38 @@ func TestValidateReplayRejectsInvalidStreamBounds(t *testing.T) {
 }
 
 func TestValidateReplayRejectsInvalidUtilityTruth(t *testing.T) {
+	t.Run("blind event references unknown utility", func(t *testing.T) {
+		data := replayWithUtilityEntity(replay.UtilityEntity{
+			UtilityID:    "utility:flash",
+			Kind:         "flashbang",
+			StartTick:    0,
+			DetonateTick: replay.Int(2),
+			EndTick:      replay.Int(2),
+			Trajectory: replay.Trajectory{
+				SampleOriginTick:    0,
+				SampleIntervalTicks: 1,
+				X:                   []*float64{replay.Float64(1)},
+				Y:                   []*float64{replay.Float64(2)},
+				Z:                   []*float64{replay.Float64(3)},
+			},
+			PhaseEvents: []replay.UtilityPhaseEvent{
+				{Tick: 0, Type: "thrown"},
+				{Tick: 2, Type: "detonate"},
+			},
+		})
+		data.Rounds[0].BlindEvents = []replay.BlindEvent{
+			{
+				Tick:          2,
+				PlayerID:      "player-1",
+				UtilityID:     replay.String("utility:missing"),
+				DurationTicks: 1,
+				EndTick:       3,
+			},
+		}
+
+		assertValidationErrorContains(t, ValidateReplay(data), "references unknown utility utility:missing")
+	})
+
 	t.Run("end before start", func(t *testing.T) {
 		data := replayWithUtilityEntity(replay.UtilityEntity{
 			UtilityID: "utility:flash",
